@@ -27,7 +27,7 @@ export async function GET() {
             lat: photo.latitude,
             lng: photo.longitude
           },
-          dateTaken: photo.uploadedAt,
+          dateTaken: photo.uploadedAt.toISOString(), // Convert to ISO string
           uploadedBy: {
             id: photo.auth0Id,
             name: user?.bioName || photo.username,  // Use bioName from users collection

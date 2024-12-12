@@ -50,7 +50,7 @@ export interface PhotoDisplayData {
     lat: number;
     lng: number;
   };
-  dateTaken?: Date;
+  dateTaken: string;
   uploadedBy: {
     id: string;
     name: string;

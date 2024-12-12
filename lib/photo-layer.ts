@@ -331,18 +331,19 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
                   coordinates: [photo.location!.lng, photo.location!.lat]
                 },
                 properties: {
-                  id: photo.id,
-                  title: photo.originalName || 'Untitled',
-                  description: photo.caption || '',
-                  url: photo.url,
-                  // Change this part
-                  uploadedBy: {
-                    id: photo.uploadedBy.id,
-                    name: photo.uploadedBy.name,
-                    picture: photo.uploadedBy.picture
-                  },
-                  dateTaken: photo.uploadedAt
-                }
+                    id: photo.id,
+                    title: photo.originalName || 'Untitled',
+                    description: photo.caption || '',
+                    url: photo.url,
+                    uploadedBy: JSON.stringify({  // Make sure to stringify the object
+                      id: photo.uploadedBy.id,
+                      name: photo.uploadedBy.name,
+                      picture: photo.uploadedBy.picture
+                    }),
+                    dateTaken: photo.uploadedAt instanceof Date ? 
+                      photo.uploadedAt.getTime() : 
+                      new Date(photo.uploadedAt).getTime()  // Convert to timestamp
+                  }
               };
             console.log('Created feature:', {
               id: feature.properties.id,

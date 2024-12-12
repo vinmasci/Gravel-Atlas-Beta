@@ -21,6 +21,24 @@ interface PhotoViewerProps {
 export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
   if (!photo) return null
 
+  const formatDate = (dateValue: any) => {
+    try {
+      const date = new Date(typeof dateValue === 'string' ? parseInt(dateValue) : dateValue);
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date from:', dateValue);
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-AU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      return 'Invalid Date';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0">
@@ -57,7 +75,7 @@ export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
               {photo.dateTaken && (
                 <div className="flex items-center gap-1">
                   <CalendarIcon className="w-4 h-4" />
-                  <span>{new Date(photo.dateTaken).toLocaleDateString()}</span>
+                  <span>{formatDate(photo.dateTaken)}</span>
                 </div>
               )}
               {photo.location && (
