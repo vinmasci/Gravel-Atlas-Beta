@@ -91,42 +91,44 @@ export function initializePhotoLayer(map: Map) {
     });
 
     map.on('click', 'unclustered-point', (e) => {
-      const coordinates = (e.features![0].geometry as any).coordinates.slice();
-      const properties = e.features![0].properties;
-      const { title, description, url, uploadedBy, dateTaken } = properties;
-
-      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-      }
-
-      const formattedDate = dateTaken ? new Date(dateTaken).toLocaleDateString() : 'Unknown date';
-
-      const popup = new mapboxgl.Popup({
-        closeButton: true,
-        closeOnClick: true,
-        maxWidth: '300px'
-      })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="max-w-sm p-2">
-            <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
-            <h3 class="text-lg font-semibold mb-1">${title}</h3>
-            ${description ? `<p class="text-sm text-gray-600 mb-2">${description}</p>` : ''}
-            <div class="flex items-center gap-2 mb-2">
-              <img 
-                src="${properties.uploadedBy.picture || '/default-avatar.png'}" 
-                alt="${properties.uploadedBy.name}"
-                class="w-8 h-8 rounded-full"
-              />
-              <div>
-                <div class="font-medium">${properties.uploadedBy.name}</div>
-                <div class="text-sm text-gray-500">${formattedDate}</div>
+        const coordinates = (e.features![0].geometry as any).coordinates.slice();
+        const properties = e.features![0].properties;
+        const { title, description, url, uploadedBy, dateTaken } = properties;
+      
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+      
+        const formattedDate = dateTaken ? new Date(dateTaken).toLocaleDateString() : 'Unknown date';
+      
+        const popup = new mapboxgl.Popup({
+          closeButton: true,
+          closeOnClick: true,
+          maxWidth: '300px',
+          className: 'photo-detail-popup'
+        })
+          .setLngLat(coordinates)
+          .setHTML(`
+            <div class="max-w-sm p-2 bg-black/80 text-white">
+              <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
+              <div class="space-y-2">
+                ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
+                <div class="flex items-center gap-2">
+                  <img 
+                    src="${properties.uploadedBy.picture}" 
+                    alt="${properties.uploadedBy.name}"
+                    class="w-8 h-8 rounded-full border border-white/20"
+                  />
+                  <div>
+                    <div class="font-medium text-sm">${properties.uploadedBy.name}</div>
+                    <div class="text-xs opacity-75">${formattedDate}</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        `)
-        .addTo(map);
-    });
+          `)
+          .addTo(map);
+      });
 
     // Add hover effects for clusters
     let hoverTimeout: NodeJS.Timeout;
@@ -267,11 +269,15 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
             },
             properties: {
               id: photo.id,
-              title: photo.title,
-              description: photo.description,
+              title: photo.originalName || 'Untitled',
+              description: photo.caption || '',
               url: photo.url,
-              uploadedBy: photo.uploadedBy,
-              dateTaken: photo.dateTaken
+              uploadedBy: {
+                id: photo.auth0Id,
+                name: photo.username,
+                picture: photo.picture
+              },
+              dateTaken: photo.uploadedAt
             }
           }))
       };
