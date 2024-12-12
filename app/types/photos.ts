@@ -41,19 +41,19 @@ export interface GeoPoint {
   }
   
   // Photo data as used in the frontend
-  export interface PhotoDisplayData {
+export interface PhotoDisplayData {
+  id: string;
+  url: string;
+  title: string;
+  description?: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  dateTaken?: Date;
+  uploadedBy: {
     id: string;
-    url: string;
-    title: string;
-    description?: string;
-    location: {
-      lat: number;
-      lng: number;
-    };
-    dateTaken?: Date;
-    uploadedBy: {
-      id: string;
-      name: string;
-      picture: string;
-    };
-  }
+    name: string;
+    picture: string;
+  };
+}

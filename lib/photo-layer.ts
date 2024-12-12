@@ -47,7 +47,7 @@ export function initializePhotoLayer(map: Map) {
         source: 'photos',
         filter: ['has', 'point_count'],
         layout: {
-          'icon-image': 'custom-marker', // We'll need to add this image
+          'icon-image': 'custom-marker',
           'icon-size': 0.1,
           'text-field': '{point_count_abbreviated}',
           'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
@@ -56,7 +56,7 @@ export function initializePhotoLayer(map: Map) {
           'icon-allow-overlap': true,
           'text-allow-overlap': true
         }
-      });
+    });
 
     // Individual photo points
     map.addLayer({
@@ -65,11 +65,11 @@ export function initializePhotoLayer(map: Map) {
         source: 'photos',
         filter: ['!', ['has', 'point_count']],
         layout: {
-          'icon-image': 'single-photo', // We'll need to add this image
+          'icon-image': 'single-photo',
           'icon-size': 0.1,
           'icon-allow-overlap': true
         }
-      });
+    });
 
     // Add click handlers
     map.on('click', 'clusters', (e) => {
@@ -95,7 +95,6 @@ export function initializePhotoLayer(map: Map) {
       const properties = e.features![0].properties;
       const { title, description, url, uploadedBy, dateTaken } = properties;
 
-      // Ensure that if the map is zoomed out such that multiple copies of the feature are visible
       while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
         coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
       }
@@ -109,50 +108,31 @@ export function initializePhotoLayer(map: Map) {
       })
         .setLngLat(coordinates)
         .setHTML(`
-            <div class="max-w-sm p-2">
-              <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
-              <h3 class="text-lg font-semibold mb-1">${title}</h3>
-              ${description ? `<p class="text-sm text-gray-600 mb-2">${description}</p>` : ''}
-              <div class="flex items-center gap-2 mb-2">
-                <img 
-                  src="${properties.uploadedBy.picture || '/default-avatar.png'}" 
-                  alt="${properties.uploadedBy.name}"
-                  class="w-8 h-8 rounded-full"
-                />
-                <div>
-                  <div class="font-medium">${properties.uploadedBy.name}</div>
-                  <div class="flex gap-2 text-sm">
-                    ${properties.uploadedBy.socials?.instagram ? 
-                      `<a href="https://instagram.com/${properties.uploadedBy.socials.instagram}" 
-                          target="_blank" rel="noopener noreferrer" 
-                          class="text-blue-500 hover:text-blue-600">
-                        <i class="fab fa-instagram"></i>
-                      </a>` : ''
-                    }
-                    ${properties.uploadedBy.socials?.strava ? 
-                      `<a href="https://strava.com/athletes/${properties.uploadedBy.socials.strava}" 
-                          target="_blank" rel="noopener noreferrer"
-                          class="text-blue-500 hover:text-blue-600">
-                        <i class="fab fa-strava"></i>
-                      </a>` : ''
-                    }
-                  </div>
-                </div>
-              </div>
-              <div class="text-sm text-gray-500">
-                ${formattedDate}
+          <div class="max-w-sm p-2">
+            <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
+            <h3 class="text-lg font-semibold mb-1">${title}</h3>
+            ${description ? `<p class="text-sm text-gray-600 mb-2">${description}</p>` : ''}
+            <div class="flex items-center gap-2 mb-2">
+              <img 
+                src="${properties.uploadedBy.picture || '/default-avatar.png'}" 
+                alt="${properties.uploadedBy.name}"
+                class="w-8 h-8 rounded-full"
+              />
+              <div>
+                <div class="font-medium">${properties.uploadedBy.name}</div>
+                <div class="text-sm text-gray-500">${formattedDate}</div>
               </div>
             </div>
-          `)
+          </div>
+        `)
         .addTo(map);
     });
 
-    // Add hover effects
+    // Add hover effects for clusters
     let hoverTimeout: NodeJS.Timeout;
     map.on('mouseenter', 'clusters', async (e) => {
       map.getCanvas().style.cursor = 'pointer';
       
-      // Clear any existing timeout
       if (hoverTimeout) clearTimeout(hoverTimeout);
       
       hoverTimeout = setTimeout(async () => {
@@ -162,12 +142,11 @@ export function initializePhotoLayer(map: Map) {
         const clusterId = features[0].properties.cluster_id;
         
         try {
-          // Get cluster leaves
           const source = map.getSource('photos') as mapboxgl.GeoJSONSource;
           const leaves = await new Promise((resolve, reject) => {
             source.getClusterLeaves(
               clusterId,
-              4, // Get 4 photos (3 to show + 1 to indicate more)
+              4,
               0,
               (err, features) => {
                 if (err) reject(err);
@@ -187,28 +166,28 @@ export function initializePhotoLayer(map: Map) {
           })
             .setLngLat(coordinates)
             .setHTML(`
-              <div class="grid grid-cols-2 gap-1 p-2 bg-white rounded-lg shadow-lg">
+              <div class="flex gap-1 p-2 bg-white rounded-lg shadow-lg">
                 ${previewFeatures.slice(0, 3).map((feature, i) => `
-                  <img 
-                    src="${feature.properties.url}" 
-                    alt="${feature.properties.title}"
-                    class="w-24 h-24 object-cover rounded-sm"
-                  />
-                `).join('')}
-                ${totalCount > 3 ? `
-                  <div class="relative w-24 h-24">
-                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
-                      <span class="text-white font-semibold">+${totalCount - 3}</span>
-                    </div>
+                  <div class="relative">
+                    <img 
+                      src="${feature.properties.url}" 
+                      alt="${feature.properties.title}"
+                      class="w-24 h-24 object-cover rounded-sm"
+                    />
+                    ${i === 2 && totalCount > 3 ? `
+                      <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
+                        <span class="text-white font-semibold">+${totalCount - 3}</span>
+                      </div>
+                    ` : ''}
                   </div>
-                ` : ''}
+                `).join('')}
               </div>
             `)
             .addTo(map);
         } catch (error) {
           console.error('Error showing cluster preview:', error);
         }
-      }, 300); // 300ms delay before showing preview
+      }, 300);
     });
 
     map.on('mouseleave', 'clusters', () => {
@@ -218,12 +197,61 @@ export function initializePhotoLayer(map: Map) {
       if (popup) popup.remove();
     });
 
-    map.on('mouseenter', 'unclustered-point', () => {
+    // Add hover effects for single photos
+    let singlePhotoPopup: mapboxgl.Popup | null = null;
+    map.on('mouseenter', 'unclustered-point', (e) => {
       map.getCanvas().style.cursor = 'pointer';
+      
+      const coordinates = (e.features![0].geometry as any).coordinates.slice();
+      const properties = e.features![0].properties;
+      
+      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+      }
+
+      singlePhotoPopup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: 'photo-marker-popup',
+        maxWidth: '300px',
+        offset: [0, -10]
+      })
+      .setLngLat(coordinates)
+      .setHTML(`
+        <div class="p-2 bg-white rounded-lg shadow-lg">
+          <div class="relative">
+            <img 
+              src="${properties.url}" 
+              alt="${properties.title}"
+              class="w-64 h-48 object-cover rounded-sm"
+            />
+          </div>
+          <div class="mt-2">
+            <h3 class="font-medium text-sm">${properties.title}</h3>
+            ${properties.description ? 
+              `<p class="text-xs text-gray-600 mt-1">${properties.description}</p>` : 
+              ''
+            }
+            <div class="flex items-center gap-2 mt-2">
+              <img 
+                src="${properties.uploadedBy.picture}" 
+                alt="${properties.uploadedBy.name}"
+                class="w-6 h-6 rounded-full"
+              />
+              <span class="text-xs text-gray-700">${properties.uploadedBy.name}</span>
+            </div>
+          </div>
+        </div>
+      `)
+      .addTo(map);
     });
     
     map.on('mouseleave', 'unclustered-point', () => {
       map.getCanvas().style.cursor = '';
+      if (singlePhotoPopup) {
+        singlePhotoPopup.remove();
+        singlePhotoPopup = null;
+      }
     });
 
     photoLayerAdded = true;
@@ -247,7 +275,7 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
       const geojson = {
         type: 'FeatureCollection',
         features: photos
-          .filter(photo => photo.location) // Only include photos with location data
+          .filter(photo => photo.location)
           .map(photo => ({
             type: 'Feature',
             geometry: {

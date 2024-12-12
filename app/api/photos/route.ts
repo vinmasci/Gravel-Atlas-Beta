@@ -8,7 +8,6 @@ export async function GET() {
     const results = await photos
       .find({})
       .sort({ uploadedAt: -1 })
-      .limit(100)
       .toArray() as PhotoDocument[]
 
     // Transform to match the format expected by the map

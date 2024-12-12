@@ -3,7 +3,6 @@
 import React from 'react'
 import { Marker, Popup } from 'mapbox-gl'
 import { PhotoDisplayData } from '@/app/types/photos'
-import Image from 'next/image'
 
 interface PhotoMarkerProps {
   photo: PhotoDisplayData
@@ -18,32 +17,38 @@ export function PhotoMarker({ photo, map, onClick }: PhotoMarkerProps) {
   React.useEffect(() => {
     if (!photo.location) return
 
-    // Create a popup
+    // Create a popup for single photo
     const popup = new Popup({
       closeButton: false,
       closeOnClick: false,
       maxWidth: '300px',
-      className: 'photo-marker-popup'
+      className: 'photo-marker-popup',
+      offset: [0, -10]
     })
-// In the popup HTML for clusters, replace the grid section with:
-.setHTML(`
-  <div class="flex gap-1 p-2 bg-white rounded-lg shadow-lg">
-    ${previewFeatures.slice(0, 3).map((feature, i) => `
-      <div class="relative">
-        <img 
-          src="${feature.properties.url}" 
-          alt="${feature.properties.title}"
-          class="w-24 h-24 object-cover rounded-sm"
-        />
-        ${i === 2 && totalCount > 3 ? `
-          <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
-            <span class="text-white font-semibold">+${totalCount - 3}</span>
+    .setHTML(`
+      <div class="p-2 bg-white rounded-lg shadow-lg">
+        <div class="relative">
+          <img 
+            src="${photo.url}" 
+            alt="${photo.title}"
+            class="w-full h-36 object-cover rounded-sm"
+          />
+        </div>
+        <div class="mt-2">
+          <h3 class="font-semibold text-sm">${photo.title}</h3>
+          ${photo.description ? `<p class="text-xs text-gray-600 mt-1">${photo.description}</p>` : ''}
+          <div class="flex items-center gap-2 mt-2">
+            <img 
+              src="${photo.uploadedBy.picture}" 
+              alt="${photo.uploadedBy.name}"
+              class="w-6 h-6 rounded-full"
+            />
+            <span class="text-xs text-gray-700">${photo.uploadedBy.name}</span>
           </div>
-        ` : ''}
+        </div>
       </div>
-    `).join('')}
-  </div>
-`)
+    `)
+
     // Create marker element
     const el = document.createElement('div')
     el.className = 'photo-marker'
@@ -63,8 +68,16 @@ export function PhotoMarker({ photo, map, onClick }: PhotoMarkerProps) {
       anchor: 'bottom'
     })
     .setLngLat([photo.location.lng, photo.location.lat])
-    .setPopup(popup)
     .addTo(map)
+
+    // Add hover handlers
+    el.addEventListener('mouseenter', () => {
+      popup.setLngLat([photo.location.lng, photo.location.lat]).addTo(map)
+    })
+
+    el.addEventListener('mouseleave', () => {
+      popup.remove()
+    })
 
     // Add click handler
     el.addEventListener('click', () => {

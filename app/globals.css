@@ -70,36 +70,27 @@
   }
 }
 
-.photo-marker {
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.photo-marker:hover {
-  transform: scale(1.1);
-}
-
 .photo-marker-popup {
-  max-width: 300px !important;
+  z-index: 3;
 }
 
-.photo-marker-popup img {
-  width: 100%;
-  height: 150px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.mapboxgl-popup-content {
+.photo-marker-popup .mapboxgl-popup-content {
   padding: 0 !important;
   border-radius: 0.5rem !important;
+  overflow: hidden;
+  background: white;
 }
 
-.cluster-preview-popup .mapboxgl-popup-content {
-  background: transparent !important;
-  box-shadow: none !important;
+.photo-marker-popup .mapboxgl-popup-tip {
+  border-top-color: white !important;
 }
 
-.cluster-preview-popup .mapboxgl-popup-tip {
-  display: none;
+/* Dark mode support */
+.dark .photo-marker-popup .mapboxgl-popup-content {
+  background: rgb(23, 23, 23);
+  color: white;
+}
+
+.dark .photo-marker-popup .mapboxgl-popup-tip {
+  border-top-color: rgb(23, 23, 23) !important;
 }

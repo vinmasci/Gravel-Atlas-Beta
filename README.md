@@ -1,3 +1,5 @@
+PLEASE DONT TRY TO WRITE ANYTHING YOUSELF
+
 # Gravel Atlas Beta
 
 A web application for mapping and exploring gravel roads across Australia. Built with Next.js, Mapbox, and modern web technologies.
