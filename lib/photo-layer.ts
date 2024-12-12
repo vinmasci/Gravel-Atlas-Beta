@@ -7,15 +7,25 @@ let photoSourceAdded = false;
 let photoLayerAdded = false;
 
 export async function fetchPhotos(): Promise<PhotoDisplayData[]> {
+  console.log('Fetching photos...');
   const response = await fetch('/api/photos');
   if (!response.ok) {
+    console.error('Failed to fetch photos:', response.status, response.statusText);
     throw new Error('Failed to fetch photos');
   }
-  return response.json();
+  const data = await response.json();
+  console.log('Fetched photos data:', {
+    total: data.length,
+    firstPhoto: data[0]
+  });
+  return data;
 }
 
 export function initializePhotoLayer(map: Map) {
+  console.log('Initializing photo layer...');
+  
   if (!photoSourceAdded) {
+    console.log('Adding photos source...');
     map.addSource('photos', {
       type: 'geojson',
       data: {
@@ -30,16 +40,24 @@ export function initializePhotoLayer(map: Map) {
   }
 
   map.loadImage('/icons/circle-camera-duotone-solid.png', (error, image) => {
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading custom-marker image:', error);
+      throw error;
+    }
     map.addImage('custom-marker', image!);
   });
   
   map.loadImage('/icons/circle-camera-duotone-solid.png', (error, image) => {
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading single-photo image:', error);
+      throw error;
+    }
     map.addImage('single-photo', image!);
   });
 
   if (!photoLayerAdded) {
+    console.log('Adding map layers...');
+    
     // Add custom cluster HTML
     map.addLayer({
         id: 'clusters',
@@ -77,10 +95,15 @@ export function initializePhotoLayer(map: Map) {
         layers: ['clusters']
       });
       const clusterId = features[0].properties.cluster_id;
+      console.log('Cluster clicked:', { clusterId });
+      
       (map.getSource('photos') as mapboxgl.GeoJSONSource).getClusterExpansionZoom(
         clusterId,
         (err, zoom) => {
-          if (err) return;
+          if (err) {
+            console.error('Error getting cluster zoom:', err);
+            return;
+          }
 
           map.easeTo({
             center: (features[0].geometry as any).coordinates,
@@ -93,6 +116,11 @@ export function initializePhotoLayer(map: Map) {
     map.on('click', 'unclustered-point', (e) => {
         const coordinates = (e.features![0].geometry as any).coordinates.slice();
         const properties = e.features![0].properties;
+        console.log('Single photo clicked:', {
+          properties,
+          uploadedBy: properties.uploadedBy
+        });
+        
         const { title, description, url, uploadedBy, dateTaken } = properties;
       
         while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
@@ -142,6 +170,7 @@ export function initializePhotoLayer(map: Map) {
           layers: ['clusters']
         });
         const clusterId = features[0].properties.cluster_id;
+        console.log('Cluster hover:', { clusterId });
         
         try {
           const source = map.getSource('photos') as mapboxgl.GeoJSONSource;
@@ -206,6 +235,7 @@ export function initializePhotoLayer(map: Map) {
       
       const coordinates = (e.features![0].geometry as any).coordinates.slice();
       const properties = e.features![0].properties;
+      console.log('Photo hover:', properties);
       
       while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
         coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
@@ -215,7 +245,7 @@ export function initializePhotoLayer(map: Map) {
         closeButton: false,
         closeOnClick: false,
         className: 'photo-marker-popup',
-        maxWidth: '120px',  // Match the image width
+        maxWidth: '120px',
         offset: [0, -10]
       })
       .setLngLat(coordinates)
@@ -245,6 +275,8 @@ export function initializePhotoLayer(map: Map) {
 
 export async function updatePhotoLayer(map: Map, visible: boolean) {
   try {
+    console.log('Updating photo layer, visible:', visible);
+    
     if (!map.getSource('photos')) {
       initializePhotoLayer(map);
     }
@@ -256,32 +288,48 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
     }
 
     if (visible) {
+      console.log('Fetching photos for layer update...');
       const photos = await fetchPhotos();
+      console.log('Creating GeoJSON from photos:', {
+        total: photos.length,
+        firstPhoto: photos[0]
+      });
+      
       const geojson = {
         type: 'FeatureCollection',
         features: photos
           .filter(photo => photo.location)
-          .map(photo => ({
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [photo.location!.lng, photo.location!.lat]
-            },
-            properties: {
-              id: photo.id,
-              title: photo.originalName || 'Untitled',
-              description: photo.caption || '',
-              url: photo.url,
-              uploadedBy: {
-                id: photo.auth0Id,
-                name: photo.username,
-                picture: photo.picture
+          .map(photo => {
+            const feature = {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [photo.location!.lng, photo.location!.lat]
               },
-              dateTaken: photo.uploadedAt
-            }
-          }))
+              properties: {
+                id: photo.id,
+                title: photo.originalName || 'Untitled',
+                description: photo.caption || '',
+                url: photo.url,
+                uploadedBy: {
+                  id: photo.auth0Id,
+                  name: photo.username,
+                  picture: photo.picture
+                },
+                dateTaken: photo.uploadedAt
+              }
+            };
+            
+            console.log('Created feature:', {
+              id: feature.properties.id,
+              uploadedBy: feature.properties.uploadedBy
+            });
+            
+            return feature;
+          })
       };
 
+      console.log('Setting data source with features:', geojson.features.length);
       (map.getSource('photos') as mapboxgl.GeoJSONSource).setData(geojson as any);
     }
   } catch (error) {
