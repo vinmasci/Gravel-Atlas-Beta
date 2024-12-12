@@ -116,15 +116,16 @@ export function initializePhotoLayer(map: Map) {
     map.on('click', 'unclustered-point', (e) => {
         const coordinates = (e.features![0].geometry as any).coordinates.slice();
         const properties = e.features![0].properties;
-        console.log('Single photo clicked:', {
-          properties,
-          uploadedBy: properties.uploadedBy
-        });
         
-        // Parse uploadedBy if it's a string
-        const uploadedBy = typeof properties.uploadedBy === 'string' 
-          ? JSON.parse(properties.uploadedBy) 
-          : properties.uploadedBy;
+        // Parse the stringified uploadedBy
+        let uploadedBy;
+        try {
+          uploadedBy = JSON.parse(properties.uploadedBy);
+          console.log('Parsed uploadedBy:', uploadedBy);
+        } catch (error) {
+          console.error('Error parsing uploadedBy:', error);
+          uploadedBy = { name: 'Unknown user', picture: '' };
+        }
       
         const { title, description, url, dateTaken } = properties;
       
@@ -133,17 +134,21 @@ export function initializePhotoLayer(map: Map) {
         }
       
         const formatDate = (dateString: string) => {
-          try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-AU', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            });
-          } catch (error) {
-            return 'Unknown date';
-          }
-        };
+            try {
+              // Convert MongoDB date string to local date string
+              const date = new Date(dateString);
+              if (isNaN(date.getTime())) return 'Unknown date';
+              
+              return date.toLocaleDateString('en-AU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+            } catch (error) {
+              console.error('Date parsing error:', error);
+              return 'Unknown date';
+            }
+          };
       
         const formattedDate = dateTaken ? formatDate(dateTaken) : 'Unknown date';
       
@@ -160,16 +165,16 @@ export function initializePhotoLayer(map: Map) {
               <div class="space-y-2">
                 ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
                 <div class="flex items-center gap-2">
-                  ${uploadedBy?.picture ? `
+                  ${uploadedBy.picture ? `
                     <img 
                       src="${uploadedBy.picture}" 
-                      alt="${uploadedBy.name || 'User'}"
+                      alt="${uploadedBy.name}"
                       class="w-8 h-8 rounded-full border border-white/20"
                     />
                   ` : ''}
                   <div>
-                    <div class="font-medium text-sm">${uploadedBy?.name || 'Unknown user'}</div>
-                    <div class="text-xs opacity-75">${formattedDate}</div>
+                    <div class="font-medium text-sm">${uploadedBy.name}</div>
+                <div class="text-xs opacity-75">${formatDate(properties.dateTaken)}</div>
                   </div>
                 </div>
               </div>
