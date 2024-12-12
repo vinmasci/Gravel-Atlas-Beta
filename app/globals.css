@@ -72,11 +72,18 @@
 
 /* Single photo preview */
 .photo-marker-popup .mapboxgl-popup-content {
-  padding: 0 !important;
+  padding: 4px !important;  /* Add back some padding */
   border-radius: 0.25rem !important;
   overflow: hidden;
   background: white;
   line-height: 0;
+}
+
+.photo-marker-popup .photo-preview img {
+  width: 120px !important;  /* Force smaller image size */
+  height: 120px !important;
+  object-fit: cover;
+  display: block;  /* Remove any line-height issues */
 }
 
 .photo-marker-popup .photo-preview {

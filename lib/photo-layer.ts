@@ -213,7 +213,7 @@ export function initializePhotoLayer(map: Map) {
         closeButton: false,
         closeOnClick: false,
         className: 'photo-marker-popup',
-        maxWidth: '300px',
+        maxWidth: '120px',  // Match the image width
         offset: [0, -10]
       })
       .setLngLat(coordinates)
@@ -222,7 +222,7 @@ export function initializePhotoLayer(map: Map) {
           <img 
             src="${properties.url}" 
             alt="${properties.title}"
-            class="w-32 h-32 object-cover"
+            class="object-cover"
           />
         </div>
       `)
