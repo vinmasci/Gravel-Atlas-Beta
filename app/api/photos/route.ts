@@ -23,22 +23,22 @@ export async function GET() {
     console.log('Starting transformation...')
     
     const displayPhotos: PhotoDisplayData[] = results.map(photo => {
-      const transformed = {
-        id: photo._id!.toString(),
-        url: photo.url,
-        title: photo.originalName || 'Untitled',
-        description: photo.caption,
-        location: {
-          lat: photo.latitude,
-          lng: photo.longitude
-        },
-        dateTaken: photo.uploadedAt,
-        uploadedBy: {
-          id: photo.auth0Id,
-          name: photo.username,
-          picture: photo.picture
-        }
-      }
+        const transformed = {
+            id: photo._id!.toString(),
+            url: photo.url,
+            title: photo.originalName || 'Untitled',
+            description: photo.caption,
+            location: {
+              lat: photo.latitude,
+              lng: photo.longitude
+            },
+            dateTaken: photo.uploadedAt,
+            uploadedBy: {
+              id: photo.auth0Id,
+              name: photo.bioName || photo.username, // Prefer bioName
+              picture: photo.picture
+            }
+          }
       
       console.log('Transformed photo:', JSON.stringify({
         id: transformed.id,

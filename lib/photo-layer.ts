@@ -121,13 +121,31 @@ export function initializePhotoLayer(map: Map) {
           uploadedBy: properties.uploadedBy
         });
         
-        const { title, description, url, uploadedBy, dateTaken } = properties;
+        // Parse uploadedBy if it's a string
+        const uploadedBy = typeof properties.uploadedBy === 'string' 
+          ? JSON.parse(properties.uploadedBy) 
+          : properties.uploadedBy;
+      
+        const { title, description, url, dateTaken } = properties;
       
         while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
           coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
         }
       
-        const formattedDate = dateTaken ? new Date(dateTaken).toLocaleDateString() : 'Unknown date';
+        const formatDate = (dateString: string) => {
+          try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-AU', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          } catch (error) {
+            return 'Unknown date';
+          }
+        };
+      
+        const formattedDate = dateTaken ? formatDate(dateTaken) : 'Unknown date';
       
         const popup = new mapboxgl.Popup({
           closeButton: true,
@@ -142,13 +160,15 @@ export function initializePhotoLayer(map: Map) {
               <div class="space-y-2">
                 ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
                 <div class="flex items-center gap-2">
-                  <img 
-                    src="${properties.uploadedBy.picture}" 
-                    alt="${properties.uploadedBy.name}"
-                    class="w-8 h-8 rounded-full border border-white/20"
-                  />
+                  ${uploadedBy?.picture ? `
+                    <img 
+                      src="${uploadedBy.picture}" 
+                      alt="${uploadedBy.name || 'User'}"
+                      class="w-8 h-8 rounded-full border border-white/20"
+                    />
+                  ` : ''}
                   <div>
-                    <div class="font-medium text-sm">${properties.uploadedBy.name}</div>
+                    <div class="font-medium text-sm">${uploadedBy?.name || 'Unknown user'}</div>
                     <div class="text-xs opacity-75">${formattedDate}</div>
                   </div>
                 </div>
@@ -301,25 +321,25 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
           .filter(photo => photo.location)
           .map(photo => {
             const feature = {
-              type: 'Feature',
-              geometry: {
-                type: 'Point',
-                coordinates: [photo.location!.lng, photo.location!.lat]
-              },
-              properties: {
-                id: photo.id,
-                title: photo.originalName || 'Untitled',
-                description: photo.caption || '',
-                url: photo.url,
-                uploadedBy: {
-                  id: photo.auth0Id,
-                  name: photo.username,
-                  picture: photo.picture
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: [photo.location!.lng, photo.location!.lat]
                 },
-                dateTaken: photo.uploadedAt
-              }
-            };
-            
+                properties: {
+                  id: photo.id,
+                  title: photo.originalName || 'Untitled',
+                  description: photo.caption || '',
+                  url: photo.url,
+                  // Change this part
+                  uploadedBy: {
+                    id: photo.uploadedBy.id,
+                    name: photo.uploadedBy.name,
+                    picture: photo.uploadedBy.picture
+                  },
+                  dateTaken: photo.uploadedAt
+                }
+              };
             console.log('Created feature:', {
               id: feature.properties.id,
               uploadedBy: feature.properties.uploadedBy
