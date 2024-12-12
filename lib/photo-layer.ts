@@ -218,29 +218,12 @@ export function initializePhotoLayer(map: Map) {
       })
       .setLngLat(coordinates)
       .setHTML(`
-        <div class="p-2 bg-white rounded-lg shadow-lg">
-          <div class="relative">
-            <img 
-              src="${properties.url}" 
-              alt="${properties.title}"
-              class="w-64 h-48 object-cover rounded-sm"
-            />
-          </div>
-          <div class="mt-2">
-            <h3 class="font-medium text-sm">${properties.title}</h3>
-            ${properties.description ? 
-              `<p class="text-xs text-gray-600 mt-1">${properties.description}</p>` : 
-              ''
-            }
-            <div class="flex items-center gap-2 mt-2">
-              <img 
-                src="${properties.uploadedBy.picture}" 
-                alt="${properties.uploadedBy.name}"
-                class="w-6 h-6 rounded-full"
-              />
-              <span class="text-xs text-gray-700">${properties.uploadedBy.name}</span>
-            </div>
-          </div>
+        <div class="photo-preview">
+          <img 
+            src="${properties.url}" 
+            alt="${properties.title}"
+            class="w-32 h-32 object-cover"
+          />
         </div>
       `)
       .addTo(map);
