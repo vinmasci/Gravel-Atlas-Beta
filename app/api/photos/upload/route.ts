@@ -127,16 +127,15 @@ export async function POST(request: Request): Promise<NextResponse<PhotoUploadRe
     try {
       const photos = await getCollection('photos')
       const photoDoc: PhotoDocument = {
-        userId: session.user.sub,
         url: imageUrl,
-        title: metadata.title,
-        description: metadata.description,
-        location,
-        dateTaken: metadata.dateTaken ? new Date(metadata.dateTaken) : null,
+        originalName: file.name,
         uploadedAt: new Date(),
-        filename,
-        status: 'active',
-        tags: []
+        latitude: metadata.latitude || 0,
+        longitude: metadata.longitude || 0,
+        auth0Id: session.user.sub,
+        username: session.user.name || '',
+        caption: metadata.description || '',
+        picture: session.user.picture || ''
       }
 
       await photos.insertOne(photoDoc)
