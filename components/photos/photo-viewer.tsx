@@ -21,13 +21,17 @@ interface PhotoViewerProps {
 export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
   if (!photo) return null
 
-  const formatDate = (dateValue: any) => {
+  const formatDate = (dateValue: string | number) => {
     try {
-      const date = new Date(typeof dateValue === 'string' ? parseInt(dateValue) : dateValue);
+      // Convert string to number if it's a string
+      const timestamp = typeof dateValue === 'string' ? parseInt(dateValue) : dateValue;
+      const date = new Date(timestamp);
+      
       if (isNaN(date.getTime())) {
         console.log('Invalid date from:', dateValue);
         return 'Invalid Date';
       }
+      
       return date.toLocaleDateString('en-AU', {
         year: 'numeric',
         month: 'long',

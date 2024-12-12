@@ -335,14 +335,12 @@ export async function updatePhotoLayer(map: Map, visible: boolean) {
                     title: photo.originalName || 'Untitled',
                     description: photo.caption || '',
                     url: photo.url,
-                    uploadedBy: JSON.stringify({  // Make sure to stringify the object
+                    uploadedBy: JSON.stringify({
                       id: photo.uploadedBy.id,
                       name: photo.uploadedBy.name,
                       picture: photo.uploadedBy.picture
                     }),
-                    dateTaken: photo.uploadedAt instanceof Date ? 
-                      photo.uploadedAt.getTime() : 
-                      new Date(photo.uploadedAt).getTime()  // Convert to timestamp
+                    dateTaken: photo.dateTaken  // This should now be a timestamp string
                   }
               };
             console.log('Created feature:', {
