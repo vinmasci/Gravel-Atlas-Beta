@@ -51,7 +51,7 @@ export function initializePhotoLayer(map: Map) {
           'icon-size': 1,
           'text-field': '{point_count_abbreviated}',
           'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-          'text-size': 12,
+          'text-size': 0.8,
           'text-offset': [0, 0.1],
           'icon-allow-overlap': true,
           'text-allow-overlap': true
