@@ -117,69 +117,71 @@ export function initializePhotoLayer(map: Map) {
         const coordinates = (e.features![0].geometry as any).coordinates.slice();
         const properties = e.features![0].properties;
         
-        // Parse the stringified uploadedBy
+        // Parse uploadedBy
         let uploadedBy;
         try {
           uploadedBy = JSON.parse(properties.uploadedBy);
-          console.log('Parsed uploadedBy:', uploadedBy);
         } catch (error) {
           console.error('Error parsing uploadedBy:', error);
           uploadedBy = { name: 'Unknown user', picture: '' };
         }
-      
+    
         const { title, description, url, dateTaken } = properties;
-      
+        
         while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
           coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
         }
-      
-        const formatDate = (dateString: number) => {
-            try {
-              const date = new Date(dateString);
-              return date.toLocaleDateString('en-AU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              });
-            } catch (error) {
-              console.error('Date parsing error:', error);
-              return 'Unknown date';
+    
+        // Format date - check both timestamp and string formats
+        const formatDate = (dateValue: any) => {
+          try {
+            console.log('Date value:', dateValue, typeof dateValue);
+            const date = new Date(typeof dateValue === 'string' ? parseInt(dateValue) : dateValue);
+            if (isNaN(date.getTime())) {
+              console.log('Invalid date from:', dateValue);
+              return 'Invalid Date';
             }
-          };
-      
-        const formattedDate = dateTaken ? formatDate(dateTaken) : 'Unknown date';
-      
+            return date.toLocaleDateString('en-AU', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          } catch (error) {
+            console.error('Date parsing error:', error);
+            return 'Invalid Date';
+          }
+        };
+    
         const popup = new mapboxgl.Popup({
           closeButton: true,
           closeOnClick: true,
           maxWidth: '300px',
           className: 'photo-detail-popup'
         })
-          .setLngLat(coordinates)
-          .setHTML(`
-            <div class="max-w-sm p-2 bg-black/80 text-white">
-              <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
-              <div class="space-y-2">
-                ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
-                <div class="flex items-center gap-2">
-                  ${uploadedBy.picture ? `
-                    <img 
-                      src="${uploadedBy.picture}" 
-                      alt="${uploadedBy.name}"
-                      class="w-8 h-8 rounded-full border border-white/20"
-                    />
-                  ` : ''}
-                  <div>
-                    <div class="font-medium text-sm">${uploadedBy.name}</div>
-                    <div class="text-xs opacity-75">${formatDate(parseInt(properties.dateTaken))}</div>
-                  </div>
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="max-w-sm p-2 bg-black/80 text-white">
+            <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
+            <div class="space-y-2">
+              ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
+              <div class="flex items-center gap-2">
+                ${uploadedBy.picture ? `
+                  <img 
+                    src="${uploadedBy.picture}" 
+                    alt="${uploadedBy.name}"
+                    class="w-8 h-8 rounded-full border border-white/20"
+                  />
+                ` : ''}
+                <div>
+                  <div class="font-medium text-sm">${uploadedBy.name}</div>
+                  <div class="text-xs opacity-75">${formatDate(dateTaken)}</div>
                 </div>
               </div>
             </div>
-          `)
-          .addTo(map);
-      });
-
+          </div>
+        `)
+        .addTo(map);
+    });
     // Add hover effects for clusters
     let hoverTimeout: NodeJS.Timeout;
     map.on('mouseenter', 'clusters', async (e) => {
