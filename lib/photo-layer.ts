@@ -48,7 +48,7 @@ export function initializePhotoLayer(map: Map) {
         filter: ['has', 'point_count'],
         layout: {
           'icon-image': 'custom-marker', // We'll need to add this image
-          'icon-size': 1,
+          'icon-size': 0.1,
           'text-field': '{point_count_abbreviated}',
           'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
           'text-size': 0.8,
@@ -66,7 +66,7 @@ export function initializePhotoLayer(map: Map) {
         filter: ['!', ['has', 'point_count']],
         layout: {
           'icon-image': 'single-photo', // We'll need to add this image
-          'icon-size': 0.8,
+          'icon-size': 0.1,
           'icon-allow-overlap': true
         }
       });

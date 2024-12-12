@@ -16,24 +16,15 @@ export interface GeoPoint {
   // The document as stored in MongoDB
   export interface PhotoDocument {
     _id?: string;
-    userId: string;
     url: string;
-    title: string;
-    description: string;
-    location: GeoPoint | null;
-    dateTaken: Date | null;
+    originalName: string;
     uploadedAt: Date;
-    filename: string;
-    status: 'active' | 'deleted' | 'pending';
-    exifData?: {
-      make?: string;
-      model?: string;
-      exposureTime?: string;
-      fNumber?: number;
-      iso?: number;
-      focalLength?: string;
-    };
-    tags?: string[];
+    latitude: number;
+    longitude: number;
+    auth0Id: string;
+    username: string;
+    caption: string;
+    picture: string;
   }
   
   // API response when uploading a photo
@@ -54,23 +45,15 @@ export interface GeoPoint {
     id: string;
     url: string;
     title: string;
-    description: string;
-    location?: {
+    description?: string;
+    location: {
       lat: number;
       lng: number;
     };
     dateTaken?: Date;
     uploadedBy: {
-        id: string;
-        name: string;
-        picture: string;
-        socials?: {
-          instagram?: string;
-          strava?: string;
-          // add other socials as needed
-        };
-      };
-    
-    
-    tags: string[];
+      id: string;
+      name: string;
+      picture: string;
+    };
   }

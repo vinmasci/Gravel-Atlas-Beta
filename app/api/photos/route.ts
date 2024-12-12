@@ -2,36 +2,35 @@ import { NextResponse } from 'next/server'
 import { getCollection } from '@/lib/db'
 import { PhotoDocument, PhotoDisplayData } from '@/app/types/photos'
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const photos = await getCollection('photos')
     const results = await photos
-      .find({ status: 'active' })
+      .find({})
       .sort({ uploadedAt: -1 })
       .limit(100)
       .toArray() as PhotoDocument[]
 
-    // Transform to display format
+    // Transform to match the format expected by the map
     const displayPhotos: PhotoDisplayData[] = results.map(photo => ({
       id: photo._id!.toString(),
       url: photo.url,
-      title: photo.title,
-      description: photo.description,
-      location: photo.location ? {
-        lat: photo.location.coordinates[1],
-        lng: photo.location.coordinates[0]
-      } : undefined,
-      dateTaken: photo.dateTaken,
-      uploadedBy: {
-        id: photo.userId,
-        name: photo.userId, // You might want to fetch user details here
-        picture: undefined
+      title: photo.originalName || 'Untitled',
+      description: photo.caption,
+      location: {
+        lat: photo.latitude,
+        lng: photo.longitude
       },
-      tags: photo.tags || []
+      dateTaken: photo.uploadedAt,
+      uploadedBy: {
+        id: photo.auth0Id,
+        name: photo.username,
+        picture: photo.picture
+      }
     }))
 
     return NextResponse.json(displayPhotos)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching photos:', error)
     return NextResponse.json(
       { error: 'Failed to fetch photos' },
