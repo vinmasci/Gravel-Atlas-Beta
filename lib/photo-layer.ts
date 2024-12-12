@@ -151,36 +151,65 @@ export function initializePhotoLayer(map: Map) {
             return 'Invalid Date';
           }
         };
-    
+
         const popup = new mapboxgl.Popup({
-          closeButton: true,
-          closeOnClick: true,
-          maxWidth: '300px',
-          className: 'photo-detail-popup'
-        })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="max-w-sm p-2 bg-black/80 text-white">
-            <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
-            <div class="space-y-2">
-              ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
-              <div class="flex items-center gap-2">
-                ${uploadedBy.picture ? `
-                  <img 
-                    src="${uploadedBy.picture}" 
-                    alt="${uploadedBy.name}"
-                    class="w-8 h-8 rounded-full border border-white/20"
-                  />
-                ` : ''}
-                <div>
-                  <div class="font-medium text-sm">${uploadedBy.name}</div>
-                  <div class="text-xs opacity-75">${formatDate(dateTaken)}</div>
+            closeButton: true,
+            closeOnClick: true,
+            maxWidth: '300px',
+            className: 'photo-detail-popup'
+          })
+          .setLngLat(coordinates)
+          .setHTML(`
+            <div class="max-w-sm p-2 bg-black/80 text-white">
+              <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
+              <div class="space-y-2">
+                ${description ? `<p class="text-sm opacity-90">${description}</p>` : ''}
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    ${uploadedBy.picture ? `
+                      <img 
+                        src="${uploadedBy.picture}" 
+                        alt="${uploadedBy.name}"
+                        class="w-8 h-8 rounded-full border border-white/20"
+                      />
+                    ` : ''}
+                    <div>
+                      <div class="font-medium text-sm">${uploadedBy.name}</div>
+                      <div class="text-xs opacity-75">${formatDate(dateTaken)}</div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex gap-3 text-sm">
+                    ${uploadedBy.website ? `
+                      <a href="${uploadedBy.website}" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white transition-colors">
+                        <i class="fa-solid fa-globe"></i>
+                      </a>
+                    ` : ''}
+                    
+                    ${uploadedBy.socialLinks?.instagram ? `
+                      <a href="${uploadedBy.socialLinks.instagram}" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-[#E1306C] transition-colors">
+                        <i class="fa-brands fa-instagram"></i>
+                      </a>
+                    ` : ''}
+          
+                    ${uploadedBy.socialLinks?.strava ? `
+                      <a href="${uploadedBy.socialLinks.strava}" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-[#FC4C02] transition-colors">
+                        <i class="fa-brands fa-strava"></i>
+                      </a>
+                    ` : ''}
+          
+                    ${uploadedBy.socialLinks?.facebook ? `
+                      <a href="${uploadedBy.socialLinks.facebook}" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-[#4267B2] transition-colors">
+                        <i class="fa-brands fa-facebook"></i>
+                      </a>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        `)
-        .addTo(map);
+          `)
+          .addTo(map);
+          
     });
     // Add hover effects for clusters
     let hoverTimeout: NodeJS.Timeout;

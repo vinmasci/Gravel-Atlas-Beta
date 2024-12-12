@@ -40,20 +40,25 @@ export interface GeoPoint {
     };
   }
   
-  // Photo data as used in the frontend
-export interface PhotoDisplayData {
-  id: string;
-  url: string;
-  title: string;
-  description?: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  dateTaken: string;
-  uploadedBy: {
+  export interface PhotoDisplayData {
     id: string;
-    name: string;
-    picture: string;
-  };
-}
+    url: string;
+    title: string;
+    description?: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
+    dateTaken: string;
+    uploadedBy: {
+      id: string;
+      name: string;
+      picture: string;
+      website?: string;
+      socialLinks?: {
+        instagram?: string;
+        strava?: string;
+        facebook?: string;
+      };
+    };
+  }

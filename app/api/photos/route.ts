@@ -41,7 +41,13 @@ export async function GET() {
           uploadedBy: {
             id: photo.auth0Id,
             name: user?.bioName || photo.username,
-            picture: photo.picture
+            picture: photo.picture,
+            website: user?.website,
+            socialLinks: user?.socialLinks || {
+              instagram: '',
+              strava: '',
+              facebook: ''
+            }
           }
         }
       })

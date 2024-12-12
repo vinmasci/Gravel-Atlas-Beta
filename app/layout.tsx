@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { Navbar } from '@/components/navbar'
 import { ThemeProvider } from "@/components/theme-provider"
@@ -21,6 +22,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link 
+          rel="stylesheet" 
+          href="https://site-assets.fontawesome.com/releases/v6.4.0/css/all.css" 
+        />
+        <Script 
+          src="https://kit.fontawesome.com/b02e210188.js" 
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={inter.className}>
         <UserProvider>
           <ThemeProvider
@@ -40,5 +52,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-<link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.4.0/css/all.css" />

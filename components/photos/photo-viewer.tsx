@@ -4,9 +4,6 @@ import React from 'react'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import { PhotoDisplayData } from '@/app/types/photos'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,27 +18,7 @@ interface PhotoViewerProps {
 export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
   if (!photo) return null
 
-  const formatDate = (dateValue: string | number) => {
-    try {
-      // Convert string to number if it's a string
-      const timestamp = typeof dateValue === 'string' ? parseInt(dateValue) : dateValue;
-      const date = new Date(timestamp);
-      
-      if (isNaN(date.getTime())) {
-        console.log('Invalid date from:', dateValue);
-        return 'Invalid Date';
-      }
-      
-      return date.toLocaleDateString('en-AU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      console.error('Date parsing error:', error);
-      return 'Invalid Date';
-    }
-  };
+  const { uploadedBy } = photo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,14 +39,64 @@ export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold">{photo.title}</h2>
               
-              {/* User info */}
-              <div className="flex items-center space-x-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={photo.uploadedBy.picture} />
-                  <AvatarFallback>{photo.uploadedBy.name?.[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{photo.uploadedBy.name}</p>
+              {/* User info and social links */}
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={uploadedBy.picture} />
+                    <AvatarFallback>{uploadedBy.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{uploadedBy.name}</p>
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                <div className="flex items-center space-x-3 text-sm">
+                  {uploadedBy.website && (
+                    <a 
+                      href={uploadedBy.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Website"
+                    >
+                      <i className="fa-solid fa-globe w-4 h-4"></i>
+                    </a>
+                  )}
+                  {uploadedBy.socialLinks?.instagram && (
+                    <a 
+                      href={uploadedBy.socialLinks.instagram} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-[#E1306C] transition-colors"
+                      title="Instagram"
+                    >
+                      <i className="fa-brands fa-instagram w-4 h-4"></i>
+                    </a>
+                  )}
+                  {uploadedBy.socialLinks?.strava && (
+                    <a 
+                      href={uploadedBy.socialLinks.strava} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-[#FC4C02] transition-colors"
+                      title="Strava"
+                    >
+                      <i className="fa-brands fa-strava w-4 h-4"></i>
+                    </a>
+                  )}
+                  {uploadedBy.socialLinks?.facebook && (
+                    <a 
+                      href={uploadedBy.socialLinks.facebook} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-[#4267B2] transition-colors"
+                      title="Facebook"
+                    >
+                      <i className="fa-brands fa-facebook w-4 h-4"></i>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -79,7 +106,7 @@ export function PhotoViewer({ photo, open, onOpenChange }: PhotoViewerProps) {
               {photo.dateTaken && (
                 <div className="flex items-center gap-1">
                   <CalendarIcon className="w-4 h-4" />
-                  <span>{formatDate(photo.dateTaken)}</span>
+                  <span>{new Date(photo.dateTaken).toLocaleDateString()}</span>
                 </div>
               )}
               {photo.location && (
