@@ -133,12 +133,9 @@ export function initializePhotoLayer(map: Map) {
           coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
         }
       
-        const formatDate = (dateString: string) => {
+        const formatDate = (dateString: number) => {
             try {
-              // Convert MongoDB date string to local date string
               const date = new Date(dateString);
-              if (isNaN(date.getTime())) return 'Unknown date';
-              
               return date.toLocaleDateString('en-AU', {
                 year: 'numeric',
                 month: 'long',
@@ -174,7 +171,7 @@ export function initializePhotoLayer(map: Map) {
                   ` : ''}
                   <div>
                     <div class="font-medium text-sm">${uploadedBy.name}</div>
-                <div class="text-xs opacity-75">${formatDate(properties.dateTaken)}</div>
+                    <div class="text-xs opacity-75">${formatDate(parseInt(properties.dateTaken))}</div>
                   </div>
                 </div>
               </div>
