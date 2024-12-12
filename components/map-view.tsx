@@ -201,6 +201,19 @@ export function MapView() {
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
+  // Add the new useEffect here
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
+      console.error('Mapbox token is missing');
+    }
+    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+      console.error('Google Maps API key is missing');
+    }
+    if (!process.env.NEXT_PUBLIC_THUNDERFOREST_API_KEY) {
+      console.error('Thunderforest API key is missing');
+    }
+  }, []);
+
   const [viewState, setViewState] = useState({
     longitude: 144.9631,
     latitude: -37.8136,
