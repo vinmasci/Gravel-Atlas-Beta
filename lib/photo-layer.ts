@@ -29,12 +29,12 @@ export function initializePhotoLayer(map: Map) {
     photoSourceAdded = true;
   }
 
-  map.loadImage('/path-to-your-image-icon.png', (error, image) => {
+  map.loadImage('/icons/circle-camera-duotone-solid.png', (error, image) => {
     if (error) throw error;
     map.addImage('custom-marker', image!);
   });
   
-  map.loadImage('/path-to-your-single-image-icon.png', (error, image) => {
+  map.loadImage('/icons/circle-camera-duotone-solid.png', (error, image) => {
     if (error) throw error;
     map.addImage('single-photo', image!);
   });
