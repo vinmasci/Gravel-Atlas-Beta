@@ -272,3 +272,95 @@ Based on our conversation, here's my understanding of what you want to do:
    - Properties including gravelType
 
 Is this an accurate understanding of what you're looking to implement? Would you like to clarify or correct any part of this?
+
+I suggest we start with laying out the tasks in order of priority. Let me outline a step-by-step approach:
+
+First Task - Drawing Functionality:
+
+We need to add the draw control panel from Gravel-Atlas2 to your Gravel-Atlas-Beta
+This would start in components/panels/contribute-panel.tsx
+We'll need the route drawing logic from the original routes.js
+The saving mechanism will be similar to save-drawn-route.js but without the difficulty rating
+
+
+Second Task - MongoDB Schema:
+
+Modify your current schema to accommodate the voting system
+Add the vote collection structure from RoadModification.js
+Set up the API endpoints for vote handling
+
+
+
+Would you like to start with the drawing functionality? If so, I can:
+
+Show you the proposed changes to your contribute-panel component
+Set up the route drawing logic
+Create the save endpoint without the difficulty rating
+
+Which part would you like to tackle first?
+
+# Draw Segment Implementation Progress
+
+## Created Files & Structure
+
+```
+app/
+├── contexts/
+│   └── map-context.tsx              # Map context provider for sharing map instance
+├── hooks/
+│   └── use-draw-mode.ts             # Custom hook for handling draw functionality
+│
+components/
+├── panels/
+│   └── draw-segment-panel.tsx       # Panel component for the draw interface
+└── draw-segment-dialog.tsx          # Dialog component for drawing process
+
+Files Modified:
+└── components/
+    └── map-view.tsx                 # Added MapContext provider and map instance state
+```
+
+## Implementation Details
+
+### 1. Map Context (`map-context.tsx`)
+- Provides map instance across components
+- Exports both context and custom hook
+- Type-safe implementation with MapContextType interface
+
+### 2. Drawing Hook (`use-draw-mode.ts`)
+- Manages drawing state
+- Handles map interactions
+- Controls coordinate collection
+- Manages drawing layer on map
+
+### 3. Draw Segment Panel (`draw-segment-panel.tsx`)
+- Provides main interface in sidebar
+- Handles authentication check
+- Triggers drawing dialog
+- Basic drawing controls
+
+### 4. Draw Segment Dialog (`draw-segment-dialog.tsx`)
+- Title input
+- Drawing instructions
+- Start/Cancel controls
+- Drawing status display
+- Save functionality
+
+### 5. Map View Modifications (`map-view.tsx`)
+Added:
+- MapContext.Provider wrapper
+- Map instance state
+- onLoad handler for map instance
+
+## Next Steps To Implement
+1. MongoDB Schema Setup
+2. API Routes:
+   - Segment saving
+   - Segment retrieval
+3. Voting System
+4. Segment Display Layer
+
+## Dependencies to Add
+```bash
+npm install togpx @turf/turf
+```
