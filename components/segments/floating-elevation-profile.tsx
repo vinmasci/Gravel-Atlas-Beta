@@ -22,19 +22,6 @@ interface ElevationPoint {
 
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
-
-// Add this debug AFTER we have checked for 2+ points
-if (drawMode.isDrawing && drawMode.elevationProfile.length >= 2) {
-    console.log('Should render elevation profile:', {
-        elevationPoints: drawMode.elevationProfile,
-        isDrawing: drawMode.isDrawing,
-        elevationLength: drawMode.elevationProfile.length,
-        elevationData: drawMode.elevationProfile.map(p => ({
-            distance: p.distance,
-            elevation: p.elevation
-        }))
-    });
-}
   
   console.log('FloatingElevationProfile render attempt:', {
     drawModeExists: !!drawMode,
@@ -44,6 +31,16 @@ if (drawMode.isDrawing && drawMode.elevationProfile.length >= 2) {
   });
   
   if (!drawMode.isDrawing || drawMode.elevationProfile.length < 2) return null;
+
+  console.log('Should render elevation profile:', {
+    elevationPoints: drawMode.elevationProfile,
+    isDrawing: drawMode.isDrawing,
+    elevationLength: drawMode.elevationProfile.length,
+    elevationData: drawMode.elevationProfile.map(p => ({
+        distance: p.distance,
+        elevation: p.elevation
+    }))
+});
 
   const elevations = drawMode.elevationProfile.map(p => p.elevation);
   const minElevation = Math.min(...elevations);
