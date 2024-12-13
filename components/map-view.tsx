@@ -6,6 +6,7 @@ import Map from 'react-map-gl';
 import { Loader } from '@googlemaps/js-api-loader';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { updatePhotoLayer } from '@/lib/photo-layer';
+import { updateSegmentLayer } from '@/lib/segment-layer';
 import { MapSidebar } from './map-sidebar';
 import { MAP_STYLES } from '@/app/constants/map-styles';
 import type { MapStyle } from '@/app/types/map';
@@ -190,7 +191,6 @@ const MobileControls = ({
 };
 
 export function MapView() {
-  
   const mapContainer = useRef<HTMLDivElement>(null);
   const googleMap = useRef<google.maps.Map | null>(null);
   const mapRef = useRef<any>(null);
@@ -202,19 +202,6 @@ export function MapView() {
   const [showAlert, setShowAlert] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-
-  // Add the new useEffect here
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
-      console.error('Mapbox token is missing');
-    }
-    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-      console.error('Google Maps API key is missing');
-    }
-    if (!process.env.NEXT_PUBLIC_THUNDERFOREST_API_KEY) {
-      console.error('Thunderforest API key is missing');
-    }
-  }, []);
 
   const [viewState, setViewState] = useState({
     longitude: 144.9631,
@@ -240,14 +227,14 @@ export function MapView() {
     { id: 'campsites', name: 'Campsites', visible: false },
   ]);
 
-    // ADD THIS EFFECT HERE
-    useEffect(() => {
-      googleLoader.load().then(() => {
-        setIsGoogleLoaded(true);
-      }).catch((error) => {
-        console.error('Error loading Google Maps:', error);
-      });
-    }, []);  
+  // Initialize Google Maps
+  useEffect(() => {
+    googleLoader.load().then(() => {
+      setIsGoogleLoaded(true);
+    }).catch((error) => {
+      console.error('Error loading Google Maps:', error);
+    });
+  }, []);
 
   // Load sidebar state from localStorage
   useEffect(() => {
@@ -278,7 +265,7 @@ export function MapView() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Map container styles based on sidebar state and device
+  // Map container styles
   const mapContainerStyle = isOpen && !isMobile ? {
     width: 'calc(100% - 320px)',
     height: '100%',
@@ -291,6 +278,7 @@ export function MapView() {
     transition: 'all 0.3s ease-in-out'
   };
 
+  // Initialize overlays
   const initializeOverlays = useCallback((map: mapboxgl.Map) => {
     if (overlayStates.mapillary && !MAP_STYLES[selectedStyle].type.includes('google')) {
       try {
@@ -304,6 +292,7 @@ export function MapView() {
     }
   }, [overlayStates, selectedStyle]);
 
+  // Handle search
   const handleSearch = useCallback((query: string) => {
     if (!query.trim() || !isGoogleLoaded) return;
 
@@ -337,6 +326,7 @@ export function MapView() {
     });
   }, [isGoogleLoaded]);
 
+  // Handle location
   const handleLocationClick = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -370,6 +360,7 @@ export function MapView() {
     }
   }, []);
 
+  // Handle zoom
   const handleZoomIn = useCallback(() => {
     const newZoom = Math.min((viewState.zoom || 0) + 1, 20);
     setViewState(prev => ({
@@ -402,6 +393,7 @@ export function MapView() {
     }
   }, [viewState.zoom]);
 
+  // Handle layer toggle
   const handleLayerToggle = useCallback((layerId: string) => {
     if (layerId === 'photos') {
       setOverlayStates(prev => {
@@ -410,6 +402,16 @@ export function MapView() {
         if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
           updatePhotoLayer(map, newState.photos)
             .catch(error => console.error('Error updating photo layer:', error));
+        }
+        return newState;
+      });
+    } else if (layerId === 'segments') {
+      setOverlayStates(prev => {
+        const newState = { ...prev, segments: !prev.segments };
+        const map = mapRef.current?.getMap();
+        if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+          updateSegmentLayer(map, newState.segments)
+            .catch(error => console.error('Error updating segments layer:', error));
         }
         return newState;
       });
@@ -453,6 +455,7 @@ export function MapView() {
     }
   }, [selectedStyle]);
 
+  // Handle style change
   const handleStyleChange = useCallback((newStyle: MapStyle) => {
     if (styleTimeout.current) {
       clearTimeout(styleTimeout.current);
@@ -489,6 +492,7 @@ export function MapView() {
     }, 300);
   }, [selectedStyle, initializeOverlays]);
 
+  // Initialize Google Maps
   useEffect(() => {
     if (MAP_STYLES[selectedStyle].type === 'google' && isGoogleLoaded && mapContainer.current) {
       googleMap.current = new google.maps.Map(mapContainer.current, {
@@ -499,16 +503,43 @@ export function MapView() {
     }
   }, [selectedStyle, isGoogleLoaded, viewState, mapContainer]);
 
+  // Update photo layer on style change
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
       map.once('style.load', () => {
-        updatePhotoLayer(map, overlayStates.photos)
-          .catch(error => console.error('Error updating photo layer:', error));
+        if (overlayStates.photos) {
+          updatePhotoLayer(map, overlayStates.photos)
+            .catch(error => console.error('Error updating photo layer:', error));
+        }
+        if (overlayStates.segments) {
+          updateSegmentLayer(map, overlayStates.segments)
+            .catch(error => console.error('Error updating segments layer:', error));
+        }
       });
     }
-  }, [selectedStyle]);
+  }, [selectedStyle, overlayStates.photos, overlayStates.segments]);
 
+  // Update segments when map moves
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+      const updateSegments = () => {
+        if (overlayStates.segments) {
+          updateSegmentLayer(map, true)
+            .catch(error => console.error('Error updating segments layer:', error));
+        }
+      };
+
+      map.on('moveend', updateSegments);
+
+      return () => {
+        map.off('moveend', updateSegments);
+      };
+    }
+  }, [selectedStyle, overlayStates.segments]);
+
+  // Render Google Maps
   if (MAP_STYLES[selectedStyle].type === 'google') {
     return (
       <div className="w-full h-full relative">
@@ -549,6 +580,7 @@ export function MapView() {
     );
   }
 
+  // Render Mapbox
   return (
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
       <div className="w-full h-full relative">
@@ -605,5 +637,5 @@ export function MapView() {
         )}
       </div>
     </MapContext.Provider>
-);
+  );
 }
