@@ -16,19 +16,30 @@ interface SegmentInfo {
 }
 
 async function getElevation(map: mapboxgl.Map, lngLat: [number, number]): Promise<number | null> {
+    if (!map) return null;
+    
     try {
-      // Wait for terrain source to be ready
-      if (!map.getSource('mapbox-dem')) {
-        console.log('Waiting for terrain source...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (!map.getSource('mapbox-dem')) {
-          console.error('Terrain source not available');
-          return null;
-        }
+      // Make sure we're using the Mapbox style
+      const style = map.getStyle();
+      if (!style.sources['mapbox-dem']) {
+        // If no terrain source, try to add it
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.terrain-rgb',
+          tileSize: 512,
+          maxzoom: 14
+        });
+        
+        map.setTerrain({
+          source: 'mapbox-dem',
+          exaggeration: 1
+        });
       }
   
+      // Wait a bit for the terrain to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const elevation = await map.queryTerrainElevation(lngLat);
-      console.log('Elevation query result:', elevation);
       return elevation;
     } catch (error) {
       console.error('Error getting elevation:', error);

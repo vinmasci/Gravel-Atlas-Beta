@@ -640,39 +640,12 @@ return (
       : 'mapbox://styles/mapbox/empty-v9'
   }
   projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+  terrain={selectedStyle === 'mapbox' ? { source: 'mapbox-dem', exaggeration: 1 } : undefined}
   reuseMaps
   ref={mapRef}
   onLoad={(evt) => {
     const map = evt.target;
     setMapInstance(map);
-
-    // Wait for the style to be fully loaded
-    map.once('styledata', () => {
-      try {
-        // Remove existing terrain source if it exists
-        if (map.getSource('mapbox-dem')) {
-          map.removeSource('mapbox-dem');
-        }
-
-        // Add the terrain source
-        map.addSource('mapbox-dem', {
-          'type': 'raster-dem',
-          'url': 'mapbox://mapbox.terrain-rgb',  // Changed from terrain-dem-v1
-          'tileSize': 512,
-          'maxzoom': 14
-        });
-
-        // Set terrain properties
-        map.setTerrain({
-          'source': 'mapbox-dem',
-          'exaggeration': 1
-        });
-
-        console.log('Terrain source added successfully');
-      } catch (error) {
-        console.error('Error setting up terrain:', error);
-      }
-    });
   }}
 />
       {isLoading && <LoadingSpinner />}
