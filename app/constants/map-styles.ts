@@ -60,3 +60,11 @@ export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
     type: 'google'
   }
 };
+
+export type MapProvider = 'mapbox' | 'google' | 'osm';
+
+export const getProviderFromStyle = (style: MapStyle): MapProvider => {
+  if (style.startsWith('google')) return 'google';
+  if (style === 'osm-cycle') return 'osm';
+  return 'mapbox';
+};

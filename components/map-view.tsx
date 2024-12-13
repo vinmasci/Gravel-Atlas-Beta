@@ -564,6 +564,7 @@ export function MapView() {
   }, [selectedStyle, overlayStates.photos, overlayStates.segments]);
 
   // Update segments when map moves
+  // Update segments when map moves
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
@@ -581,6 +582,42 @@ export function MapView() {
       };
     }
   }, [selectedStyle, overlayStates.segments]);
+
+  // Add terrain source and configuration
+  useEffect(() => {
+    if (!mapInstance || selectedStyle !== 'mapbox') return;
+
+    // Wait for style to load
+    mapInstance.on('style.load', () => {
+      // Check if source already exists to avoid duplicate additions
+      if (!mapInstance.getSource('mapbox-dem')) {
+        mapInstance.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        });
+      }
+
+      // Set terrain properties
+      mapInstance.setTerrain({ 
+        source: 'mapbox-dem',
+        exaggeration: 1 
+      });
+    });
+
+    // Cleanup function
+    return () => {
+      if (mapInstance && mapInstance.getSource('mapbox-dem')) {
+        try {
+          mapInstance.setTerrain(null);
+          mapInstance.removeSource('mapbox-dem');
+        } catch (e) {
+          console.error('Error cleaning up terrain:', e);
+        }
+      }
+    };
+  }, [mapInstance, selectedStyle]);
 
   // Render Google Maps
   if (MAP_STYLES[selectedStyle].type === 'google') {
@@ -640,7 +677,6 @@ return (
       : 'mapbox://styles/mapbox/empty-v9'
   }
   projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-  terrain={selectedStyle === 'mapbox' ? { source: 'mapbox-dem', exaggeration: 1 } : undefined}
   reuseMaps
   ref={mapRef}
   onLoad={(evt) => {
