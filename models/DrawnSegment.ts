@@ -1,12 +1,33 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const drawnSegmentSchema = new mongoose.Schema({
+// Define the vote interface
+interface Vote {
+  user_id: string;
+  userName: string;
+  condition: string;
+  timestamp: Date;
+}
+
+// Define the document interface
+interface IDrawnSegment extends Document {
+  gpxData: string;
+  geojson: any;
+  metadata: {
+    title: string;
+  };
+  votes: Vote[];
+  auth0Id: string;
+  createdAt: Date;
+}
+
+// Create the schema
+const drawnSegmentSchema = new Schema<IDrawnSegment>({
   gpxData: {
     type: String,
     required: true
   },
   geojson: {
-    type: Object,
+    type: Schema.Types.Mixed,
     required: true
   },
   metadata: {
@@ -44,4 +65,5 @@ const drawnSegmentSchema = new mongoose.Schema({
   }
 });
 
-export const DrawnSegment = mongoose.models.DrawnSegment || mongoose.model('DrawnSegment', drawnSegmentSchema);
+// Create and export the model
+export const DrawnSegment = mongoose.models.DrawnSegment || mongoose.model<IDrawnSegment>('DrawnSegment', drawnSegmentSchema);
