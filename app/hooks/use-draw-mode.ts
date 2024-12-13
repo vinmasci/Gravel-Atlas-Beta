@@ -15,18 +15,28 @@ interface SegmentInfo {
   elevation?: number;
 }
 
-async function getElevation(map: mapboxgl.Map, lngLat: [number, number]): Promise<number | null> {
-    if (!map) return null;
-    
+async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
     try {
-      // No need to add the source here as it's already in the style
-      const elevation = await map.queryTerrainElevation(lngLat);
-      return elevation;
+        const response = await fetch('/api/get-elevation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ coordinates }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.coordinates;
     } catch (error) {
-      console.error('Error getting elevation:', error);
-      return null;
+        console.error('Error fetching elevation:', error);
+        // Return original coordinates with 0 elevation if there's an error
+        return coordinates.map(([lng, lat]) => [lng, lat, 0]);
     }
-  }
+}
 
 export const useDrawMode = (map: Map | null) => {
   const [isDrawing, setIsDrawing] = useState(false);
@@ -96,11 +106,6 @@ export const useDrawMode = (map: Map | null) => {
     setDrawnCoordinates([]);
     setElevationProfile([]);
     setSegments([]);
-    
-    // Enable terrain if not already enabled
-    if (!map.getTerrain()) {
-      map.setTerrain({ source: 'mapbox-dem', exaggeration: 1 });
-    }
     
     map.getCanvas().style.cursor = 'crosshair';
 
@@ -190,32 +195,26 @@ export const useDrawMode = (map: Map | null) => {
       newPoints = [clickedPoint];
     }
 
-    // Sample elevations for new points
-    let totalDistance = elevationProfile.length > 0 ? elevationProfile[elevationProfile.length - 1].distance : 0;
-    const newElevationPoints: ElevationPoint[] = [];
-
-    for (let i = 0; i < newPoints.length; i++) {
-      const point = newPoints[i];
-      const elevation = await getElevation(map, point);
-
-      if (elevation !== null) {
-        if (i > 0 || drawnCoordinates.length > 0) {
-          const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
-          const distance = turf.distance(
-            turf.point(prevPoint),
-            turf.point(point),
-            { units: 'kilometers' }
-          );
-          totalDistance += distance;
-        }
-
-        newElevationPoints.push({
-          distance: totalDistance,
-          elevation: elevation
-        });
-      }
-    }
+    // Get elevation for all new points at once
+    const elevationData = await getElevation(newPoints);
     
+    let totalDistance = elevationProfile.length > 0 ? elevationProfile[elevationProfile.length - 1].distance : 0;
+    const newElevationPoints = elevationData.map((point, i) => {
+      if (i > 0 || drawnCoordinates.length > 0) {
+        const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
+        const distance = turf.distance(
+          turf.point(prevPoint),
+          turf.point([point[0], point[1]]),
+          { units: 'kilometers' }
+        );
+        totalDistance += distance;
+      }
+      return {
+        distance: totalDistance,
+        elevation: point[2]
+      };
+    });
+
     // Update elevation profile
     setElevationProfile(prev => [...prev, ...newElevationPoints]);
     
@@ -224,7 +223,7 @@ export const useDrawMode = (map: Map | null) => {
       points: newPoints,
       isSnapped: snapToRoad && newPoints.length > 1,
       clickPoint: clickedPoint,
-      elevation: newElevationPoints[0]?.elevation
+      elevation: elevationData[0]?.[2]
     }]);
 
     const newCoordinates = [...drawnCoordinates, ...newPoints];
@@ -248,7 +247,7 @@ export const useDrawMode = (map: Map | null) => {
       points: newPoints, 
       isSnapped: snapToRoad && newPoints.length > 1, 
       clickPoint: clickedPoint,
-      elevation: newElevationPoints[0]?.elevation
+      elevation: elevationData[0]?.[2]
     }]);
   }, [isDrawing, map, drawingLayer, drawnCoordinates, snapToRoad, segments, updateMarkers, elevationProfile]);
 

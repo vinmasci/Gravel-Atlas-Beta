@@ -564,7 +564,6 @@ export function MapView() {
   }, [selectedStyle, overlayStates.photos, overlayStates.segments]);
 
   // Update segments when map moves
-  // Update segments when map moves
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
@@ -583,44 +582,47 @@ export function MapView() {
     }
   }, [selectedStyle, overlayStates.segments]);
 
-  // Add terrain source and configuration
-  useEffect(() => {
-    if (!mapInstance || selectedStyle !== 'mapbox') return;
+// Add terrain source and configuration
+useEffect(() => {
+  if (!mapInstance || selectedStyle !== 'mapbox') return;
 
-    // Wait for style to load
-    mapInstance.on('style.load', () => {
-      // Check if source already exists to avoid duplicate additions
+  // Wait for style to load
+  mapInstance.once('style.load', () => {
+    try {
+      // Add DEM source if it doesn't exist
       if (!mapInstance.getSource('mapbox-dem')) {
         mapInstance.addSource('mapbox-dem', {
           type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          url: 'mapbox://mapbox.terrain-dem-v1',
           tileSize: 512,
           maxzoom: 14
         });
+
+        // Set terrain after adding source
+        mapInstance.setTerrain({
+          source: 'mapbox-dem',
+          exaggeration: 1
+        });
       }
+    } catch (error) {
+      console.error('Error adding terrain:', error);
+    }
+  });
 
-      // Set terrain properties
-      mapInstance.setTerrain({ 
-        source: 'mapbox-dem',
-        exaggeration: 1 
-      });
-    });
-
-    // Cleanup function
-    return () => {
-      if (mapInstance && mapInstance.getSource('mapbox-dem')) {
-        try {
-          mapInstance.setTerrain(null);
-          mapInstance.removeSource('mapbox-dem');
-        } catch (e) {
-          console.error('Error cleaning up terrain:', e);
-        }
+  return () => {
+    if (mapInstance && mapInstance.getSource('mapbox-dem')) {
+      try {
+        mapInstance.setTerrain(null);
+        mapInstance.removeSource('mapbox-dem');
+      } catch (e) {
+        console.error('Error cleaning up terrain:', e);
       }
-    };
-  }, [mapInstance, selectedStyle]);
+    }
+  };
+}, [mapInstance, selectedStyle]);
 
-  // Render Google Maps
-  if (MAP_STYLES[selectedStyle].type === 'google') {
+// Render Google Maps
+if (MAP_STYLES[selectedStyle].type === 'google') {
     return (
       <div className="w-full h-full relative">
         <div ref={mapContainer} style={mapContainerStyle} />
