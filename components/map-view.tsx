@@ -686,7 +686,7 @@ return (
     setMapInstance(map);
   }}
 />
-      {isLoading && <LoadingSpinner />}
+{isLoading && <LoadingSpinner />}
       {showAlert && (
         <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
       )}
@@ -719,19 +719,19 @@ return (
         />
       )}
 
-      {/* Add this elevation profile component */}
-      {elevationProfile.length > 0 && (
-        <ElevationProfile
-          data={elevationProfile}
-          className="absolute bottom-4 right-4 z-50"
-        />
-      )}
-
       <SegmentSheet
         open={!!selectedSegment}
         onOpenChange={(open) => !open && setSelectedSegment(null)}
         segment={selectedSegment}
       />
+
+      {/* Moved outside map controls but inside provider */}
+      {elevationProfile.length > 0 && (
+        <ElevationProfile
+          data={elevationProfile}
+          sidebarWidth={isOpen && !isMobile ? 360 : 0}
+        />
+      )}
     </div>
   </MapContext.Provider>
 );

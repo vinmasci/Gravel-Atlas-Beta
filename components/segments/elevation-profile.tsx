@@ -1,4 +1,4 @@
-// components/segments/elevation-profile.tsx
+// components/segments/elevation-profile.tsx NO LONGER IN USE, USING FLOATING-ELEVTION-PROFILE-INSTEAD
 'use client';
 
 import React from 'react';
