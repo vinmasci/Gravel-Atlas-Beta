@@ -271,14 +271,6 @@ export function DrawSegmentPanel() {
           </DialogContent>
         </Dialog>
       </div>
-
-      {isDrawing && (
-  <FloatingElevationProfile 
-    data={elevationProfile}
-    onClose={clearDrawing}
-    isDrawing={isDrawing}
-  />
-)}
     </div>
   );
 }
