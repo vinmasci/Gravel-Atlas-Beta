@@ -27,6 +27,7 @@ export function DrawSegmentDialog({
   onDrawComplete
 }: DrawSegmentDialogProps) {
   const [title, setTitle] = useState('');
+  const [drawnGeojson, setDrawnGeojson] = useState<any>(null);
   const { map } = useContext(MapContext);
   const { toast } = useToast();
   const {
@@ -41,8 +42,12 @@ export function DrawSegmentDialog({
     if (!open) {
       clearDrawing();
       setTitle('');
+      setDrawnGeojson(null);
+    } else {
+      // Start drawing immediately when dialog opens
+      startDrawing();
     }
-  }, [open, clearDrawing]);
+  }, [open, clearDrawing, startDrawing]);
 
   useEffect(() => {
     if (!map) return;
@@ -55,7 +60,7 @@ export function DrawSegmentDialog({
       e.preventDefault();
       const geojson = finishDrawing();
       if (geojson) {
-        handleSave(geojson);
+        setDrawnGeojson(geojson);
       }
     };
 
@@ -70,7 +75,7 @@ export function DrawSegmentDialog({
     };
   }, [map, isDrawing, handleClick, finishDrawing]);
 
-  const handleStartDrawing = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       toast({
         title: "Title Required",
@@ -79,10 +84,7 @@ export function DrawSegmentDialog({
       });
       return;
     }
-    startDrawing();
-  };
 
-  const handleSave = async (geojson: any) => {
     try {
       const response = await fetch('/api/segments/save', {
         method: 'POST',
@@ -90,7 +92,7 @@ export function DrawSegmentDialog({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          geojson,
+          geojson: drawnGeojson,
           metadata: {
             title
           }
@@ -124,14 +126,6 @@ export function DrawSegmentDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Input
-              placeholder="Enter segment title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
           {isDrawing ? (
             <Alert>
               <MapPinOff className="h-4 w-4" />
@@ -139,6 +133,31 @@ export function DrawSegmentDialog({
                 Click on the map to draw. Double click to finish.
               </AlertDescription>
             </Alert>
+          ) : drawnGeojson ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  placeholder="Enter segment title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    clearDrawing();
+                    startDrawing();
+                    setDrawnGeojson(null);
+                  }}
+                >
+                  Redraw
+                </Button>
+                <Button onClick={handleSave}>
+                  Save Segment
+                </Button>
+              </div>
+            </div>
           ) : null}
 
           <div className="flex justify-between">
@@ -151,20 +170,6 @@ export function DrawSegmentDialog({
             >
               Cancel
             </Button>
-            {isDrawing ? (
-              <Button 
-                variant="destructive" 
-                onClick={() => {
-                  clearDrawing();
-                }}
-              >
-                Clear Drawing
-              </Button>
-            ) : (
-              <Button onClick={handleStartDrawing}>
-                Start Drawing
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>

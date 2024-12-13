@@ -37,7 +37,6 @@ export function DrawSegmentPanel() {
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         onDrawComplete={(data) => {
-          // We'll implement this later
           console.log('Draw complete:', data);
           setIsDialogOpen(false);
         }}
