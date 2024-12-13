@@ -1,4 +1,6 @@
+// lib/mongodb.ts
 import { MongoClient } from 'mongodb'
+import mongoose from 'mongoose'
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your Mongo URI to .env.local')
@@ -26,3 +28,18 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export default clientPromise
+
+export const dbConnect = async () => {
+  try {
+    if (mongoose.connection.readyState >= 1) {
+      return
+    }
+
+    console.log('Connecting to MongoDB...')
+    await mongoose.connect(process.env.MONGODB_URI!)
+    console.log('MongoDB connected successfully')
+  } catch (error) {
+    console.error('MongoDB connection error:', error)
+    throw error
+  }
+}
