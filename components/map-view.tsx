@@ -199,13 +199,12 @@ export function MapView() {
   const mapRef = useRef<any>(null);
   const styleTimeout = useRef<NodeJS.Timeout | null>(null);
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-  
+  const drawMode = useDrawMode(mapInstance);
   const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox');
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-  const drawMode = useDrawMode(mapInstance);
   const { isDrawing, elevationProfile } = drawMode;
 
   const [viewState, setViewState] = useState({
