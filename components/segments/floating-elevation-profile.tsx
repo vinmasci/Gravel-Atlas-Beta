@@ -22,6 +22,13 @@ interface ElevationPoint {
 
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
+
+  console.log('FloatingElevationProfile render attempt:', {
+    drawModeExists: !!drawMode,
+    isDrawing: drawMode.isDrawing,
+    elevationProfileLength: drawMode.elevationProfile.length,
+    elevationData: drawMode.elevationProfile
+  });
   
   if (!drawMode.isDrawing || drawMode.elevationProfile.length < 2) return null;
 

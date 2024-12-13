@@ -145,6 +145,13 @@ export const useDrawMode = (map: Map | null) => {
   const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent) => {
     if (!isDrawing || !map || !layerRefs.current.drawing || isProcessingClick.current) return;
     
+    console.log('Handle click event:', {
+        isDrawingActive: isDrawing,
+        existingPoints: drawnCoordinates.length,
+        newPoint: [e.lngLat.lng, e.lngLat.lat],
+        currentElevationProfile: elevationProfile
+      });
+
     if (pendingOperation.current) {
       pendingOperation.current.abort();
     }
