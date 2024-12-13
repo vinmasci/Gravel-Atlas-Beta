@@ -19,7 +19,8 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MapContext } from '@/app/contexts/map-context';
 import { SegmentSheet } from '@/components/segments/segment-sheet';
-import { ElevationProfile } from '@/components/segments/elevation-profile';
+import { FloatingElevationProfile } from './segments/floating-elevation-profile';
+import { useDrawMode } from '@/app/hooks/use-draw-mode';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -729,12 +730,13 @@ return (
     </MapContext.Provider>
 
     {/* Elevation profile at root level, outside both map container and context */}
-    {elevationProfile.length > 0 && (
-      <ElevationProfile
-        data={elevationProfile}
-        sidebarWidth={isOpen && !isMobile ? 360 : 0}
-      />
-    )}
+    {map && (
+    <FloatingElevationProfile 
+      data={drawMode.elevationProfile}
+      onClose={drawMode.clearDrawing}
+      isDrawing={drawMode.isDrawing}
+    />
+  )}
   </>
 );
 }

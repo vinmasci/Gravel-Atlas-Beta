@@ -271,13 +271,6 @@ export function DrawSegmentPanel() {
           </DialogContent>
         </Dialog>
       </div>
-
-      {isDrawing && drawnCoordinates.length > 0 && (
-  <FloatingElevationProfile 
-    data={elevationProfile}
-    onClose={clearDrawing}
-  />
-)}
     </div>
   );
 }
