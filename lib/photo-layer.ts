@@ -160,6 +160,10 @@ export function initializePhotoLayer(map: Map) {
           })
           .setLngLat(coordinates)
           .setHTML(`
+            <!-- Add FontAwesome kit inside popup -->
+            <script src="https://kit.fontawesome.com/b02e210188.js" crossorigin="anonymous"></script>
+            <link rel="stylesheet" href="https://kit.fontawesome.com/b02e210188.css" crossorigin="anonymous">
+            
             <div class="max-w-sm p-2 bg-black/80 text-white">
               <img src="${url}" alt="${title}" class="w-full h-48 object-cover rounded-lg mb-3" />
               <div class="space-y-2">
@@ -209,7 +213,7 @@ export function initializePhotoLayer(map: Map) {
             </div>
           `)
           .addTo(map);
-          
+
     });
     // Add hover effects for clusters
     let hoverTimeout: NodeJS.Timeout;

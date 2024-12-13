@@ -25,15 +25,16 @@ export default function RootLayout({
       <head>
         <link 
           rel="stylesheet" 
-          href="https://site-assets.fontawesome.com/releases/v6.4.0/css/all.css" 
-        />
-        <Script 
-          src="https://kit.fontawesome.com/b02e210188.js" 
+          href="https://kit.fontawesome.com/b02e210188.css"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
       </head>
       <body className={inter.className}>
+        <Script 
+          src="https://kit.fontawesome.com/b02e210188.js" 
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
         <UserProvider>
           <ThemeProvider
             attribute="class"

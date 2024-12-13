@@ -474,3 +474,105 @@ components/
 - Leveraging shadcn/ui components for consistent UI
 - MongoDB for photo metadata storage
 - AWS S3 for image storage
+
+# Gravel Atlas Beta
+
+A web application for mapping and exploring gravel roads across Australia. Built with Next.js, Mapbox, and modern web technologies.
+
+## 🎯 Current Status (Dec 13, 2024)
+
+### Working Features ✅
+- **Authentication & User Management**
+  - Auth0 integration with unified sign-in/sign-up
+  - User profile system with avatar support
+  - Secure authentication flow
+  - User session management
+  - Dark/Light mode persistence per user
+  - AWS S3 profile picture integration
+  - User profile data with MongoDB integration
+  - Social media links and website display
+  - User bio and profile customization
+
+- **Multiple Map Providers**
+  - Mapbox (outdoor style) - Primary map with clean UI
+  - OpenStreetMap Cycle via Thunderforest - Great for cycling routes
+  - Google Maps (Standard, Hybrid, Satellite) - Alternative views
+  - Smooth transitions between providers
+  - Each with proper error handling
+
+- **Core Navigation**
+  - Functional search (geocoding)
+  - Zoom controls
+  - Location centering
+  - Style switching between providers
+  - Default centered on Melbourne
+
+- **UI/UX Achievements**
+  - Minimalist, clean navbar design
+  - Responsive authentication controls
+  - Desktop: Full sidebar with collapsible sections
+  - Mobile: Optimized controls at bottom of screen
+  - Clean transitions between views
+  - Dark/Light mode support
+  - Loading indicators
+  - Alert system for incompatible features
+  - Controlled sheet animations with proper state management
+  - FontAwesome Pro integration for icons
+
+- **Photo System**
+  - Photo upload with automatic metadata extraction
+  - Photo markers on map
+  - Clustering for multiple photos
+  - Photo preview on hover
+  - Detailed photo viewer with user attribution
+  - User profile links and social media integration
+  - Upload date and location display
+  - Photo metadata storage in MongoDB
+  - AWS S3 integration for storage
+  - Proper error handling and validation
+
+- **Map Overlays**
+  - Layer system implemented for:
+    - Segments
+    - Photos
+    - Gravel/Unpaved Roads
+    - Asphalt/Paved Roads
+    - Speed Limits
+    - Private Access
+    - Mapillary integration (except with Google Maps)
+
+### Known Issues 🚨
+1. **Map Display**
+   - OSM Cycle Map requires zoom level 6+ for proper display
+   - Tiling issues during extreme zoom-out transitions
+   - Globe effect conflicts between Mapbox/OSM
+
+2. **Feature Limitations**
+   - Mapillary only works with Mapbox/OSM (Google Maps restriction)
+   - Layer states don't persist between map style changes
+   - Overlay data not yet connected to backend
+
+## 🚀 Next Development Phase
+
+### High Priority
+1. **Photo Enhancement**
+   - Add photo editing capabilities
+   - Implement photo deletion
+   - Add moderation system
+   - Add batch upload support
+   - Implement photo filtering by date/location
+   - Add photo search functionality
+   - Create photo routes/trails
+
+2. **Social Features**
+   - Add likes/comments system
+   - Share functionality
+   - User photo galleries
+   - Photo collections/albums
+
+3. **Core Features**
+   - Drawing tools for segments
+   - GPX file handling
+   - Proper data layers for overlays
+
+[Rest of README remains the same...]

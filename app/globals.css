@@ -1,3 +1,5 @@
+@import url('https://site-assets.fontawesome.com/releases/v6.4.0/css/all.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
