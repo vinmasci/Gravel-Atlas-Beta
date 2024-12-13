@@ -19,26 +19,7 @@ async function getElevation(map: mapboxgl.Map, lngLat: [number, number]): Promis
     if (!map) return null;
     
     try {
-      // Make sure we're using the Mapbox style
-      const style = map.getStyle();
-      if (!style.sources['mapbox-dem']) {
-        // If no terrain source, try to add it
-        map.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.terrain-rgb',
-          tileSize: 512,
-          maxzoom: 14
-        });
-        
-        map.setTerrain({
-          source: 'mapbox-dem',
-          exaggeration: 1
-        });
-      }
-  
-      // Wait a bit for the terrain to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      // No need to add the source here as it's already in the style
       const elevation = await map.queryTerrainElevation(lngLat);
       return elevation;
     } catch (error) {
