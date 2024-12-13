@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createCanvas, loadImage } from 'canvas';
 import fetch from 'node-fetch';
 
 interface Coords {
@@ -8,68 +7,35 @@ interface Coords {
     lat: number;
 }
 
-function lngLatToTile(lng: number, lat: number, zoom: number) {
-    const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
-    const y = Math.floor((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-    return { x, y };
-}
+async function getElevationFromMapbox(coordinates: [number, number][]) {
+    if (coordinates.length === 0) return [];
+    
+    // Format coordinates for Mapbox API
+    const coordinatesString = coordinates
+        .map(([lng, lat]) => `${lng},${lat}`)
+        .join(';');
 
-function lngLatToPixel(lng: number, lat: number, zoom: number) {
-    const tileSize = 256;
-    const scale = tileSize * Math.pow(2, zoom);
-    const worldX = ((lng + 180) / 360) * scale;
-    const worldY = ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * scale;
-    return {
-        pixelX: worldX % tileSize,
-        pixelY: worldY % tileSize
-    };
-}
+    try {
+        const response = await fetch(
+            `https://api.mapbox.com/v4/mapbox.terrain-rgb/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        );
 
-function rgbToElevation(r: number, g: number, b: number): number {
-    // Decode RGB values to elevation in meters
-    // Formula from Mapbox documentation: https://docs.mapbox.com/data/tilesets/guides/access-elevation-data/
-    // -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)
-    const heightValue = (r * Math.pow(2, 16) + g * Math.pow(2, 8) + b);
-    const elevation = -10000 + (heightValue * 0.1);
-    return elevation;
-}
-
-async function getElevationData(coordinates: [number, number][]) {
-    const zoom = 14; // Best zoom level for terrain-rgb tiles
-    const results = await Promise.all(coordinates.map(async ([lng, lat]) => {
-        try {
-            const { x, y } = lngLatToTile(lng, lat, zoom);
-            const { pixelX, pixelY } = lngLatToPixel(lng, lat, zoom);
-            
-            const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${x}/${y}.pngraw?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
-            
-            const response = await fetch(url);
-            if (!response.ok) {
-                console.error(`Elevation API error:`, response.status);
-                return [lng, lat, 0];
-            }
-
-            const buffer = await response.buffer();
-            const img = await loadImage(buffer);
-            
-            const canvas = createCanvas(img.width, img.height);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            
-            const imageData = ctx.getImageData(Math.floor(pixelX), Math.floor(pixelY), 1, 1).data;
-            const [r, g, b] = imageData;
-            
-            // Use the corrected elevation calculation
-            const elevation = rgbToElevation(r, g, b);
-            
-            return [lng, lat, Math.round(elevation)];
-        } catch (error) {
-            console.error('Error processing coordinate:', { lng, lat }, error);
-            return [lng, lat, 0];
+        if (!response.ok) {
+            throw new Error(`Elevation API error: ${response.status}`);
         }
-    }));
 
-    return results;
+        const data = await response.json();
+        
+        // Map the results back to coordinate format
+        return coordinates.map((coord, index) => {
+            const elevation = data.features[index]?.properties?.elevation || 0;
+            return [...coord, elevation];
+        });
+    } catch (error) {
+        console.error('Error fetching elevation:', error);
+        // Return coordinates with 0 elevation on error
+        return coordinates.map(coord => [...coord, 0]);
+    }
 }
 
 export async function POST(req: NextRequest) {
@@ -81,7 +47,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 });
         }
 
-        const elevationData = await getElevationData(coordinates);
+        if (coordinates.length < 2) {
+            return NextResponse.json(
+                { error: 'Not enough input coordinates given; minimum number of coordinates is 2.' },
+                { status: 422 }
+            );
+        }
+
+        const elevationData = await getElevationFromMapbox(coordinates);
         return NextResponse.json({ coordinates: elevationData });
 
     } catch (error) {
