@@ -16,18 +16,25 @@ interface SegmentInfo {
 }
 
 async function getElevation(map: mapboxgl.Map, lngLat: [number, number]): Promise<number | null> {
-  if (!map.getTerrain()) {
-    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1 });
-  }
+    try {
+      // Wait for terrain source to be ready
+      if (!map.getSource('mapbox-dem')) {
+        console.log('Waiting for terrain source...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!map.getSource('mapbox-dem')) {
+          console.error('Terrain source not available');
+          return null;
+        }
+      }
   
-  try {
-    const elevation = await map.queryTerrainElevation(lngLat);
-    return elevation;
-  } catch (error) {
-    console.error('Error getting elevation:', error);
-    return null;
+      const elevation = await map.queryTerrainElevation(lngLat);
+      console.log('Elevation query result:', elevation);
+      return elevation;
+    } catch (error) {
+      console.error('Error getting elevation:', error);
+      return null;
+    }
   }
-}
 
 export const useDrawMode = (map: Map | null) => {
   const [isDrawing, setIsDrawing] = useState(false);

@@ -627,41 +627,54 @@ export function MapView() {
 return (
   <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
     <div className="w-full h-full relative">
-      <Map
-        {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        style={mapContainerStyle}
-        mapStyle={
-          selectedStyle === 'osm-cycle'
-            ? MAP_STYLES[selectedStyle].style
-            : selectedStyle === 'mapbox'
-            ? MAP_STYLES[selectedStyle].style
-            : 'mapbox://styles/mapbox/empty-v9'
+    <Map
+  {...viewState}
+  onMove={evt => setViewState(evt.viewState)}
+  mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+  style={mapContainerStyle}
+  mapStyle={
+    selectedStyle === 'osm-cycle'
+      ? MAP_STYLES[selectedStyle].style
+      : selectedStyle === 'mapbox'
+      ? MAP_STYLES[selectedStyle].style
+      : 'mapbox://styles/mapbox/empty-v9'
+  }
+  projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+  reuseMaps
+  ref={mapRef}
+  onLoad={(evt) => {
+    const map = evt.target;
+    setMapInstance(map);
+
+    // Wait for the style to be fully loaded
+    map.once('styledata', () => {
+      try {
+        // Remove existing terrain source if it exists
+        if (map.getSource('mapbox-dem')) {
+          map.removeSource('mapbox-dem');
         }
-        projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-        reuseMaps
-        ref={mapRef}
-        onLoad={(evt) => {
-          const map = evt.target;
-          setMapInstance(map);
-          
-          map.once('style.load', () => {
-            // Add terrain source if it doesn't exist
-            if (!map.getSource('mapbox-dem')) {
-              map.addSource('mapbox-dem', {
-                'type': 'raster-dem',
-                'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                'tileSize': 512,
-                'maxzoom': 14
-              });
-              
-              // Enable terrain
-              map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1 });
-            }
-          });
-        }}
-      />
+
+        // Add the terrain source
+        map.addSource('mapbox-dem', {
+          'type': 'raster-dem',
+          'url': 'mapbox://mapbox.terrain-rgb',  // Changed from terrain-dem-v1
+          'tileSize': 512,
+          'maxzoom': 14
+        });
+
+        // Set terrain properties
+        map.setTerrain({
+          'source': 'mapbox-dem',
+          'exaggeration': 1
+        });
+
+        console.log('Terrain source added successfully');
+      } catch (error) {
+        console.error('Error setting up terrain:', error);
+      }
+    });
+  }}
+/>
       {isLoading && <LoadingSpinner />}
       {showAlert && (
         <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
