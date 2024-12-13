@@ -646,18 +646,20 @@ return (
           const map = evt.target;
           setMapInstance(map);
           
-          // Add terrain source if it doesn't exist
-          if (!map.getSource('mapbox-dem')) {
-            map.addSource('mapbox-dem', {
-              'type': 'raster-dem',
-              'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
-              'tileSize': 512,
-              'maxzoom': 14
-            });
-            
-            // Enable terrain
-            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1 });
-          }
+          map.once('style.load', () => {
+            // Add terrain source if it doesn't exist
+            if (!map.getSource('mapbox-dem')) {
+              map.addSource('mapbox-dem', {
+                'type': 'raster-dem',
+                'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                'tileSize': 512,
+                'maxzoom': 14
+              });
+              
+              // Enable terrain
+              map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1 });
+            }
+          });
         }}
       />
       {isLoading && <LoadingSpinner />}
