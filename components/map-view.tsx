@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Search, Layers, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { MapContext } from '@/app/contexts/map-context';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -194,6 +195,7 @@ export function MapView() {
   const googleMap = useRef<google.maps.Map | null>(null);
   const mapRef = useRef<any>(null);
   const styleTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   
   const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox');
   const [isLoading, setIsLoading] = useState(false);
@@ -548,56 +550,60 @@ export function MapView() {
   }
 
   return (
-    <div className="w-full h-full relative">
-<Map
-  {...viewState}
-  onMove={evt => setViewState(evt.viewState)}
-  mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-  style={mapContainerStyle}
-  mapStyle={
-    selectedStyle === 'osm-cycle'
-      ? MAP_STYLES[selectedStyle].style
-      : selectedStyle === 'mapbox'
-      ? MAP_STYLES[selectedStyle].style
-      : 'mapbox://styles/mapbox/empty-v9'
-  }
-  projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-  reuseMaps
-  ref={mapRef}
-/>
-      {isLoading && <LoadingSpinner />}
-      {showAlert && (
-        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-      )}
-      
-      {isMobile ? (
-        <MobileControls
-          onSearch={handleSearch}
-          onLocationClick={handleLocationClick}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onLayerToggle={handleLayerToggle}
-          selectedStyle={selectedStyle}
-          onStyleChange={handleStyleChange}
-          overlayStates={overlayStates}
-          mapillaryVisible={mapillaryVisible}
+    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+      <div className="w-full h-full relative">
+        <Map
+          {...viewState}
+          onMove={evt => setViewState(evt.viewState)}
+          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+          style={mapContainerStyle}
+          mapStyle={
+            selectedStyle === 'osm-cycle'
+              ? MAP_STYLES[selectedStyle].style
+              : selectedStyle === 'mapbox'
+              ? MAP_STYLES[selectedStyle].style
+              : 'mapbox://styles/mapbox/empty-v9'
+          }
+          projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+          reuseMaps
+          ref={mapRef}
+          onLoad={(evt) => {
+            setMapInstance(evt.target);
+          }}
         />
-      ) : (
-        <MapSidebar
-          isOpen={isOpen}
-          setIsOpen={handleSidebarToggle}
-          onSearch={handleSearch}
-          onLocationClick={handleLocationClick}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          availableLayers={layers}
-          onLayerToggle={handleLayerToggle}
-          selectedStyle={selectedStyle}
-          onStyleChange={handleStyleChange}
-          mapillaryVisible={mapillaryVisible}
-          overlayStates={overlayStates}
-        />
-      )}
-    </div>
-  );
+        {isLoading && <LoadingSpinner />}
+        {showAlert && (
+          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+        )}
+        {isMobile ? (
+          <MobileControls
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            overlayStates={overlayStates}
+            mapillaryVisible={mapillaryVisible}
+          />
+        ) : (
+          <MapSidebar
+            isOpen={isOpen}
+            setIsOpen={handleSidebarToggle}
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            availableLayers={layers}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            mapillaryVisible={mapillaryVisible}
+            overlayStates={overlayStates}
+          />
+        )}
+      </div>
+    </MapContext.Provider>
+);
 }
