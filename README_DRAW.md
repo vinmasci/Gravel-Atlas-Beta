@@ -420,3 +420,69 @@ console.log(elevation); // [[longitude, latitude, elevationInMeters]]
 3. Batch process elevation requests
 4. Add elevation data compression
 5. Implement proper error retries
+
+## 🔄 Development Update - Elevation Profile Implementation
+
+### Recently Implemented ✅
+1. **Real-time Elevation Profile**
+   - Added floating elevation chart while drawing segments
+   - Shows elevation gain, min, and max values
+   - Updates dynamically as points are added
+   - Positioned above navbar with proper spacing
+   - Uses recharts for visualization
+
+2. **File Changes**
+   - Created `floating-elevation-profile.tsx`
+   - Updated `draw-segment-panel.tsx` to include elevation chart
+   - Removed redundant `elevation-profile.tsx` (superseded by floating version)
+   - Integrated with existing elevation API endpoint
+
+### Technical Details 📝
+1. **Component Structure**
+   ```
+   components/
+   ├── segments/
+   │   └── floating-elevation-profile.tsx    # New floating chart component
+   └── panels/
+       └── draw-segment-panel.tsx           # Updated to include elevation chart
+   ```
+
+2. **Positioning**
+   - Fixed position at `left-[360px]` to account for sidebar
+   - Bottom spacing with `bottom-4` for navbar clearance
+   - Width: 800px
+   - Height: 150px
+   - z-index: 50 to float above map
+
+3. **Chart Features**
+   - Line graph showing elevation over distance
+   - Red theme (#ef4444) for consistency
+   - Distance in kilometers with one decimal
+   - Elevation in whole meters
+   - Responsive tooltips with dark theme
+   - No data points for cleaner look
+   - Grid removed for minimal aesthetic
+
+### Cleanup Tasks 📋
+1. **Redundant Files to Remove**
+   - `components/segments/elevation-profile.tsx` (replaced by floating version)
+   - Any references to old ElevationProfile component
+
+### Future Improvements 🎯
+1. **Visualization**
+   - Add area fill under the line
+   - Implement gradient fill
+   - Add hover state improvements
+   - Consider animation on updates
+
+2. **Functionality**
+   - Add slope calculation
+   - Show gradient percentage
+   - Add elevation breakdown (up/down)
+   - Consider elevation smoothing
+
+3. **UX Enhancements**
+   - Add minimize/maximize option
+   - Consider mobile responsiveness
+   - Add export capabilities
+   - Implement elevation data caching

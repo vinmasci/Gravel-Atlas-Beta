@@ -8,7 +8,7 @@ import { Undo, RotateCcw, Save } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { useMapContext } from '@/app/contexts/map-context';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
-import { ElevationProfile } from '../segments/elevation-profile';
+import { FloatingElevationProfile } from '../segments/floating-elevation-profile';
 import { 
   Dialog,
   DialogContent,
@@ -186,7 +186,7 @@ export function DrawSegmentPanel() {
         >
           {isDrawing ? 'Drawing Mode Active' : 'Start Drawing'}
         </Button>
-  
+
         {isDrawing && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -201,7 +201,7 @@ export function DrawSegmentPanel() {
                 onCheckedChange={handleSnapToggle}
               />
             </div>
-  
+
             <div className="flex gap-2 justify-between">
               <Button
                 variant="outline"
@@ -212,7 +212,7 @@ export function DrawSegmentPanel() {
                 <Undo className="h-4 w-4 mr-1" />
                 Undo
               </Button>
-  
+
               <Button
                 variant="outline"
                 size="sm"
@@ -222,7 +222,7 @@ export function DrawSegmentPanel() {
                 <RotateCcw className="h-4 w-4 mr-1" />
                 Reset
               </Button>
-  
+
               <Button
                 variant="outline"
                 size="sm"
@@ -235,7 +235,7 @@ export function DrawSegmentPanel() {
             </div>
           </div>
         )}
-  
+
         <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
           <DialogContent>
             <DialogHeader>
@@ -271,12 +271,13 @@ export function DrawSegmentPanel() {
           </DialogContent>
         </Dialog>
       </div>
-  
+
       {isDrawing && drawnCoordinates.length > 0 && (
-        <FloatingElevationChart 
-          data={elevationProfile}
-          onClose={clearDrawing}
-        />
-      )}
+  <FloatingElevationProfile 
+    data={elevationProfile}
+    onClose={clearDrawing}
+  />
+)}
     </div>
   );
+}

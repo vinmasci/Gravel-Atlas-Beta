@@ -4,8 +4,10 @@ import React from 'react';
 import {
   LineChart,
   Line,
+  Area,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
@@ -18,12 +20,12 @@ interface ElevationPoint {
   elevation: number;
 }
 
-interface FloatingElevationChartProps {
+interface FloatingElevationProfileProps {
   data: ElevationPoint[];
   onClose?: () => void;
 }
 
-export function FloatingElevationChart({ data, onClose }: FloatingElevationChartProps) {
+export function FloatingElevationProfile({ data, onClose }: FloatingElevationProfileProps) {
   if (data.length < 2) return null;
 
   const elevations = data.map(p => p.elevation);
@@ -36,7 +38,7 @@ export function FloatingElevationChart({ data, onClose }: FloatingElevationChart
   }, 0);
 
   return (
-    <Card className="fixed left-1/2 bottom-32 -translate-x-1/2 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-4 w-[800px] h-[300px] z-50">
+<Card className="fixed left-[360px] bottom-4 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-4 w-[800px] h-[150px] z-50">
       <div className="flex justify-between items-start mb-2">
         <div className="text-sm space-x-4">
           <span className="font-medium">Elevation Gain: {Math.round(elevationGain)}m</span>
@@ -54,41 +56,49 @@ export function FloatingElevationChart({ data, onClose }: FloatingElevationChart
           </Button>
         )}
       </div>
-      <div className="h-[220px]">
+      <div className="h-[90px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <XAxis 
-              dataKey="distance" 
-              type="number"
-              domain={['dataMin', 'dataMax']}
-              tickFormatter={(value) => `${value.toFixed(1)}km`}
-              stroke="currentColor"
-              fontSize={12}
-            />
-            <YAxis 
-              domain={[minElevation - 10, maxElevation + 10]}
-              tickFormatter={(value) => `${Math.round(value)}m`}
-              stroke="currentColor"
-              fontSize={12}
-            />
-            <Tooltip 
-              formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
-              labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-              contentStyle={{
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                border: 'none',
-                borderRadius: '4px',
-                color: 'white'
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="elevation"
-              stroke="#6366f1"
-              dot={false}
-              strokeWidth={2}
-            />
-          </LineChart>
+        <LineChart data={data}>
+  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+  <XAxis 
+    dataKey="distance" 
+    type="number"
+    domain={['dataMin', 'dataMax']}
+    tickFormatter={(value) => `${value.toFixed(1)}km`}
+    stroke="#666"
+    fontSize={12}
+  />
+  <YAxis 
+    domain={[minElevation - 10, maxElevation + 10]}
+    tickFormatter={(value) => `${Math.round(value)}m`}
+    stroke="#666"
+    fontSize={12}
+  />
+  <Tooltip 
+    formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
+    labelFormatter={(value: number) => `${value.toFixed(1)} km`}
+    contentStyle={{
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      border: 'none',
+      borderRadius: '8px',
+      color: 'white'
+    }}
+  />
+  <Area 
+    type="monotone"
+    dataKey="elevation"
+    fill="#ef4444"
+    fillOpacity={0.2}
+    strokeWidth={0}
+  />
+  <Line
+    type="monotone"
+    dataKey="elevation"
+    stroke="#ef4444"
+    strokeWidth={2}
+    dot={false}
+  />
+</LineChart>
         </ResponsiveContainer>
       </div>
     </Card>

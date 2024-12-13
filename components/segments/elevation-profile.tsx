@@ -42,29 +42,46 @@ export function ElevationProfile({ data, className }: ElevationProfileProps) {
       </div>
       <div className="h-[150px] w-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <XAxis 
-              dataKey="distance" 
-              type="number"
-              domain={['dataMin', 'dataMax']}
-              tickFormatter={(value) => `${value.toFixed(1)}km`}
-            />
-            <YAxis 
-              domain={[minElevation - 10, maxElevation + 10]}
-              tickFormatter={(value) => `${Math.round(value)}m`}
-            />
-            <Tooltip 
-              formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
-              labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-            />
-            <Line
-              type="monotone"
-              dataKey="elevation"
-              stroke="#6366f1"
-              dot={false}
-              strokeWidth={2}
-            />
-          </LineChart>
+        <LineChart data={data}>
+  <XAxis 
+    dataKey="distance" 
+    type="number"
+    domain={['dataMin', 'dataMax']}
+    tickFormatter={(value) => `${value.toFixed(1)}km`}
+    stroke="#666"
+    fontSize={12}
+  />
+  <YAxis 
+    domain={[minElevation - 10, maxElevation + 10]}
+    tickFormatter={(value) => `${Math.round(value)}m`}
+    stroke="#666"
+    fontSize={12}
+  />
+  <Tooltip 
+    formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
+    labelFormatter={(value: number) => `${value.toFixed(1)} km`}
+    contentStyle={{
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      border: 'none',
+      borderRadius: '8px',
+      color: 'white'
+    }}
+  />
+  <Line
+    type="monotone"
+    dataKey="elevation"
+    stroke="#ef4444"  // red-500 color
+    fill="#ef4444"
+    dot={false}
+    strokeWidth={2}
+  />
+  <defs>
+    <linearGradient id="elevationFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8}/>
+      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+    </linearGradient>
+  </defs>
+</LineChart>
         </ResponsiveContainer>
       </div>
     </div>
