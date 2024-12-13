@@ -205,7 +205,6 @@ export function MapView() {
   const [showAlert, setShowAlert] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-  const { isDrawing, elevationProfile } = drawMode;
 
   const [viewState, setViewState] = useState({
     longitude: 144.9631,
@@ -656,14 +655,19 @@ return (
           reuseMaps
           ref={mapRef}
           onLoad={(evt) => {
+            console.log('Map loaded:', evt.target);
             const map = evt.target;
             setMapInstance(map);
           }}
         />
+
+        {/* Status indicators */}
         {isLoading && <LoadingSpinner />}
         {showAlert && (
           <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
         )}
+
+        {/* Controls */}
         {isMobile ? (
           <MobileControls
             onSearch={handleSearch}
@@ -701,14 +705,25 @@ return (
       </div>
     </MapContext.Provider>
 
-    {/* Elevation profile at root level, outside both map container and context */}
-    {mapInstance && (
-  <FloatingElevationProfile 
-    data={drawMode.elevationProfile}
-    onClose={drawMode.clearDrawing}
-    isDrawing={drawMode.isDrawing}
-  />
-)}
+    {/* Elevation profile with debug logging */}
+    {(() => {
+      // Debug logging
+      console.log('Debug elevation profile render:', {
+        mapInstance: !!mapInstance,
+        isDrawing: drawMode.isDrawing,
+        elevationProfileLength: drawMode.elevationProfile?.length,
+        drawModeState: drawMode
+      });
+
+      // Only render if we have a map instance
+      return mapInstance && (
+        <FloatingElevationProfile 
+          data={drawMode.elevationProfile}
+          onClose={drawMode.clearDrawing}
+          isDrawing={drawMode.isDrawing}
+        />
+      );
+    })()}
   </>
 );
 }
