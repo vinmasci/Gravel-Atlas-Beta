@@ -18,6 +18,7 @@ import { Search, Layers, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MapContext } from '@/app/contexts/map-context';
+import { SegmentDialog } from '@/components/segments/segment-dialog';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -226,6 +227,15 @@ export function MapView() {
     { id: 'water-points', name: 'Water Points', visible: true },
     { id: 'campsites', name: 'Campsites', visible: false },
   ]);
+  
+  const [selectedSegment, setSelectedSegment] = useState<{
+    id: string;
+    title: string;
+    userName: string;
+    length: number;
+    averageRating?: number;
+    totalVotes?: number;
+  } | null>(null);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -410,8 +420,11 @@ export function MapView() {
         const newState = { ...prev, segments: !prev.segments };
         const map = mapRef.current?.getMap();
         if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-          updateSegmentLayer(map, newState.segments)
-            .catch(error => console.error('Error updating segments layer:', error));
+          updateSegmentLayer(
+            map, 
+            newState.segments,
+            (segment) => setSelectedSegment(segment)
+          ).catch(error => console.error('Error updating segments layer:', error));
         }
         return newState;
       });
@@ -635,6 +648,7 @@ export function MapView() {
             overlayStates={overlayStates}
           />
         )}
+        
       </div>
     </MapContext.Provider>
   );
