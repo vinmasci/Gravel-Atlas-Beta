@@ -329,5 +329,94 @@ The elevation profile appears automatically while drawing segments:
 - Profile updates may have slight delay due to API calls
 - Consider adding error handling for missing elevation data
 
-I BELEIVE THE CURRENT ISSUE WITH THE ELEVATION CHART NOT LOADING IS BECAUSE WE ARENT LOADING THE TERRAIN OR SOMETHING LIKE THAT IN:
-constants/map-styles.ts
+# Elevation Implementation 
+
+## Overview
+This implementation uses server-side terrain elevation calculation by directly accessing Mapbox's terrain-rgb tiles. This approach provides several advantages over client-side terrain querying:
+
+- More reliable elevation data retrieval
+- Works with any map style
+- No need to configure terrain sources in the client map
+- Better error handling and fallbacks
+
+## Architecture
+
+### Backend (`/api/get-elevation`)
+The elevation data is processed server-side using the following components:
+- Direct access to Mapbox terrain-rgb tiles
+- Pixel value decoding to elevation values
+- Coordinate to tile coordinate conversion
+- Proper error handling and fallbacks
+
+### Frontend (Drawing System)
+The drawing system handles elevation in these steps:
+1. Immediate visual feedback when drawing
+2. Asynchronous elevation data fetching
+3. State updates with elevation data
+4. Elevation profile updates
+
+## Technical Details
+
+### Tile Coordinates
+```javascript
+function lngLatToTile(lng, lat, zoom) {
+    const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
+    const y = Math.floor((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
+    return { x, y };
+}
+```
+
+### Elevation Calculation
+- Uses Mapbox's terrain-rgb tiles at zoom level 14
+- Each pixel contains elevation data encoded in RGB values
+- Elevation calculation: `-10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)`
+- Returns elevation in meters
+
+### API Endpoint
+```typescript
+POST /api/get-elevation
+Body: {
+  coordinates: [number, number][] // Array of [longitude, latitude] pairs
+}
+Response: {
+  coordinates: [number, number, number][] // Array of [longitude, latitude, elevation]
+}
+```
+
+## Usage Example
+```typescript
+// Fetch elevation for a point
+const elevation = await getElevation([[longitude, latitude]]);
+console.log(elevation); // [[longitude, latitude, elevationInMeters]]
+```
+
+## Error Handling
+1. Invalid coordinates return 400 Bad Request
+2. Failed tile fetches return 500 Internal Server Error
+3. Client-side fallbacks to 0 elevation if server fails
+4. Proper cleanup on component unmount
+
+## Dependencies
+- node-fetch for server-side requests
+- canvas for processing terrain-rgb tiles
+- Mapbox API token with terrain-rgb tileset access
+
+## Performance Considerations
+- Batches multiple elevation requests when possible
+- Immediate visual feedback while fetching elevation
+- Caching could be implemented for frequently accessed tiles
+- Consider implementing elevation data throttling for long segments
+
+## Implementation Notes
+- Zoom level 14 provides optimal balance of precision and performance
+- Terrain-rgb tiles have 0.1 meter precision
+- Maximum zoom level supported is 15
+- Consider implementing tile caching for improved performance
+- Handles coordinate precision up to 6 decimal places
+
+## Future Improvements
+1. Implement tile caching
+2. Add elevation profile smoothing
+3. Batch process elevation requests
+4. Add elevation data compression
+5. Implement proper error retries

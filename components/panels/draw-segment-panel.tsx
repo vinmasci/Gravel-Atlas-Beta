@@ -1,10 +1,11 @@
+// components/panels/draw-segment-panel.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from "@/app/hooks/use-toast";
-import { Undo, RotateCcw, Save, Grid } from 'lucide-react';
+import { Undo, RotateCcw, Save } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { useMapContext } from '@/app/contexts/map-context';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
@@ -20,43 +21,40 @@ import { Input } from "@/components/ui/input";
 
 export function DrawSegmentPanel() {
   const { map } = useMapContext();
+  const { user } = useUser();
+  const { toast } = useToast();
+  
+  // Local state
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [segmentTitle, setSegmentTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize draw mode hook
+  const drawMode = useDrawMode(map);
   const { 
     isDrawing, 
-    drawnCoordinates, 
+    drawnCoordinates,
     snapToRoad,
-    elevationProfile,  // Add this
     startDrawing, 
     handleClick, 
     finishDrawing, 
     clearDrawing, 
     undoLastPoint,
     toggleSnapToRoad
-  } = useDrawMode(map);
-  
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [segmentTitle, setSegmentTitle] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const { user } = useUser();
-  const { toast } = useToast();
+  } = drawMode;
 
-  // Set up map click handler
+  // Set up map click handler once
   useEffect(() => {
     if (!map) return;
 
     if (isDrawing) {
       map.on('click', handleClick);
-    } else {
-      map.off('click', handleClick);
+      return () => map.off('click', handleClick);
     }
-
-    return () => {
-      if (map) {
-        map.off('click', handleClick);
-      }
-    };
   }, [map, isDrawing, handleClick]);
 
-  const handleDrawingToggle = () => {
+  // Handler functions
+  const handleDrawingToggle = useCallback(() => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -76,9 +74,9 @@ export function DrawSegmentPanel() {
     } else {
       startDrawing();
     }
-  };
+  }, [user, isDrawing, drawnCoordinates.length, clearDrawing, startDrawing, toast]);
 
-  const handleSnapToggle = (enabled: boolean) => {
+  const handleSnapToggle = useCallback((enabled: boolean) => {
     toggleSnapToRoad(enabled);
     toast({
       title: enabled ? "Snap to Road Enabled" : "Snap to Road Disabled",
@@ -86,9 +84,9 @@ export function DrawSegmentPanel() {
         ? "Points will now snap to the nearest road" 
         : "Points will be placed exactly where you click",
     });
-  };
+  }, [toggleSnapToRoad, toast]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!segmentTitle.trim()) {
       toast({
         title: "Title Required",
@@ -103,8 +101,6 @@ export function DrawSegmentPanel() {
       const segment = finishDrawing();
       if (!segment) return;
   
-      console.log('Original segment:', segment);
-  
       // Create GPX data
       const coordinates = segment.geometry.coordinates;
       const trackpoints = coordinates
@@ -114,20 +110,20 @@ export function DrawSegmentPanel() {
         .join('\n      ');
   
       const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
-  <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Gravel Atlas Beta">
-    <metadata>
-      <name>${segmentTitle}</name>
-    </metadata>
-    <trk>
-      <name>${segmentTitle}</name>
-      <desc>color=#c0392b</desc>
-      <trkseg>
-        ${trackpoints}
-      </trkseg>
-    </trk>
-  </gpx>`;
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Gravel Atlas Beta">
+  <metadata>
+    <name>${segmentTitle}</name>
+  </metadata>
+  <trk>
+    <name>${segmentTitle}</name>
+    <desc>color=#c0392b</desc>
+    <trkseg>
+      ${trackpoints}
+    </trkseg>
+  </trk>
+</gpx>`;
   
-      // Format data according to our schema
+      // Format data according to schema
       const payload = {
         title: segmentTitle,
         gpxData,
@@ -141,8 +137,6 @@ export function DrawSegmentPanel() {
         }
       };
   
-      console.log('Sending payload:', payload);
-  
       const response = await fetch('/api/segments/save', {
         method: 'POST',
         headers: {
@@ -151,13 +145,8 @@ export function DrawSegmentPanel() {
         body: JSON.stringify(payload),
       });
   
-      const responseData = await response.json();
-      console.log('Response:', {
-        status: response.status,
-        data: responseData
-      });
-  
       if (!response.ok) {
+        const responseData = await response.json();
         throw new Error(responseData.error || 'Failed to save segment');
       }
   
@@ -170,12 +159,7 @@ export function DrawSegmentPanel() {
       setShowSaveDialog(false);
       clearDrawing();
     } catch (error: any) {
-      console.error('Error saving segment:', {
-        message: error.message,
-        stack: error.stack,
-        error
-      });
-      
+      console.error('Error saving segment:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save segment. Please try again.",
@@ -184,13 +168,13 @@ export function DrawSegmentPanel() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [segmentTitle, finishDrawing, clearDrawing, toast]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setShowSaveDialog(false);
     setSegmentTitle('');
     clearDrawing();
-  };
+  }, [clearDrawing]);
 
   return (
     <div className="space-y-4">

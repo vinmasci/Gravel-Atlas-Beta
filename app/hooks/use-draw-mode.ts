@@ -1,5 +1,5 @@
 // app/hooks/use-draw-mode.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { Map } from 'mapbox-gl';
 import * as turf from '@turf/turf';
 
@@ -15,56 +15,44 @@ interface SegmentInfo {
   elevation?: number;
 }
 
+interface ClickPoint {
+  coordinates: [number, number];
+  timestamp: number;
+}
+
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
-    try {
-        const response = await fetch('/api/get-elevation', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ coordinates }),
-        });
+  try {
+    const response = await fetch('/api/get-elevation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ coordinates }),
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.coordinates;
-    } catch (error) {
-        console.error('Error fetching elevation:', error);
-        // Return original coordinates with 0 elevation if there's an error
-        return coordinates.map(([lng, lat]) => [lng, lat, 0]);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data.coordinates;
+  } catch (error) {
+    console.error('Error fetching elevation:', error);
+    // Return original coordinates with 0 elevation if there's an error
+    return coordinates.map(([lng, lat]) => [lng, lat, 0]);
+  }
 }
 
 export const useDrawMode = (map: Map | null) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);
   const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
-  const [drawingLayer, setDrawingLayer] = useState<string | null>(null);
-  const [markersLayer, setMarkersLayer] = useState<string | null>(null);
   const [snapToRoad, setSnapToRoad] = useState(true);
-  const [segments, setSegments] = useState<SegmentInfo[]>([]);
-
-  const updateMarkers = useCallback((segments: SegmentInfo[]) => {
-    if (!map || !markersLayer) return;
-
-    const source = map.getSource(markersLayer) as mapboxgl.GeoJSONSource;
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: segments.map((segment) => ({
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: segment.clickPoint
-          },
-          properties: {}
-        }))
-      });
-    }
-  }, [map, markersLayer]);
+  const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
+  
+  const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
+  const pendingOperation = useRef<AbortController | null>(null);
+  const isProcessingClick = useRef(false);
 
   const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<[number, number][]> => {
     if (!snapToRoad) return [clickedPoint];
@@ -99,77 +87,51 @@ export const useDrawMode = (map: Map | null) => {
     }
   };
 
-  const startDrawing = useCallback(() => {
+  const initializeLayers = useCallback(() => {
     if (!map) return;
-    
-    setIsDrawing(true);
-    setDrawnCoordinates([]);
-    setElevationProfile([]);
-    setSegments([]);
-    
-    map.getCanvas().style.cursor = 'crosshair';
 
     // Clean up existing layers
-    if (drawingLayer) {
-      if (map.getLayer(drawingLayer)) {
-        map.removeLayer(drawingLayer);
-      }
-      if (map.getSource(drawingLayer)) {
-        map.removeSource(drawingLayer);
-      }
+    if (layerRefs.current.drawing) {
+      map.removeLayer(layerRefs.current.drawing);
+      map.removeSource(layerRefs.current.drawing);
+    }
+    if (layerRefs.current.markers) {
+      map.removeLayer(layerRefs.current.markers);
+      map.removeSource(layerRefs.current.markers);
     }
 
-    if (markersLayer) {
-      if (map.getLayer(markersLayer)) {
-        map.removeLayer(markersLayer);
-      }
-      if (map.getSource(markersLayer)) {
-        map.removeSource(markersLayer);
-      }
-    }
+    // Create new layers with unique IDs
+    const drawingId = `drawing-${Date.now()}`;
+    const markersId = `markers-${Date.now()}`;
 
-    // Create new line layer
-    const newLayerId = `drawing-${Date.now()}`;
-    map.addSource(newLayerId, {
+    // Add drawing layer
+    map.addSource(drawingId, {
       type: 'geojson',
       data: {
         type: 'Feature',
         properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: []
-        }
+        geometry: { type: 'LineString', coordinates: [] }
       }
     });
 
     map.addLayer({
-      id: newLayerId,
+      id: drawingId,
       type: 'line',
-      source: newLayerId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#ff0000',
-        'line-width': 3
-      }
+      source: drawingId,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ff0000', 'line-width': 3 }
     });
 
-    // Create markers layer
-    const newMarkersLayerId = `markers-${Date.now()}`;
-    map.addSource(newMarkersLayerId, {
+    // Add markers layer
+    map.addSource(markersId, {
       type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: []
-      }
+      data: { type: 'FeatureCollection', features: [] }
     });
 
     map.addLayer({
-      id: newMarkersLayerId,
+      id: markersId,
       type: 'circle',
-      source: newMarkersLayerId,
+      source: markersId,
       paint: {
         'circle-radius': 5,
         'circle-color': '#ffffff',
@@ -178,95 +140,128 @@ export const useDrawMode = (map: Map | null) => {
       }
     });
 
-    setDrawingLayer(newLayerId);
-    setMarkersLayer(newMarkersLayerId);
-  }, [map, drawingLayer, markersLayer]);
+    layerRefs.current = { drawing: drawingId, markers: markersId };
+  }, [map]);
 
   const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent) => {
-    if (!isDrawing || !map || !drawingLayer) return;
-
-    const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-    const previousPoint = drawnCoordinates.length > 0 ? drawnCoordinates[drawnCoordinates.length - 1] : undefined;
+    if (!isDrawing || !map || !layerRefs.current.drawing || isProcessingClick.current) return;
     
-    let newPoints: [number, number][];
-    if (snapToRoad) {
-      newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
-    } else {
-      newPoints = [clickedPoint];
+    if (pendingOperation.current) {
+      pendingOperation.current.abort();
     }
 
-    // Get elevation for all new points at once
-    const elevationData = await getElevation(newPoints);
-    
-    let totalDistance = elevationProfile.length > 0 ? elevationProfile[elevationProfile.length - 1].distance : 0;
-    const newElevationPoints = elevationData.map((point, i) => {
-      if (i > 0 || drawnCoordinates.length > 0) {
-        const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
-        const distance = turf.distance(
-          turf.point(prevPoint),
-          turf.point([point[0], point[1]]),
-          { units: 'kilometers' }
-        );
-        totalDistance += distance;
-      }
-      return {
-        distance: totalDistance,
-        elevation: point[2]
+    isProcessingClick.current = true;
+    const controller = new AbortController();
+    pendingOperation.current = controller;
+
+    try {
+      const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+      const previousPoint = drawnCoordinates.length > 0 
+        ? drawnCoordinates[drawnCoordinates.length - 1] 
+        : undefined;
+
+      // Add click point immediately
+      const newClickPoint = { 
+        coordinates: clickedPoint,
+        timestamp: Date.now()
       };
-    });
+      setClickPoints(prev => [...prev, newClickPoint]);
 
-    // Update elevation profile
-    setElevationProfile(prev => [...prev, ...newElevationPoints]);
-    
-    // Store points, snap state, and elevation
-    setSegments(prev => [...prev, {
-      points: newPoints,
-      isSnapped: snapToRoad && newPoints.length > 1,
-      clickPoint: clickedPoint,
-      elevation: elevationData[0]?.[2]
-    }]);
+      // Get snapped points and elevation
+      const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
+      const elevationData = await getElevation([clickedPoint]);
 
-    const newCoordinates = [...drawnCoordinates, ...newPoints];
-    setDrawnCoordinates(newCoordinates);
+      // Calculate new elevation profile
+      let totalDistance = elevationProfile.length > 0 
+        ? elevationProfile[elevationProfile.length - 1].distance 
+        : 0;
 
-    // Update line
-    const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
-    if (source) {
-      source.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: newCoordinates
+      const newElevationPoints = elevationData.map((point, i) => {
+        if (i > 0 || drawnCoordinates.length > 0) {
+          const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
+          const distance = turf.distance(
+            turf.point(prevPoint),
+            turf.point([point[0], point[1]]),
+            { units: 'kilometers' }
+          );
+          totalDistance += distance;
         }
+        return {
+          distance: totalDistance,
+          elevation: point[2]
+        };
       });
-    }
 
-    // Update markers
-    updateMarkers([...segments, { 
-      points: newPoints, 
-      isSnapped: snapToRoad && newPoints.length > 1, 
-      clickPoint: clickedPoint,
-      elevation: elevationData[0]?.[2]
-    }]);
-  }, [isDrawing, map, drawingLayer, drawnCoordinates, snapToRoad, segments, updateMarkers, elevationProfile]);
+      const newCoordinates = [...drawnCoordinates, ...newPoints];
+      
+      // Update line source
+      const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
+      const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
+
+      if (lineSource && markerSource) {
+        lineSource.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: newCoordinates
+          }
+        });
+
+        markerSource.setData({
+          type: 'FeatureCollection',
+          features: [...clickPoints, newClickPoint].map(point => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: point.coordinates
+            },
+            properties: {
+              timestamp: point.timestamp
+            }
+          }))
+        });
+
+        setDrawnCoordinates(newCoordinates);
+        setElevationProfile(prev => [...prev, ...newElevationPoints]);
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Error processing click:', error);
+      }
+    } finally {
+      isProcessingClick.current = false;
+      pendingOperation.current = null;
+    }
+  }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints]);
+
+  const startDrawing = useCallback(() => {
+    if (!map) return;
+    
+    setIsDrawing(true);
+    setDrawnCoordinates([]);
+    setElevationProfile([]);
+    setClickPoints([]);
+    
+    map.getCanvas().style.cursor = 'crosshair';
+    initializeLayers();
+  }, [map, initializeLayers]);
 
   const undoLastPoint = useCallback(() => {
-    if (!map || !drawingLayer || segments.length === 0) return;
-
-    const newSegments = segments.slice(0, -1);
-    setSegments(newSegments);
-
-    const newCoordinates = newSegments.flatMap(segment => segment.points);
-    setDrawnCoordinates(newCoordinates);
-
-    // Update elevation profile
-    setElevationProfile(prev => prev.slice(0, -1));
-
-    // Update line
-    const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
-    if (source) {
-      source.setData({
+    if (!map || !layerRefs.current.drawing || drawnCoordinates.length === 0) return;
+  
+    // Find the previous click point
+    const newClickPoints = clickPoints.slice(0, -1);
+  
+    // Get the coordinates up to the last segment
+    const lastSegmentStartIndex = Math.max(0, drawnCoordinates.length - 2);
+    const newCoordinates = drawnCoordinates.slice(0, lastSegmentStartIndex);
+    
+    const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
+    const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
+  
+    if (lineSource && markerSource) {
+      lineSource.setData({
         type: 'Feature',
         properties: {},
         geometry: {
@@ -274,11 +269,26 @@ export const useDrawMode = (map: Map | null) => {
           coordinates: newCoordinates
         }
       });
+  
+      markerSource.setData({
+        type: 'FeatureCollection',
+        features: newClickPoints.map(point => ({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: point.coordinates
+          },
+          properties: {
+            timestamp: point.timestamp
+          }
+        }))
+      });
+  
+      setClickPoints(newClickPoints);
+      setDrawnCoordinates(newCoordinates);
+      setElevationProfile(prev => prev.slice(0, -1));
     }
-
-    // Update markers
-    updateMarkers(newSegments);
-  }, [map, drawingLayer, segments, updateMarkers]);
+  }, [map, drawnCoordinates, clickPoints]);
 
   const finishDrawing = useCallback(() => {
     if (!map || !isDrawing || drawnCoordinates.length < 2) return null;
@@ -299,36 +309,29 @@ export const useDrawMode = (map: Map | null) => {
   }, [map, isDrawing, drawnCoordinates, elevationProfile]);
 
   const clearDrawing = useCallback(() => {
-    if (!map || !drawingLayer) return;
-
-    if (map.getLayer(drawingLayer)) {
-      map.removeLayer(drawingLayer);
-    }
-    if (map.getSource(drawingLayer)) {
-      map.removeSource(drawingLayer);
+    if (!map) return;
+    
+    if (pendingOperation.current) {
+      pendingOperation.current.abort();
     }
 
-    if (markersLayer) {
-      if (map.getLayer(markersLayer)) {
-        map.removeLayer(markersLayer);
-      }
-      if (map.getSource(markersLayer)) {
-        map.removeSource(markersLayer);
-      }
+    if (layerRefs.current.drawing) {
+      map.removeLayer(layerRefs.current.drawing);
+      map.removeSource(layerRefs.current.drawing);
     }
 
-    setDrawingLayer(null);
-    setMarkersLayer(null);
+    if (layerRefs.current.markers) {
+      map.removeLayer(layerRefs.current.markers);
+      map.removeSource(layerRefs.current.markers);
+    }
+
+    layerRefs.current = { drawing: null, markers: null };
     setDrawnCoordinates([]);
     setElevationProfile([]);
-    setSegments([]);
+    setClickPoints([]);
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
-  }, [map, drawingLayer, markersLayer]);
-
-  const toggleSnapToRoad = useCallback((enabled: boolean) => {
-    setSnapToRoad(enabled);
-  }, []);
+  }, [map]);
 
   return {
     isDrawing,
@@ -340,6 +343,6 @@ export const useDrawMode = (map: Map | null) => {
     finishDrawing,
     clearDrawing,
     undoLastPoint,
-    toggleSnapToRoad
+    toggleSnapToRoad: setSnapToRoad
   };
 };
