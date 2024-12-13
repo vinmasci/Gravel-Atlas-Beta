@@ -38,11 +38,25 @@ export async function POST(req: Request) {
     // Connect to database
     await dbConnect();
 
-    const { geojson, title } = await req.json();
+    // Log the request body for debugging
+    const body = await req.json();
+    console.log('Request body:', JSON.stringify(body, null, 2));
+
+    const { geojson, title } = body;
 
     if (!geojson || !title) {
+      console.log('Missing fields:', { hasGeojson: !!geojson, hasTitle: !!title });
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate geojson structure
+    if (!geojson.type || !geojson.geometry || !geojson.geometry.coordinates) {
+      console.log('Invalid GeoJSON structure:', geojson);
+      return NextResponse.json(
+        { error: 'Invalid GeoJSON structure' },
         { status: 400 }
       );
     }
@@ -52,7 +66,16 @@ export async function POST(req: Request) {
 
     // Calculate basic metadata
     const coordinates = geojson.geometry.coordinates;
-    const length = calculateLength(coordinates); // You'll need to implement this
+    const length = calculateLength(coordinates);
+
+    // Log the data we're about to save
+    console.log('Creating segment with data:', {
+      title,
+      userId: session.user.sub,
+      userName: session.user.name,
+      coordinatesCount: coordinates.length,
+      length
+    });
 
     const segment = new DrawnSegment({
       gpxData,
@@ -60,7 +83,6 @@ export async function POST(req: Request) {
       metadata: {
         title,
         length,
-        // We can add elevation data later
         elevationGain: null,
         elevationLoss: null,
         surfaceTypes: []
@@ -74,16 +96,37 @@ export async function POST(req: Request) {
       }
     });
 
-    await segment.save();
+    // Log any validation errors
+    const validationError = segment.validateSync();
+    if (validationError) {
+      console.error('Validation error:', validationError);
+      return NextResponse.json(
+        { error: 'Validation failed', details: validationError },
+        { status: 400 }
+      );
+    }
+
+    // Save and log the result
+    const savedSegment = await segment.save();
+    console.log('Segment saved successfully:', savedSegment._id);
 
     return NextResponse.json({
       success: true,
-      segment
+      segment: savedSegment
     });
-  } catch (error) {
-    console.error('Error saving segment:', error);
+  } catch (error: any) {
+    // Log the full error
+    console.error('Error saving segment:', {
+      message: error.message,
+      stack: error.stack,
+      details: error
+    });
+
     return NextResponse.json(
-      { error: 'Failed to save segment' },
+      { 
+        error: 'Failed to save segment',
+        details: error.message // Include error message in response
+      },
       { status: 500 }
     );
   }
