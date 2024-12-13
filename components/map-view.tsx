@@ -702,7 +702,7 @@ return (
         </div>
       </MapContext.Provider>
       
-      {mapInstance && <FloatingElevationProfile />}
+      <FloatingElevationProfile />
     </DrawModeProvider>
   </>
 );

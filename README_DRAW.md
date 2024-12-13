@@ -486,3 +486,29 @@ console.log(elevation); // [[longitude, latitude, elevationInMeters]]
    - Consider mobile responsiveness
    - Add export capabilities
    - Implement elevation data caching
+
+   Here's what we did:
+
+1. Original Problem:
+- The elevation profile was showing up inside the sidebar when drawing segments
+- We wanted it to be full-width at the bottom of the screen, like RideWithGPS
+
+2. Solution Approach:
+- We created a DrawModeContext to share the drawing state
+- Moved the FloatingElevationProfile out of the sidebar
+- Put it at the root level in map-view.tsx
+
+3. What Worked:
+- Setting up the DrawModeContext
+- The floating elevation profile component itself works correctly
+- Data flow through the context is working
+
+4. What Didn't Work Initially:
+- The mapInstance check (`{mapInstance && <FloatingElevationProfile />}`) was preventing the profile from showing
+- This was unnecessary since the profile gets its data through the DrawMode context
+- Fixed by removing the mapInstance check
+
+Key Learning:
+The elevation profile should be displayed based on drawing state (isDrawing) and elevation data existence, not based on map instance availability.
+
+Want me to clarify any part of this?
