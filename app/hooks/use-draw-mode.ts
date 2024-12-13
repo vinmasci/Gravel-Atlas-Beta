@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Map } from 'mapbox-gl';
+import type { Map } from 'mapbox-gl';
 
 export const useDrawMode = (map: Map | null) => {
   const [isDrawing, setIsDrawing] = useState(false);
