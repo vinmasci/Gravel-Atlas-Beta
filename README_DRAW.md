@@ -317,13 +317,12 @@ models/
 └── DrawnSegment.ts                  # Mongoose model for segments
 
 components/
-├── panels/
-│   └── draw-segment-panel.tsx       # Panel component for the draw interface
-└── draw-segment-dialog.tsx          # Dialog component for drawing process
+└── panels/
+    └── draw-segment-panel.tsx       # Panel component with integrated drawing interface
 
 Files Modified:
 └── components/
-    └── map-view.tsx                 # Added MapContext provider and map instance state
+    └── map-view.tsx                # Added MapContext provider and map instance state
 ```
 
 ## Implementation Details
@@ -334,40 +333,44 @@ Files Modified:
 - Type-safe implementation with MapContextType interface
 
 ### 2. Drawing Hook (`use-draw-mode.ts`)
-- Manages drawing state
-- Handles map interactions
-- Controls coordinate collection
+- Manages drawing state and coordinates
+- Handles map click interactions
+- Controls line drawing visualization
 - Manages drawing layer on map
+- Provides undo functionality
+- Handles drawing cleanup
+- Manages cursor states
+- Provides GeoJSON conversion
 
 ### 3. Draw Segment Panel (`draw-segment-panel.tsx`)
 - Provides main interface in sidebar
-- Handles authentication check
-- Triggers drawing dialog
-- Basic drawing controls
+- Authentication check for drawing
+- Toggle-able drawing mode with visual feedback
+- Drawing tool controls:
+  - Undo last point
+  - Reset drawing
+  - Save segment
+- Snap to road option
+- Save dialog with title input
+- Integration with map context and drawing hook
 
-### 4. Draw Segment Dialog (`draw-segment-dialog.tsx`)
-- Title input
-- Drawing instructions
-- Start/Cancel controls
-- Drawing status display
-- Save functionality
-
-### 5. Map View Modifications (`map-view.tsx`)
+### 4. Map View Modifications (`map-view.tsx`)
 Added:
 - MapContext.Provider wrapper
-- Map instance state
+- Map instance state management
 - onLoad handler for map instance
+- Drawing layer support
 
-### 6. MongoDB Schema (`DrawnSegment.ts`)
+### 5. MongoDB Schema (`DrawnSegment.ts`)
 - Implements segment data structure
 - Includes vote schema
 - Handles GPX and GeoJSON data
 - Tracks user attribution
 - Manages timestamps
 
-### 7. API Routes (`/api/segments/save/route.ts`)
+### 6. API Routes (`/api/segments/save/route.ts`)
 - Handles segment saving
-- Converts GeoJSON to GPX
+- Server-side GPX generation
 - Authentication check
 - Data validation
 - MongoDB integration
@@ -375,8 +378,9 @@ Added:
 ## Currently Implemented
 1. ✅ MongoDB Schema Setup
 2. ✅ Basic API Route (save)
-3. ✅ Drawing Interface
+3. ✅ Drawing Interface with Tools
 4. ✅ Map Context System
+5. ✅ Interactive Drawing System
 
 ## Next Steps To Implement
 1. API Routes:
@@ -391,13 +395,29 @@ Added:
    - Load segments on map
    - Segment styling
    - Segment interaction
+4. Enhanced Drawing Features:
+   - Implement snap to road functionality
+   - Add elevation data
+   - Add distance calculations
 
 ## Dependencies Added
 ```bash
-npm install mongoose togpx @turf/turf
+npm install mongoose @turf/turf
 ```
 
 ## Environment Variables Required
 ```
 MONGODB_URI=your_mongodb_connection_string
 ```
+
+## Usage Instructions
+1. Click the "Draw Segment" accordion in the sidebar
+2. Authenticate if not already logged in
+3. Click "Start Drawing" to enter drawing mode
+4. Click on the map to place points
+5. Use tools while drawing:
+   - Undo: Remove last point
+   - Reset: Clear current drawing
+   - Save: Complete drawing and add title
+6. Save dialog will appear for title input
+7. Segment is saved to database with GPX and GeoJSON data
