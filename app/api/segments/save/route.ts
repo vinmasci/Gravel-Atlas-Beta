@@ -1,7 +1,30 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import clientPromise from '@/lib/mongodb';
-import togpx from 'togpx';
+
+// Helper function to create GPX data without using togpx
+function createGPX(geojson: any, title: string) {
+  const coordinates = geojson.geometry.coordinates;
+  const trackpoints = coordinates
+    .map((coord: [number, number]) => {
+      return `<trkpt lat="${coord[1]}" lon="${coord[0]}"></trkpt>`;
+    })
+    .join('\n      ');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Gravel Atlas Beta">
+  <metadata>
+    <name>${title}</name>
+  </metadata>
+  <trk>
+    <name>${title}</name>
+    <desc>color=#c0392b</desc>
+    <trkseg>
+      ${trackpoints}
+    </trkseg>
+  </trk>
+</gpx>`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,20 +42,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Convert GeoJSON to GPX
-    const gpxData = togpx({
-      type: 'FeatureCollection',
-      features: [
-        {
-          ...geojson,
-          properties: {
-            ...geojson.properties,
-            color: '#c0392b',
-            id: `segment-${Date.now()}`,
-          },
-        },
-      ],
-    });
+    // Create GPX using our server-side function
+    const gpxData = createGPX(geojson, metadata.title);
 
     const client = await clientPromise;
     const db = client.db('roadApp');
