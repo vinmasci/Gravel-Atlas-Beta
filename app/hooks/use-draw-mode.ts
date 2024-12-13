@@ -1,3 +1,4 @@
+// app/hooks/use-draw-mode.ts
 import { useState, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
 
@@ -14,81 +15,94 @@ export const useDrawMode = (map: Map | null) => {
     
     // Change cursor to crosshair
     map.getCanvas().style.cursor = 'crosshair';
+
+    // Create new layer for drawing
+    const newLayerId = `drawing-${Date.now()}`;
+    map.addSource(newLayerId, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: []
+        }
+      }
+    });
+
+    map.addLayer({
+      id: newLayerId,
+      type: 'line',
+      source: newLayerId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#ff0000',
+        'line-width': 3
+      }
+    });
+
+    setDrawingLayer(newLayerId);
   }, [map]);
 
   const handleClick = useCallback((e: mapboxgl.MapMouseEvent) => {
-    if (!isDrawing || !map) return;
+    if (!isDrawing || !map || !drawingLayer) return;
 
     const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-    setDrawnCoordinates(prev => [...prev, coords]);
+    const newCoordinates = [...drawnCoordinates, coords];
+    setDrawnCoordinates(newCoordinates);
 
-    // Update or create the drawing layer
-    if (drawingLayer) {
-      const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
-      if (source) {
-        source.setData({
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [...drawnCoordinates, coords]
-          }
-        });
-      }
-    } else {
-      // Create new layer for drawing
-      const newLayerId = `drawing-${Date.now()}`;
-      map.addSource(newLayerId, {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [coords]
-          }
+    // Update the drawing layer
+    const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: newCoordinates
         }
       });
-
-      map.addLayer({
-        id: newLayerId,
-        type: 'line',
-        source: newLayerId,
-        layout: {
-          'line-cap': 'round',
-          'line-join': 'round'
-        },
-        paint: {
-          'line-color': '#ff0000',
-          'line-width': 3
-        }
-      });
-
-      setDrawingLayer(newLayerId);
     }
-  }, [isDrawing, map, drawnCoordinates, drawingLayer]);
+  }, [isDrawing, map, drawingLayer, drawnCoordinates]);
+
+  const undoLastPoint = useCallback(() => {
+    if (!map || !drawingLayer || drawnCoordinates.length === 0) return;
+
+    const newCoordinates = [...drawnCoordinates];
+    newCoordinates.pop();
+    setDrawnCoordinates(newCoordinates);
+
+    const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: newCoordinates
+        }
+      });
+    }
+  }, [map, drawingLayer, drawnCoordinates]);
 
   const finishDrawing = useCallback(() => {
-    if (!map || !isDrawing) return null;
+    if (!map || !isDrawing || drawnCoordinates.length < 2) return null;
 
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
 
-    if (drawnCoordinates.length < 2) {
-      clearDrawing();
-      return null;
-    }
-
     const geojson = {
-      type: 'Feature',
+      type: 'Feature' as const,
       properties: {},
       geometry: {
-        type: 'LineString',
+        type: 'LineString' as const,
         coordinates: drawnCoordinates
       }
     };
 
-    clearDrawing();
     return geojson;
   }, [map, isDrawing, drawnCoordinates]);
 
@@ -114,6 +128,7 @@ export const useDrawMode = (map: Map | null) => {
     startDrawing,
     handleClick,
     finishDrawing,
-    clearDrawing
+    clearDrawing,
+    undoLastPoint
   };
 };
