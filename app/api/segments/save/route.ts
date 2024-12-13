@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
-import { DrawnSegment } from '@/models/DrawnSegment';
-import { connectToDatabase } from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb';
 import togpx from 'togpx';
 
 export async function POST(req: Request) {
@@ -35,9 +34,11 @@ export async function POST(req: Request) {
       ],
     });
 
-    await connectToDatabase();
-
-    const segment = await DrawnSegment.create({
+    const client = await clientPromise;
+    const db = client.db('roadApp');
+    const segmentsCollection = db.collection('segmentsV2');
+    
+    const segment = await segmentsCollection.insertOne({
       gpxData,
       geojson: {
         type: 'FeatureCollection',
@@ -47,10 +48,22 @@ export async function POST(req: Request) {
         title: metadata.title
       },
       auth0Id: session.user.sub,
-      votes: []
+      votes: [],
+      createdAt: new Date()
     });
 
-    return NextResponse.json(segment);
+    return NextResponse.json({
+      success: true,
+      segment: {
+        _id: segment.insertedId,
+        gpxData,
+        geojson,
+        metadata,
+        auth0Id: session.user.sub,
+        votes: [],
+        createdAt: new Date()
+      }
+    });
   } catch (error) {
     console.error('Error saving segment:', error);
     return NextResponse.json(
