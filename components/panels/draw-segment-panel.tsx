@@ -104,13 +104,36 @@ export function DrawSegmentPanel() {
   
       console.log('Original segment:', segment);
   
+      // Create GPX data
+      const coordinates = segment.geometry.coordinates;
+      const trackpoints = coordinates
+        .map((coord: [number, number]) => {
+          return `<trkpt lat="${coord[1]}" lon="${coord[0]}"></trkpt>`;
+        })
+        .join('\n      ');
+  
+      const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
+  <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Gravel Atlas Beta">
+    <metadata>
+      <name>${segmentTitle}</name>
+    </metadata>
+    <trk>
+      <name>${segmentTitle}</name>
+      <desc>color=#c0392b</desc>
+      <trkseg>
+        ${trackpoints}
+      </trkseg>
+    </trk>
+  </gpx>`;
+  
       // Format data according to our schema
       const payload = {
         title: segmentTitle,
+        gpxData,
         geojson: {
-          type: 'Feature',
+          type: 'Feature' as const,
           geometry: {
-            type: 'LineString',
+            type: 'LineString' as const,
             coordinates: segment.geometry.coordinates
           },
           properties: {}
