@@ -7,36 +7,9 @@ export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
   mapbox: {
     id: 'mapbox',
     title: 'Mapbox Outdoors',
-    style: {
-      version: 8,
-      sources: {
-        'mapbox-outdoors': {
-          type: 'raster',
-          url: 'mapbox://mapbox.outdoors-v12',
-          tileSize: 256
-        },
-        'mapbox-dem': {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.terrain-rgb',
-          tileSize: 512,
-          maxzoom: 14
-        }
-      },
-      layers: [{
-        id: 'mapbox-outdoors-layer',
-        type: 'raster',
-        source: 'mapbox-outdoors',
-        minzoom: 0,
-        maxzoom: 22
-      }],
-      terrain: {
-        source: 'mapbox-dem',
-        exaggeration: 1
-      }
-    },
+    style: 'mapbox://styles/mapbox/outdoors-v12',
     type: 'mapbox'
   },
-  
   'osm-cycle': {
     id: 'osm-cycle',
     title: 'OSM Cycle',

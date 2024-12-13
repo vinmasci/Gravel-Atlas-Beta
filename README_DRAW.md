@@ -216,95 +216,118 @@ AUTH0_CLIENT_SECRET=         # Auth0 client secret
 4. Enhanced statistics
 5. Export capabilities
 
-CURRENT ISSUE
-THIS BLOCK OF CODE IN MAPVIEW
-  // Render Mapbox
-  return (
-    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <div className="w-full h-full relative">
-        <Map
-          {...viewState}
-          onMove={evt => setViewState(evt.viewState)}
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          style={mapContainerStyle}
-          mapStyle={
-            selectedStyle === 'osm-cycle'
-              ? MAP_STYLES[selectedStyle].style
-              : selectedStyle === 'mapbox'
-              ? MAP_STYLES[selectedStyle].style
-              : 'mapbox://styles/mapbox/empty-v9'
-          }
-          projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-          reuseMaps
-          ref={mapRef}
-          onLoad={(evt) => {
-            setMapInstance(evt.target);
-          }}
-        />
-        {isLoading && <LoadingSpinner />}
-        {showAlert && (
-          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-        )}
-        {isMobile ? (
-          <MobileControls
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
-          />
-        ) : (
-          <MapSidebar
-            isOpen={isOpen}
-            setIsOpen={handleSidebarToggle}
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            availableLayers={layers}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            mapillaryVisible={mapillaryVisible}
-            overlayStates={overlayStates}
-          />
-        )}
-                <SegmentDialog
-          open={!!selectedSegment}
-          onOpenChange={(open) => !open && setSelectedSegment(null)}
-          segment={selectedSegment}
-        />
-      </div>
-    </MapContext.Provider>
-  );
+ADD ONS
+# Elevation Profile Implementation
+
+## 📂 New Files Added
+
+```
+components/
+└── segments/
+    └── elevation-profile.tsx    # Elevation profile visualization component
+
+lib/
+└── elevation-utils.ts          # (Optional) Utility functions for elevation calculations
+```
+
+## 🔧 Modified Files
+
+1. **app/hooks/use-draw-mode.ts**
+   - Added elevation sampling functionality
+   - Integrated terrain querying with Mapbox
+   - Added elevation profile state management
+
+2. **components/map-view.tsx**
+   - Added terrain source configuration
+   - Integrated elevation profile display
+   - Added elevation data flow management
+
+## 📊 Component Details
+
+### ElevationProfile Component
+```typescript
+interface ElevationPoint {
+  distance: number;  // Distance in kilometers
+  elevation: number; // Elevation in meters
 }
 
-CREATES THIS ERROR:
-Failed to compile
+interface ElevationProfileProps {
+  data: ElevationPoint[];
+  className?: string;
+}
+```
 
-./components/segments/segment-dialog.tsx:6:1
-Module not found: Can't resolve '@/hooks/use-toast'
-  4 | import React, { useState } from 'react';
-  5 | import { useUser } from '@auth0/nextjs-auth0/client';
-> 6 | import { useToast } from '@/hooks/use-toast';
-    | ^
-  7 | import {
-  8 |   Dialog,
-  9 |   DialogContent,
+Features:
+- Real-time elevation visualization
+- Distance and elevation metrics
+- Total elevation gain calculation
+- Responsive chart sizing
+- Interactive tooltips
 
-https://nextjs.org/docs/messages/module-not-found
+### Implementation Requirements
+1. Mapbox GL JS v2.0 or higher
+2. Mapbox terrain-rgb tileset access
+3. recharts library for visualization
 
-Import trace for requested module:
-./components/map-view.tsx
+## 🎯 Usage
 
-SO I HAVE REMOVED THE                 <SegmentDialog
-          open={!!selectedSegment}
-          onOpenChange={(open) => !open && setSelectedSegment(null)}
-          segment={selectedSegment}
-        />
+The elevation profile appears automatically while drawing segments:
+1. Shows in bottom-right corner of map
+2. Updates in real-time as points are added
+3. Displays:
+   - Current elevation
+   - Total elevation gain
+   - Distance covered
+   - Elevation profile graph
 
-        FOR NOW
+## 🔍 Technical Details
+
+### Terrain Configuration
+```typescript
+// Required Mapbox terrain source
+{
+  'mapbox-dem': {
+    type: 'raster-dem',
+    url: 'mapbox://mapbox.terrain-rgb',
+    tileSize: 512,
+    maxzoom: 14
+  }
+}
+
+// Terrain settings
+{
+  source: 'mapbox-dem',
+  exaggeration: 1
+}
+```
+
+### Elevation Sampling
+- Samples elevation at each drawn point
+- Interpolates between points for smooth profile
+- Calculates cumulative distance and elevation gain
+- Updates profile data in real-time
+
+## 💡 Dependencies Added
+```json
+{
+  "dependencies": {
+    "recharts": "^2.10.3"
+  }
+}
+```
+
+## 🔄 Future Improvements
+1. Elevation data caching
+2. Customizable profile display
+3. Export elevation data
+4. Gradient coloring based on slope
+5. Alternative elevation data sources
+
+## 📝 Notes
+- Elevation data requires Mapbox's terrain-rgb tileset
+- Terrain source must be added before querying elevations
+- Profile updates may have slight delay due to API calls
+- Consider adding error handling for missing elevation data
+
+I BELEIVE THE CURRENT ISSUE WITH THE ELEVATION CHART NOT LOADING IS BECAUSE WE ARENT LOADING THE TERRAIN OR SOMETHING LIKE THAT IN:
+constants/map-styles.ts
