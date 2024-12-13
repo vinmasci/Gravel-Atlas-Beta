@@ -19,6 +19,7 @@ interface Segment {
 }
 
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
+    console.log('getElevation called with:', coordinates);
   try {
     const response = await fetch('/api/get-elevation', {
       method: 'POST',
@@ -174,7 +175,20 @@ export const useDrawMode = (map: Map | null) => {
 
       // Get snapped points and elevation
       const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
+
+      console.log('About to fetch elevation for:', {
+        clickedPoint,
+        previousPoint,
+        newPoints
+    });
+
       const elevationData = await getElevation([clickedPoint]);
+
+      console.log('Elevation response:', {
+        elevationData,
+        newElevationPoints,
+        currentProfile: elevationProfile
+    });
 
       // Create new segment
       const newSegment: Segment = {

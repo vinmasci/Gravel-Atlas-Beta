@@ -41,6 +41,10 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
+        console.log('Elevation API received:', {
+            coordinates: body.coordinates,
+            coordinatesLength: body.coordinates?.length
+        });
         const { coordinates } = body;
 
         if (!coordinates || !Array.isArray(coordinates)) {
