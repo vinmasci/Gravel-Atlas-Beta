@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { DrawSegmentDialog } from '@/components/draw-segment-dialog';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from "@/app/hooks/use-toast";
-import { useDrawMode } from '@/app/hooks/use-draw-mode';
 
 export function DrawSegmentPanel() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

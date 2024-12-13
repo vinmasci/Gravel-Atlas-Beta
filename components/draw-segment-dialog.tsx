@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from "@/app/hooks/use-toast";
 import { MapPinOff } from 'lucide-react';
-import { MapContext } from '@/app/contexts/map-context'; // We'll create this next
+import { MapContext } from '@/app/contexts/map-context';
+import { useDrawMode } from '@/app/hooks/use-draw-mode';
 
 interface DrawSegmentDialogProps {
   open: boolean;
