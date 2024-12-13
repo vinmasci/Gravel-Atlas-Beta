@@ -8,16 +8,14 @@ interface ElevationPoint {
   elevation: number;
 }
 
-interface SegmentInfo {
-  points: [number, number][];
-  isSnapped: boolean;
-  clickPoint: [number, number];
-  elevation?: number;
-}
-
 interface ClickPoint {
   coordinates: [number, number];
   timestamp: number;
+}
+
+interface Segment {
+  clickPoint: ClickPoint;
+  roadPoints: [number, number][];
 }
 
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
@@ -49,6 +47,7 @@ export const useDrawMode = (map: Map | null) => {
   const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
   const [snapToRoad, setSnapToRoad] = useState(true);
   const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
   
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
@@ -165,11 +164,16 @@ export const useDrawMode = (map: Map | null) => {
         coordinates: clickedPoint,
         timestamp: Date.now()
       };
-      setClickPoints(prev => [...prev, newClickPoint]);
 
       // Get snapped points and elevation
       const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
       const elevationData = await getElevation([clickedPoint]);
+
+      // Create new segment
+      const newSegment: Segment = {
+        clickPoint: newClickPoint,
+        roadPoints: newPoints
+      };
 
       // Calculate new elevation profile
       let totalDistance = elevationProfile.length > 0 
@@ -192,9 +196,15 @@ export const useDrawMode = (map: Map | null) => {
         };
       });
 
-      const newCoordinates = [...drawnCoordinates, ...newPoints];
+      // Update state with new segment
+      setSegments(prev => [...prev, newSegment]);
+      setClickPoints(prev => [...prev, newClickPoint]);
+
+      // Update coordinates by concatenating all road points from all segments
+      const allCoordinates = [...segments, newSegment].flatMap(segment => segment.roadPoints);
+      setDrawnCoordinates(allCoordinates);
       
-      // Update line source
+      // Update map sources
       const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
       const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
@@ -204,7 +214,7 @@ export const useDrawMode = (map: Map | null) => {
           properties: {},
           geometry: {
             type: 'LineString',
-            coordinates: newCoordinates
+            coordinates: allCoordinates
           }
         });
 
@@ -222,7 +232,6 @@ export const useDrawMode = (map: Map | null) => {
           }))
         });
 
-        setDrawnCoordinates(newCoordinates);
         setElevationProfile(prev => [...prev, ...newElevationPoints]);
       }
     } catch (error) {
@@ -233,7 +242,7 @@ export const useDrawMode = (map: Map | null) => {
       isProcessingClick.current = false;
       pendingOperation.current = null;
     }
-  }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints]);
+  }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
   const startDrawing = useCallback(() => {
     if (!map) return;
@@ -242,24 +251,25 @@ export const useDrawMode = (map: Map | null) => {
     setDrawnCoordinates([]);
     setElevationProfile([]);
     setClickPoints([]);
+    setSegments([]);
     
     map.getCanvas().style.cursor = 'crosshair';
     initializeLayers();
   }, [map, initializeLayers]);
 
   const undoLastPoint = useCallback(() => {
-    if (!map || !layerRefs.current.drawing || drawnCoordinates.length === 0) return;
-  
-    // Find the previous click point
+    if (!map || !layerRefs.current.drawing || segments.length === 0) return;
+
+    // Remove the last segment
+    const newSegments = segments.slice(0, -1);
     const newClickPoints = clickPoints.slice(0, -1);
-  
-    // Get the coordinates up to the last segment
-    const lastSegmentStartIndex = Math.max(0, drawnCoordinates.length - 2);
-    const newCoordinates = drawnCoordinates.slice(0, lastSegmentStartIndex);
+    
+    // Reconstruct coordinates from remaining segments
+    const newCoordinates = newSegments.flatMap(segment => segment.roadPoints);
     
     const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
     const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
-  
+
     if (lineSource && markerSource) {
       lineSource.setData({
         type: 'Feature',
@@ -269,7 +279,7 @@ export const useDrawMode = (map: Map | null) => {
           coordinates: newCoordinates
         }
       });
-  
+
       markerSource.setData({
         type: 'FeatureCollection',
         features: newClickPoints.map(point => ({
@@ -283,12 +293,13 @@ export const useDrawMode = (map: Map | null) => {
           }
         }))
       });
-  
+
+      setSegments(newSegments);
       setClickPoints(newClickPoints);
       setDrawnCoordinates(newCoordinates);
       setElevationProfile(prev => prev.slice(0, -1));
     }
-  }, [map, drawnCoordinates, clickPoints]);
+  }, [map, segments, clickPoints]);
 
   const finishDrawing = useCallback(() => {
     if (!map || !isDrawing || drawnCoordinates.length < 2) return null;
@@ -329,6 +340,7 @@ export const useDrawMode = (map: Map | null) => {
     setDrawnCoordinates([]);
     setElevationProfile([]);
     setClickPoints([]);
+    setSegments([]);
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
   }, [map]);

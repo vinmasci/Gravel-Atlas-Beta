@@ -1,4 +1,3 @@
-// components/panels/draw-segment-panel.tsx
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -9,6 +8,7 @@ import { Undo, RotateCcw, Save } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { useMapContext } from '@/app/contexts/map-context';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
+import { ElevationProfile } from '../segments/elevation-profile';
 import { 
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ export function DrawSegmentPanel() {
   const { 
     isDrawing, 
     drawnCoordinates,
+    elevationProfile,
     snapToRoad,
     startDrawing, 
     handleClick, 
@@ -112,10 +113,10 @@ export function DrawSegmentPanel() {
       const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Gravel Atlas Beta">
   <metadata>
-    <name>${segmentTitle}</name>
+    <n>${segmentTitle}<n>
   </metadata>
   <trk>
-    <name>${segmentTitle}</name>
+    <n>${segmentTitle}<n>
     <desc>color=#c0392b</desc>
     <trkseg>
       ${trackpoints}
@@ -177,97 +178,105 @@ export function DrawSegmentPanel() {
   }, [clearDrawing]);
 
   return (
-    <div className="space-y-4">
-      <Button 
-        className={`w-full ${isDrawing ? 'bg-green-500 hover:bg-green-600' : ''}`}
-        onClick={handleDrawingToggle}
-      >
-        {isDrawing ? 'Drawing Mode Active' : 'Start Drawing'}
-      </Button>
-
-      {isDrawing && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-sm font-medium">Snap to Road</span>
-              <p className="text-xs text-muted-foreground">
-                Automatically align points to the nearest road
-              </p>
+    <div>
+      <div className="space-y-4">
+        <Button 
+          className={`w-full ${isDrawing ? 'bg-green-500 hover:bg-green-600' : ''}`}
+          onClick={handleDrawingToggle}
+        >
+          {isDrawing ? 'Drawing Mode Active' : 'Start Drawing'}
+        </Button>
+  
+        {isDrawing && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Snap to Road</span>
+                <p className="text-xs text-muted-foreground">
+                  Automatically align points to the nearest road
+                </p>
+              </div>
+              <Switch
+                checked={snapToRoad}
+                onCheckedChange={handleSnapToggle}
+              />
             </div>
-            <Switch
-              checked={snapToRoad}
-              onCheckedChange={handleSnapToggle}
-            />
+  
+            <div className="flex gap-2 justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={drawnCoordinates.length === 0}
+                onClick={undoLastPoint}
+              >
+                <Undo className="h-4 w-4 mr-1" />
+                Undo
+              </Button>
+  
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={drawnCoordinates.length === 0}
+                onClick={clearDrawing}
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Reset
+              </Button>
+  
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={drawnCoordinates.length < 2}
+                onClick={() => setShowSaveDialog(true)}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Save
+              </Button>
+            </div>
           </div>
-
-          <div className="flex gap-2 justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={drawnCoordinates.length === 0}
-              onClick={undoLastPoint}
-            >
-              <Undo className="h-4 w-4 mr-1" />
-              Undo
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={drawnCoordinates.length === 0}
-              onClick={clearDrawing}
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={drawnCoordinates.length < 2}
-              onClick={() => setShowSaveDialog(true)}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              Save
-            </Button>
-          </div>
-        </div>
+        )}
+  
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save Segment</DialogTitle>
+              <DialogDescription>
+                Give your segment a title to save it.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <Input
+                placeholder="Segment title"
+                value={segmentTitle}
+                onChange={(e) => setSegmentTitle(e.target.value)}
+              />
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={!segmentTitle.trim() || isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save Segment'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+  
+      {isDrawing && drawnCoordinates.length > 0 && (
+        <FloatingElevationChart 
+          data={elevationProfile}
+          onClose={clearDrawing}
+        />
       )}
-
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Segment</DialogTitle>
-            <DialogDescription>
-              Give your segment a title to save it.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <Input
-              placeholder="Segment title"
-              value={segmentTitle}
-              onChange={(e) => setSegmentTitle(e.target.value)}
-            />
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={handleCancel}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSave}
-              disabled={!segmentTitle.trim() || isSaving}
-            >
-              {isSaving ? 'Saving...' : 'Save Segment'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-}

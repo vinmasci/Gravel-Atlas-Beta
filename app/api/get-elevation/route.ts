@@ -25,6 +25,15 @@ function lngLatToPixel(lng: number, lat: number, zoom: number) {
     };
 }
 
+function rgbToElevation(r: number, g: number, b: number): number {
+    // Decode RGB values to elevation in meters
+    // Formula from Mapbox documentation: https://docs.mapbox.com/data/tilesets/guides/access-elevation-data/
+    // -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)
+    const heightValue = (r * Math.pow(2, 16) + g * Math.pow(2, 8) + b);
+    const elevation = -10000 + (heightValue * 0.1);
+    return elevation;
+}
+
 async function getElevationData(coordinates: [number, number][]) {
     const zoom = 14; // Best zoom level for terrain-rgb tiles
     const results = await Promise.all(coordinates.map(async ([lng, lat]) => {
@@ -49,7 +58,9 @@ async function getElevationData(coordinates: [number, number][]) {
             
             const imageData = ctx.getImageData(Math.floor(pixelX), Math.floor(pixelY), 1, 1).data;
             const [r, g, b] = imageData;
-            const elevation = -10000 + ((r * 256 * 256 + g * 256 + b) * 0.1);
+            
+            // Use the corrected elevation calculation
+            const elevation = rgbToElevation(r, g, b);
             
             return [lng, lat, Math.round(elevation)];
         } catch (error) {
