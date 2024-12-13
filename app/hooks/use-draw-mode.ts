@@ -315,6 +315,16 @@ export const useDrawMode = (map: Map | null) => {
         }))
       });
 
+      setElevationProfile(prev => {
+        const newProfile = [...prev, ...newElevationPoints];
+        console.log('Setting new elevation profile:', {
+            newProfile,
+            length: newProfile.length,
+            isDrawing
+        });
+        return newProfile;
+    });
+
       setSegments(newSegments);
       setClickPoints(newClickPoints);
       setDrawnCoordinates(newCoordinates);
