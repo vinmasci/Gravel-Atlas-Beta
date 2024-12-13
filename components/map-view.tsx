@@ -18,6 +18,7 @@ import { Search, Layers, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MapContext } from '@/app/contexts/map-context';
+import { DrawModeProvider } from '@/app/contexts/draw-mode-context';
 import { SegmentSheet } from '@/components/segments/segment-sheet';
 import { FloatingElevationProfile } from './segments/floating-elevation-profile';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
@@ -637,93 +638,72 @@ if (MAP_STYLES[selectedStyle].type === 'google') {
 // Render Mapbox
 return (
   <>
-    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <div className="w-full h-full relative">
-        <Map
-          {...viewState}
-          onMove={evt => setViewState(evt.viewState)}
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          style={mapContainerStyle}
-          mapStyle={
-            selectedStyle === 'osm-cycle'
-              ? MAP_STYLES[selectedStyle].style
-              : selectedStyle === 'mapbox'
-              ? MAP_STYLES[selectedStyle].style
-              : 'mapbox://styles/mapbox/empty-v9'
-          }
-          projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-          reuseMaps
-          ref={mapRef}
-          onLoad={(evt) => {
-            console.log('Map loaded:', evt.target);
-            const map = evt.target;
-            setMapInstance(map);
-          }}
-        />
-
-        {/* Status indicators */}
-        {isLoading && <LoadingSpinner />}
-        {showAlert && (
-          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-        )}
-
-        {/* Controls */}
-        {isMobile ? (
-          <MobileControls
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
+    <DrawModeProvider value={drawMode}>
+      <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+        <div className="w-full h-full relative">
+          <Map
+            {...viewState}
+            onMove={evt => setViewState(evt.viewState)}
+            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+            style={mapContainerStyle}
+            mapStyle={
+              selectedStyle === 'osm-cycle'
+                ? MAP_STYLES[selectedStyle].style
+                : selectedStyle === 'mapbox'
+                ? MAP_STYLES[selectedStyle].style
+                : 'mapbox://styles/mapbox/empty-v9'
+            }
+            projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+            reuseMaps
+            ref={mapRef}
+            onLoad={(evt) => {
+              const map = evt.target;
+              setMapInstance(map);
+            }}
           />
-        ) : (
-          <MapSidebar
-            isOpen={isOpen}
-            setIsOpen={handleSidebarToggle}
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            availableLayers={layers}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            mapillaryVisible={mapillaryVisible}
-            overlayStates={overlayStates}
+          {isLoading && <LoadingSpinner />}
+          {showAlert && (
+            <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+          )}
+          {isMobile ? (
+            <MobileControls
+              onSearch={handleSearch}
+              onLocationClick={handleLocationClick}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onLayerToggle={handleLayerToggle}
+              selectedStyle={selectedStyle}
+              onStyleChange={handleStyleChange}
+              overlayStates={overlayStates}
+              mapillaryVisible={mapillaryVisible}
+            />
+          ) : (
+            <MapSidebar
+              isOpen={isOpen}
+              setIsOpen={handleSidebarToggle}
+              onSearch={handleSearch}
+              onLocationClick={handleLocationClick}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              availableLayers={layers}
+              onLayerToggle={handleLayerToggle}
+              selectedStyle={selectedStyle}
+              onStyleChange={handleStyleChange}
+              mapillaryVisible={mapillaryVisible}
+              overlayStates={overlayStates}
+            />
+          )}
+
+          <SegmentSheet
+            open={!!selectedSegment}
+            onOpenChange={(open) => !open && setSelectedSegment(null)}
+            segment={selectedSegment}
           />
-        )}
-
-        <SegmentSheet
-          open={!!selectedSegment}
-          onOpenChange={(open) => !open && setSelectedSegment(null)}
-          segment={selectedSegment}
-        />
-      </div>
-    </MapContext.Provider>
-
-    {/* Elevation profile with debug logging */}
-    {(() => {
-      // Debug logging
-      console.log('Debug elevation profile render:', {
-        mapInstance: !!mapInstance,
-        isDrawing: drawMode.isDrawing,
-        elevationProfileLength: drawMode.elevationProfile?.length,
-        drawModeState: drawMode
-      });
-
-      // Only render if we have a map instance
-      return mapInstance && (
-        <FloatingElevationProfile 
-          data={drawMode.elevationProfile}
-          onClose={drawMode.clearDrawing}
-          isDrawing={drawMode.isDrawing}
-        />
-      );
-    })()}
+        </div>
+      </MapContext.Provider>
+      
+      {mapInstance && <FloatingElevationProfile />}
+    </DrawModeProvider>
   </>
 );
 }

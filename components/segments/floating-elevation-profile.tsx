@@ -13,40 +13,33 @@ import {
 } from 'recharts';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDrawModeContext } from '@/app/contexts/draw-mode-context';
 
 interface ElevationPoint {
   distance: number;
   elevation: number;
 }
 
-interface FloatingElevationProfileProps {
-  data: ElevationPoint[];
-  onClose?: () => void;
-  isDrawing: boolean;
-}
+export function FloatingElevationProfile() {
+  const drawMode = useDrawModeContext();
+  
+  if (!drawMode.isDrawing || drawMode.elevationProfile.length < 2) return null;
 
-export function FloatingElevationProfile({ 
-  data, 
-  onClose,
-  isDrawing
-}: FloatingElevationProfileProps) {
-  if (!isDrawing || data.length < 2) return null;
-
-  const elevations = data.map(p => p.elevation);
+  const elevations = drawMode.elevationProfile.map(p => p.elevation);
   const minElevation = Math.min(...elevations);
   const maxElevation = Math.max(...elevations);
-  const elevationGain = data.reduce((gain, point, i) => {
+  const elevationGain = drawMode.elevationProfile.reduce((gain, point, i) => {
     if (i === 0) return 0;
-    const climb = point.elevation - data[i-1].elevation;
+    const climb = point.elevation - drawMode.elevationProfile[i-1].elevation;
     return gain + (climb > 0 ? climb : 0);
   }, 0);
-  const elevationLoss = data.reduce((loss, point, i) => {
+  const elevationLoss = drawMode.elevationProfile.reduce((loss, point, i) => {
     if (i === 0) return 0;
-    const drop = point.elevation - data[i-1].elevation;
+    const drop = point.elevation - drawMode.elevationProfile[i-1].elevation;
     return loss + (drop < 0 ? Math.abs(drop) : 0);
   }, 0);
 
-  const totalDistance = data[data.length - 1].distance;
+  const totalDistance = drawMode.elevationProfile[drawMode.elevationProfile.length - 1].distance;
 
   return (
     <div 
@@ -63,12 +56,12 @@ export function FloatingElevationProfile({
             <span className="font-medium">Loss: {Math.round(elevationLoss)}m</span>
             <span>Dist: {totalDistance.toFixed(1)}km</span>
           </div>
-          {onClose && (
+          {drawMode.clearDrawing && (
             <Button
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
-              onClick={onClose}
+              onClick={drawMode.clearDrawing}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -76,7 +69,7 @@ export function FloatingElevationProfile({
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+            <LineChart data={drawMode.elevationProfile}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 vertical={false} 
