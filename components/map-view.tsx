@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MapContext } from '@/app/contexts/map-context';
 import { SegmentSheet } from '@/components/segments/segment-sheet';
+import { ElevationProfile } from '@/components/segments/elevation-profile';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -644,7 +645,7 @@ return (
         onLoad={(evt) => {
           const map = evt.target;
           setMapInstance(map);
-
+          
           // Add terrain source if it doesn't exist
           if (!map.getSource('mapbox-dem')) {
             map.addSource('mapbox-dem', {
@@ -653,21 +654,17 @@ return (
               'tileSize': 512,
               'maxzoom': 14
             });
-
+            
             // Enable terrain
             map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1 });
           }
         }}
       />
-
-      {/* Loading and Alert overlays */}
       {isLoading && <LoadingSpinner />}
       {showAlert && (
         <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
       )}
-
-{/* Mobile or Desktop Controls */}
-{isMobile ? (
+      {isMobile ? (
         <MobileControls
           onSearch={handleSearch}
           onLocationClick={handleLocationClick}
@@ -696,15 +693,14 @@ return (
         />
       )}
 
-      {/* Real-time elevation profile */}
-      {isDrawing && elevationProfile.length > 0 && (
+      {/* Add this elevation profile component */}
+      {elevationProfile.length > 0 && (
         <ElevationProfile
           data={elevationProfile}
           className="absolute bottom-4 right-4 z-50"
         />
       )}
 
-      {/* Segment Details Sheet */}
       <SegmentSheet
         open={!!selectedSegment}
         onOpenChange={(open) => !open && setSelectedSegment(null)}
