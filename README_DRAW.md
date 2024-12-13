@@ -309,7 +309,13 @@ app/
 │   └── map-context.tsx              # Map context provider for sharing map instance
 ├── hooks/
 │   └── use-draw-mode.ts             # Custom hook for handling draw functionality
-│
+├── api/
+│   └── segments/
+│       └── save/
+│           └── route.ts             # API endpoint for saving drawn segments
+models/
+└── DrawnSegment.ts                  # Mongoose model for segments
+
 components/
 ├── panels/
 │   └── draw-segment-panel.tsx       # Panel component for the draw interface
@@ -352,15 +358,46 @@ Added:
 - Map instance state
 - onLoad handler for map instance
 
-## Next Steps To Implement
-1. MongoDB Schema Setup
-2. API Routes:
-   - Segment saving
-   - Segment retrieval
-3. Voting System
-4. Segment Display Layer
+### 6. MongoDB Schema (`DrawnSegment.ts`)
+- Implements segment data structure
+- Includes vote schema
+- Handles GPX and GeoJSON data
+- Tracks user attribution
+- Manages timestamps
 
-## Dependencies to Add
+### 7. API Routes (`/api/segments/save/route.ts`)
+- Handles segment saving
+- Converts GeoJSON to GPX
+- Authentication check
+- Data validation
+- MongoDB integration
+
+## Currently Implemented
+1. ✅ MongoDB Schema Setup
+2. ✅ Basic API Route (save)
+3. ✅ Drawing Interface
+4. ✅ Map Context System
+
+## Next Steps To Implement
+1. API Routes:
+   - Segment retrieval (`GET /api/segments`)
+   - Vote submission endpoint
+   - Vote retrieval endpoint
+2. Voting System:
+   - Vote interface
+   - Vote submission
+   - Vote display
+3. Segment Display Layer:
+   - Load segments on map
+   - Segment styling
+   - Segment interaction
+
+## Dependencies Added
 ```bash
-npm install togpx @turf/turf
+npm install mongoose togpx @turf/turf
+```
+
+## Environment Variables Required
+```
+MONGODB_URI=your_mongodb_connection_string
 ```

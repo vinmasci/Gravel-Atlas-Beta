@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import { DrawnSegment } from '@/models/DrawnSegment';
 import { connectToDatabase } from '@/lib/mongodb';
+import togpx from 'togpx';
 
 export async function POST(req: Request) {
   try {
@@ -10,21 +11,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { gpxData, geojson, metadata } = await req.json();
+    const { geojson, metadata } = await req.json();
 
-    if (!gpxData || !geojson || !metadata?.title) {
+    if (!geojson || !metadata?.title) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    // Convert GeoJSON to GPX
+    const gpxData = togpx({
+      type: 'FeatureCollection',
+      features: [
+        {
+          ...geojson,
+          properties: {
+            ...geojson.properties,
+            color: '#c0392b',
+            id: `segment-${Date.now()}`,
+          },
+        },
+      ],
+    });
+
     await connectToDatabase();
 
     const segment = await DrawnSegment.create({
       gpxData,
-      geojson,
-      metadata,
+      geojson: {
+        type: 'FeatureCollection',
+        features: [geojson]
+      },
+      metadata: {
+        title: metadata.title
+      },
       auth0Id: session.user.sub,
       votes: []
     });
