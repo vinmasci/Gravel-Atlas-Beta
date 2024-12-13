@@ -23,14 +23,15 @@ export function DrawSegmentPanel() {
   const { 
     isDrawing, 
     drawnCoordinates, 
+    snapToRoad,
     startDrawing, 
     handleClick, 
     finishDrawing, 
     clearDrawing, 
-    undoLastPoint 
+    undoLastPoint,
+    toggleSnapToRoad
   } = useDrawMode(map);
   
-  const [snapToRoad, setSnapToRoad] = useState(true); // Default to true
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [segmentTitle, setSegmentTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -74,6 +75,16 @@ export function DrawSegmentPanel() {
     } else {
       startDrawing();
     }
+  };
+
+  const handleSnapToggle = (enabled: boolean) => {
+    toggleSnapToRoad(enabled);
+    toast({
+      title: enabled ? "Snap to Road Enabled" : "Snap to Road Disabled",
+      description: enabled 
+        ? "Points will now snap to the nearest road" 
+        : "Points will be placed exactly where you click",
+    });
   };
 
   const handleSave = async () => {
@@ -152,7 +163,7 @@ export function DrawSegmentPanel() {
             </div>
             <Switch
               checked={snapToRoad}
-              onCheckedChange={setSnapToRoad}
+              onCheckedChange={handleSnapToggle}
             />
           </div>
 

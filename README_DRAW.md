@@ -1,423 +1,383 @@
 # Draw Segments System Documentation
 
-## 📚 Source Code Reference
-To access the source code from Gravel-Atlas2:
-
-1. **Repository Access**
-```bash
-# Repository Information
-Owner: vinmasci
-Repository: Gravel-Atlas2
-Access: Public repository
-```
-
-2. **Key File Paths**
-```
-# Core Files for Drawing System
-api/save-drawn-route.js
-models/RoadModification.js
-js/routes.js
-
-# To access these files using GitHub API:
-get_file_contents:
-  - path: "api/save-drawn-route.js"
-  - repo: "Gravel-Atlas2"
-  - owner: "vinmasci"
-```
-
-3. **Reference Paths**
-- For implementation details, check:
-  ```
-  api/
-    - save-drawn-route.js      # Route saving logic
-    - get-drawn-routes.js      # Route retrieval
-    - delete-drawn-route.js    # Route deletion
-    - get-road-modifications.js # Surface modifications
-  js/
-    - routes.js               # Drawing implementation
-    - map.js                  # Map integration
-  models/
-    - RoadModification.js     # Data schemas
-    - Activity.js            # User activity tracking
-  ```
-
-[Previous content remains the same...]
-
-# Draw Segments System Documentation
-
-## 🎯 Current Implementation (Gravel-Atlas2)
-
-### Data Structure
-```typescript
-// Route Schema
-interface DrawnRoute {
-  gpxData: string;
-  geojson: FeatureCollection;
-  metadata: {
-    title: string;
-    initialDifficulty: string; // To be removed in new system
-  };
-  auth0Id: string;
-  votes: Vote[];
-  createdAt: Date;
-}
-
-// Vote Schema
-interface Vote {
-  user_id: string;
-  userName: string;
-  condition: string; // 0-6 rating
-  timestamp: Date;
-}
-
-// Condition Rating Scale
-const difficultyLevels = [
-  '0: Smooth surface, any bike',
-  '1: Well maintained, gravel bike',
-  '2: Occasional rough surface',
-  '3: Frequent loose surface',
-  '4: Very rough surface',
-  '5: Extremely rough surface, MTB',
-  '6: Hike-A-Bike'
-]
-```
-
-### Core Features
-1. **Route Drawing**
-   - Draw route segments on map
-   - Automatic elevation data enrichment
-   - GPX data generation
-   - Multiple segment support
-   - LineString geometry type
-
-2. **Metadata Handling**
-   - Title assignment
-   - User attribution (auth0Id)
-   - Initial difficulty rating (to be removed)
-   - Creation timestamp
-
-3. **Voting System**
-   - Per-user voting
-   - Historical vote tracking
-   - User identification
-   - Timestamp tracking
-   - 0-6 difficulty scale
-
-### File Structure
-```
-api/
-  ├── save-drawn-route.js       # Route saving endpoint
-  ├── get-drawn-routes.js       # Route retrieval
-  └── get-road-modifications.js # Vote/modification data
-models/
-  └── RoadModification.js       # Schema definitions
-js/
-  ├── routes.js                 # Drawing functionality
-  └── map.js                    # Map integration
-```
-
-## 🔄 Planned Changes for Gravel-Atlas-Beta
-
-### Modified Data Flow
-1. **Drawing Phase**
-   - User draws route segment
-   - Elevation data enrichment
-   - Basic metadata collection (title, user)
-   - Initial save without difficulty rating
-
-2. **Voting Phase**
-   - Creator submits first vote
-   - Other users can vote
-   - Running average calculation
-   - Vote history maintenance
-
-### Database Updates
-1. **Route Collection**
-   ```javascript
-   {
-     _id: ObjectId,
-     gpxData: String,
-     geojson: {
-       type: "FeatureCollection",
-       features: [{
-         type: "Feature",
-         geometry: {
-           type: "LineString",
-           coordinates: [[lng, lat, elevation]]
-         },
-         properties: {
-           title: String,
-           auth0Id: String
-         }
-       }]
-     },
-     metadata: {
-       title: String
-     },
-     votes: [{
-       user_id: String,
-       userName: String,
-       condition: String,
-       timestamp: Date
-     }],
-     auth0Id: String,
-     createdAt: Date
-   }
-   ```
-
-2. **Vote Collection**
-   ```javascript
-   {
-     route_id: ObjectId,
-     votes: [{
-       user_id: String,
-       userName: String,
-       condition: String,
-       timestamp: Date
-     }],
-     averageRating: Number,
-     totalVotes: Number
-   }
-   ```
-
-### API Endpoints Needed
-1. **Drawing**
-   - POST /api/routes/save
-   - GET /api/routes/list
-   - DELETE /api/routes/:id
-
-2. **Voting**
-   - POST /api/routes/:id/vote
-   - GET /api/routes/:id/votes
-   - PUT /api/routes/:id/vote (update vote)
-
-### UI Components Required
-1. **Drawing Interface**
-   - Draw tool activation
-   - Segment visualization
-   - Elevation preview
-   - Save controls
-
-2. **Voting Interface**
-   - Difficulty selector
-   - Vote submission
-   - Vote history view
-   - Average rating display
-
-### Security Considerations
-1. **Route Creation**
-   - Authentication required
-   - User verification
-   - Rate limiting
-
-2. **Voting**
-   - One vote per user per route
-   - Vote modification allowed
-   - Vote history tracking
-
-## 🎯 Implementation Steps
-
-1. **Phase 1: Basic Drawing**
-   - Implement route drawing tools
-   - Set up MongoDB schema
-   - Create save endpoint
-   - Add elevation enrichment
-
-2. **Phase 2: Voting System**
-   - Create voting UI
-   - Implement vote endpoints
-   - Add vote tracking
-   - Calculate averages
-
-3. **Phase 3: UI/UX**
-   - Add loading states
-   - Implement error handling
-   - Add success notifications
-   - Mobile optimization
-
-4. **Phase 4: Enhancement**
-   - Add vote history
-   - Implement statistics
-   - Add user profiles
-   - Add moderation tools
-
-## 📝 Technical Notes
-- Environment variables needed for MongoDB and Mapbox
-- Proper error handling required for elevation data fetching
-- Rate limiting implementation for API endpoints
-- Proper cleanup of drawn routes on cancellation
-- Optimistic updates for voting system
-- Proper validation for vote submissions
-
-Based on our conversation, here's my understanding of what you want to do:
-
-1. You want to merge the route drawing and voting system from Gravel-Atlas2 into your newer Gravel-Atlas-Beta project, but with a key modification:
-
-2. The main change is in the workflow:
-   - In Gravel-Atlas2: Users draw a segment AND assign a difficulty rating immediately
-   - In the new system: Users only draw the segment first, then both they and others can vote on its difficulty later
-
-3. Specifically for Gravel-Atlas-Beta, you want:
-   - Keep the drawing functionality for segments
-   - Remove the initial difficulty rating requirement
-   - Implement the voting system where:
-     - The original creator can vote on difficulty after creating
-     - Other users can also vote on the same segment
-     - Each user gets one vote (but can update their vote)
-
-4. From what I can see in the GPX data you shared, the segments are currently storing:
-   - Geographic coordinates with elevation data
-   - Metadata like title and user ID
-   - Line styling (color, dash array)
-   - Properties including gravelType
-
-Is this an accurate understanding of what you're looking to implement? Would you like to clarify or correct any part of this?
-
-I suggest we start with laying out the tasks in order of priority. Let me outline a step-by-step approach:
-
-First Task - Drawing Functionality:
-
-We need to add the draw control panel from Gravel-Atlas2 to your Gravel-Atlas-Beta
-This would start in components/panels/contribute-panel.tsx
-We'll need the route drawing logic from the original routes.js
-The saving mechanism will be similar to save-drawn-route.js but without the difficulty rating
-
-
-Second Task - MongoDB Schema:
-
-Modify your current schema to accommodate the voting system
-Add the vote collection structure from RoadModification.js
-Set up the API endpoints for vote handling
-
-
-
-Would you like to start with the drawing functionality? If so, I can:
-
-Show you the proposed changes to your contribute-panel component
-Set up the route drawing logic
-Create the save endpoint without the difficulty rating
-
-Which part would you like to tackle first?
-
-# Draw Segment Implementation Progress
-
-## Created Files & Structure
+## 📂 Current Implementation Files
 
 ```
 app/
-├── contexts/
-│   └── map-context.tsx              # Map context provider for sharing map instance
 ├── hooks/
-│   └── use-draw-mode.ts             # Custom hook for handling draw functionality
-├── api/
-│   └── segments/
-│       └── save/
-│           └── route.ts             # API endpoint for saving drawn segments
-models/
-└── DrawnSegment.ts                  # Mongoose model for segments
-
+│   └── use-draw-mode.ts              # Core drawing functionality hook
+│
+├── contexts/
+│   └── map-context.tsx              # Map instance context provider
+│
 components/
 └── panels/
-    └── draw-segment-panel.tsx       # Panel component with integrated drawing interface
+    └── draw-segment-panel.tsx       # Drawing UI and controls
 
-Files Modified:
-└── components/
-    └── map-view.tsx                # Added MapContext provider and map instance state
+types/
+└── map.ts                          # TypeScript types for map features
 ```
 
-## Implementation Details
+## 🔍 Component Breakdown
 
-### 1. Map Context (`map-context.tsx`)
-- Provides map instance across components
-- Exports both context and custom hook
-- Type-safe implementation with MapContextType interface
+### use-draw-mode.ts
+Core drawing functionality hook that provides:
+- Drawing mode state management
+- Snap-to-road functionality with Mapbox Directions API
+- Point and segment tracking
+- Visual feedback (lines and markers)
+- Undo/reset capabilities
+- GeoJSON conversion for saving
 
-### 2. Drawing Hook (`use-draw-mode.ts`)
-- Manages drawing state and coordinates
-- Handles map click interactions
-- Controls line drawing visualization
-- Manages drawing layer on map
-- Provides undo functionality
-- Handles drawing cleanup
-- Manages cursor states
-- Provides GeoJSON conversion
-
-### 3. Draw Segment Panel (`draw-segment-panel.tsx`)
-- Provides main interface in sidebar
-- Authentication check for drawing
-- Toggle-able drawing mode with visual feedback
-- Drawing tool controls:
-  - Undo last point
-  - Reset drawing
-  - Save segment
-- Snap to road option
+### draw-segment-panel.tsx
+User interface component that includes:
+- Drawing mode toggle
+- Snap-to-road toggle with visual feedback
+- Undo/Reset/Save controls
 - Save dialog with title input
-- Integration with map context and drawing hook
+- Authentication checks
+- Toast notifications for user feedback
 
-### 4. Map View Modifications (`map-view.tsx`)
-Added:
-- MapContext.Provider wrapper
-- Map instance state management
-- onLoad handler for map instance
-- Drawing layer support
+### map-context.tsx
+Context provider that:
+- Shares map instance across components
+- Manages map state
+- Provides type-safe map access
 
-### 5. MongoDB Schema (`DrawnSegment.ts`)
-- Implements segment data structure
-- Includes vote schema
-- Handles GPX and GeoJSON data
-- Tracks user attribution
-- Manages timestamps
+## ✅ Implemented Features
 
-### 6. API Routes (`/api/segments/save/route.ts`)
-- Handles segment saving
-- Server-side GPX generation
-- Authentication check
-- Data validation
-- MongoDB integration
+### Drawing System
+- Line drawing with point-to-point capability
+- Snap-to-road functionality
+- Visual markers at click points
+- Undo last point functionality
+- Reset drawing capability
+- Line preview during drawing
+- Proper cleanup on cancel/complete
 
-## Currently Implemented
-1. ✅ MongoDB Schema Setup
-2. ✅ Basic API Route (save)
-3. ✅ Drawing Interface with Tools
-4. ✅ Map Context System
-5. ✅ Interactive Drawing System
+### Snap-to-Road
+- Toggle-able snap-to-road feature
+- Automatic road snapping using Mapbox API
+- Fallback to direct points when snapping fails
+- Visual feedback for snapped segments
 
-## Next Steps To Implement
-1. API Routes:
-   - Segment retrieval (`GET /api/segments`)
-   - Vote submission endpoint
-   - Vote retrieval endpoint
-2. Voting System:
-   - Vote interface
-   - Vote submission
-   - Vote display
-3. Segment Display Layer:
-   - Load segments on map
-   - Segment styling
-   - Segment interaction
-4. Enhanced Drawing Features:
-   - Implement snap to road functionality
-   - Add elevation data
-   - Add distance calculations
+### UI/UX
+- Clear visual feedback for active drawing mode
+- Point markers showing click locations
+- Intuitive undo/reset controls
+- Save dialog with title input
+- Toast notifications for user feedback
+- Authentication integration
 
-## Dependencies Added
-```bash
-npm install mongoose @turf/turf
+### Data Management
+- Segment tracking with metadata
+- GeoJSON format conversion
+- Basic save functionality
+- Proper state cleanup
+
+## 🎯 Next Steps
+
+### High Priority
+1. **Data Persistence**
+   - Implement MongoDB schema for segments
+   - Create API endpoints for segment management
+   - Add segment listing and retrieval
+   - Implement segment deletion
+
+2. **Enhanced Visualization**
+   - Add elevation data to segments
+   - Implement segment distance calculation
+   - Add segment statistics (length, elevation gain/loss)
+   - Preview cards for saved segments
+
+3. **Editing Features**
+   - Add ability to edit existing segments
+   - Implement segment splitting
+   - Add segment joining capability
+   - Enable point adjustment after drawing
+
+### Medium Priority
+1. **User Experience**
+   - Add hover tooltips for controls
+   - Implement keyboard shortcuts
+   - Add drawing instructions overlay
+   - Improve mobile drawing experience
+
+2. **Segment Management**
+   - Add segment categorization
+   - Implement segment tagging
+   - Add segment description field
+   - Enable segment sharing
+
+3. **Enhanced Features**
+   - Add waypoint annotations
+   - Implement surface type selection
+   - Add segment difficulty rating
+   - Enable segment comments
+
+### Low Priority
+1. **Analytics**
+   - Track segment popularity
+   - Add user statistics
+   - Implement heatmaps
+   - Add segment recommendations
+
+2. **Social Features**
+   - Add segment likes/favorites
+   - Implement user following
+   - Add segment collections
+   - Enable route sharing
+
+## 🛠 Technical Improvements Needed
+
+1. **Performance**
+   - Optimize snap-to-road requests
+   - Implement point clustering for long segments
+   - Add request caching
+   - Optimize marker rendering
+
+2. **Error Handling**
+   - Add better API error feedback
+   - Implement offline support
+   - Add connection recovery
+   - Improve error messages
+
+3. **Testing**
+   - Add unit tests for drawing logic
+   - Implement integration tests
+   - Add E2E testing
+   - Create testing utilities
+
+## 📝 API Requirements
+
+### Endpoints Needed
+```typescript
+// Segment Management
+POST   /api/segments               // Create new segment
+GET    /api/segments              // List segments
+GET    /api/segments/:id          // Get single segment
+PUT    /api/segments/:id          // Update segment
+DELETE /api/segments/:id          // Delete segment
+
+// Metadata
+GET    /api/segments/:id/stats    // Get segment statistics
+GET    /api/segments/:id/elevation // Get elevation data
+
+// User Interaction
+POST   /api/segments/:id/favorite  // Favorite a segment
+POST   /api/segments/:id/comment   // Comment on segment
 ```
 
-## Environment Variables Required
-```
-MONGODB_URI=your_mongodb_connection_string
+### MongoDB Schema
+```typescript
+interface Segment {
+  id: ObjectId;
+  title: string;
+  geojson: FeatureCollection;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  metadata: {
+    length: number;
+    elevationGain: number;
+    elevationLoss: number;
+    surfaceTypes: string[];
+  };
+  stats: {
+    views: number;
+    favorites: number;
+    shares: number;
+  };
+}
 ```
 
-## Usage Instructions
-1. Click the "Draw Segment" accordion in the sidebar
-2. Authenticate if not already logged in
-3. Click "Start Drawing" to enter drawing mode
-4. Click on the map to place points
-5. Use tools while drawing:
-   - Undo: Remove last point
-   - Reset: Clear current drawing
-   - Save: Complete drawing and add title
-6. Save dialog will appear for title input
-7. Segment is saved to database with GPX and GeoJSON data
+## 🔒 Security Considerations
+1. Validate all user input
+2. Implement rate limiting for API calls
+3. Add proper authentication checks
+4. Validate segment ownership
+5. Sanitize segment data
+6. Implement proper CORS policies
+
+## 📊 Metrics to Track
+1. Segment creation success rate
+2. API response times
+3. User engagement metrics
+4. Error rates
+5. Usage patterns
+6. Performance metrics
+
+# Draw Segments System Documentation
+
+[Previous sections remain the same until "Data Management" where we add:]
+
+### Data Management
+- Segment tracking with metadata
+- GeoJSON format conversion
+- Basic save functionality
+- Proper state cleanup
+
+### Voting System
+Currently implementing a community-driven surface condition rating system where:
+- Each user gets one vote per segment
+- Votes can be updated
+- Running average is maintained
+- Historical votes are tracked
+
+#### Vote Scale (0-6):
+```typescript
+const surfaceConditions = {
+  0: 'Smooth surface, any bike',
+  1: 'Well maintained, gravel bike',
+  2: 'Occasional rough surface',
+  3: 'Frequent loose surface',
+  4: 'Very rough surface',
+  5: 'Extremely rough surface, MTB',
+  6: 'Hike-A-Bike'
+}
+```
+
+## 🎯 Next Steps
+
+### High Priority
+1. **Voting System Implementation**
+   - Add vote UI component
+   - Implement vote submission
+   - Create vote average calculation
+   - Add vote history tracking
+   - Show vote distribution
+   - Enable vote updates
+   - Add vote validation
+
+2. **Data Persistence**
+   [Previous content remains...]
+
+[Previous sections remain the same until "API Requirements" where we add:]
+
+## 📝 API Requirements
+
+### Endpoints Needed
+```typescript
+// Previous endpoints remain...
+
+// Voting System
+POST   /api/segments/:id/vote     // Submit/update vote
+GET    /api/segments/:id/votes    // Get vote statistics
+GET    /api/segments/:id/vote     // Get user's vote
+DELETE /api/segments/:id/vote     // Remove vote
+
+// Analytics
+GET    /api/segments/:id/vote-history  // Get voting history
+GET    /api/segments/:id/vote-stats    // Get voting statistics
+```
+
+### MongoDB Schema
+```typescript
+// Previous Segment interface remains...
+
+interface Vote {
+  userId: string;
+  userName: string;
+  segmentId: ObjectId;
+  condition: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  timestamp: Date;
+  previousVotes?: {
+    condition: number;
+    timestamp: Date;
+  }[];
+}
+
+interface SegmentVoteStats {
+  segmentId: ObjectId;
+  averageRating: number;
+  totalVotes: number;
+  distribution: {
+    [key: number]: number;  // condition -> count
+  };
+  lastUpdated: Date;
+}
+```
+
+### Vote Component Requirements
+```typescript
+interface VoteComponentProps {
+  segmentId: string;
+  currentVote?: number;
+  averageRating: number;
+  totalVotes: number;
+  distribution: Record<number, number>;
+  onVote: (rating: number) => Promise<void>;
+}
+```
+
+## 🎨 UI Components Needed
+
+### Vote Display Component
+- Shows current average rating
+- Displays vote distribution
+- Indicates user's current vote
+- Shows total vote count
+- Provides visual rating scale
+
+### Vote Input Component
+- Rating selector (0-6)
+- Submit button
+- Update confirmation
+- Vote history display
+- Visual condition descriptions
+
+### Vote Statistics Component
+- Vote distribution chart
+- Trend over time
+- Recent vote activity
+- User participation stats
+- Reliability metrics
+
+## 📊 Voting System Metrics
+1. Vote distribution patterns
+2. Vote update frequency
+3. User participation rate
+4. Vote consistency
+5. Segment rating stability
+6. Community engagement
+
+## 🔒 Vote Security Considerations
+1. One vote per user per segment
+2. Vote manipulation prevention
+3. Update frequency limits
+4. Vote history tracking
+5. Anomaly detection
+6. User verification
+
+## 🎯 Voting System Roadmap
+
+### Phase 1: Basic Voting
+- ✅ Define vote schema
+- ✅ Set up vote tracking
+- ⬜ Implement vote submission
+- ⬜ Add vote display
+- ⬜ Create basic statistics
+
+### Phase 2: Enhanced Features
+- ⬜ Add vote history
+- ⬜ Implement vote updates
+- ⬜ Add distribution display
+- ⬜ Create trend analysis
+- ⬜ Add community insights
+
+### Phase 3: Advanced Analytics
+- ⬜ Implement reliability metrics
+- ⬜ Add vote verification
+- ⬜ Create user reputation
+- ⬜ Add vote recommendations
+- ⬜ Implement trend predictions
+
+## 🤝 Community Guidelines
+1. Vote based on personal experience
+2. Update votes when conditions change
+3. Provide constructive feedback
+4. Respect community consensus
+5. Report suspicious activity
+6. Contribute regularly
+
+[Rest of previous sections remain the same...]
