@@ -664,75 +664,77 @@ if (MAP_STYLES[selectedStyle].type === 'google') {
 
 // Render Mapbox
 return (
-  <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-    <div className="w-full h-full relative">
-    <Map
-  {...viewState}
-  onMove={evt => setViewState(evt.viewState)}
-  mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-  style={mapContainerStyle}
-  mapStyle={
-    selectedStyle === 'osm-cycle'
-      ? MAP_STYLES[selectedStyle].style
-      : selectedStyle === 'mapbox'
-      ? MAP_STYLES[selectedStyle].style
-      : 'mapbox://styles/mapbox/empty-v9'
-  }
-  projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-  reuseMaps
-  ref={mapRef}
-  onLoad={(evt) => {
-    const map = evt.target;
-    setMapInstance(map);
-  }}
-/>
-{isLoading && <LoadingSpinner />}
-      {showAlert && (
-        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-      )}
-      {isMobile ? (
-        <MobileControls
-          onSearch={handleSearch}
-          onLocationClick={handleLocationClick}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onLayerToggle={handleLayerToggle}
-          selectedStyle={selectedStyle}
-          onStyleChange={handleStyleChange}
-          overlayStates={overlayStates}
-          mapillaryVisible={mapillaryVisible}
+  <>
+    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+      <div className="w-full h-full relative">
+        <Map
+          {...viewState}
+          onMove={evt => setViewState(evt.viewState)}
+          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+          style={mapContainerStyle}
+          mapStyle={
+            selectedStyle === 'osm-cycle'
+              ? MAP_STYLES[selectedStyle].style
+              : selectedStyle === 'mapbox'
+              ? MAP_STYLES[selectedStyle].style
+              : 'mapbox://styles/mapbox/empty-v9'
+          }
+          projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+          reuseMaps
+          ref={mapRef}
+          onLoad={(evt) => {
+            const map = evt.target;
+            setMapInstance(map);
+          }}
         />
-      ) : (
-        <MapSidebar
-          isOpen={isOpen}
-          setIsOpen={handleSidebarToggle}
-          onSearch={handleSearch}
-          onLocationClick={handleLocationClick}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          availableLayers={layers}
-          onLayerToggle={handleLayerToggle}
-          selectedStyle={selectedStyle}
-          onStyleChange={handleStyleChange}
-          mapillaryVisible={mapillaryVisible}
-          overlayStates={overlayStates}
-        />
-      )}
+        {isLoading && <LoadingSpinner />}
+        {showAlert && (
+          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+        )}
+        {isMobile ? (
+          <MobileControls
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            overlayStates={overlayStates}
+            mapillaryVisible={mapillaryVisible}
+          />
+        ) : (
+          <MapSidebar
+            isOpen={isOpen}
+            setIsOpen={handleSidebarToggle}
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            availableLayers={layers}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            mapillaryVisible={mapillaryVisible}
+            overlayStates={overlayStates}
+          />
+        )}
 
-      <SegmentSheet
-        open={!!selectedSegment}
-        onOpenChange={(open) => !open && setSelectedSegment(null)}
-        segment={selectedSegment}
+        <SegmentSheet
+          open={!!selectedSegment}
+          onOpenChange={(open) => !open && setSelectedSegment(null)}
+          segment={selectedSegment}
+        />
+      </div>
+    </MapContext.Provider>
+
+    {/* Elevation profile at root level, outside both map container and context */}
+    {elevationProfile.length > 0 && (
+      <ElevationProfile
+        data={elevationProfile}
+        sidebarWidth={isOpen && !isMobile ? 360 : 0}
       />
-
-      {/* Moved outside map controls but inside provider */}
-      {elevationProfile.length > 0 && (
-        <ElevationProfile
-          data={elevationProfile}
-          sidebarWidth={isOpen && !isMobile ? 360 : 0}
-        />
-      )}
-    </div>
-  </MapContext.Provider>
+    )}
+  </>
 );
 }
