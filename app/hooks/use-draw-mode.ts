@@ -184,12 +184,6 @@ export const useDrawMode = (map: Map | null) => {
 
       const elevationData = await getElevation([clickedPoint]);
 
-      console.log('Elevation response:', {
-        elevationData,
-        newElevationPoints,
-        currentProfile: elevationProfile
-    });
-
       // Create new segment
       const newSegment: Segment = {
         clickPoint: newClickPoint,
@@ -216,6 +210,12 @@ export const useDrawMode = (map: Map | null) => {
           elevation: point[2]
         };
       });
+      
+      console.log('Elevation response:', {
+        elevationData,
+        newElevationPoints,
+        currentProfile: elevationProfile
+    });
 
       // Update state with new segment
       setSegments(prev => [...prev, newSegment]);
