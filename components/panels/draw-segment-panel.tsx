@@ -96,40 +96,65 @@ export function DrawSegmentPanel() {
       });
       return;
     }
-
+  
     setIsSaving(true);
     try {
       const segment = finishDrawing();
       if (!segment) return;
-
+  
+      console.log('Original segment:', segment);
+  
+      // Format data according to our schema
+      const payload = {
+        title: segmentTitle,
+        geojson: {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: segment.geometry.coordinates
+          },
+          properties: {}
+        }
+      };
+  
+      console.log('Sending payload:', payload);
+  
       const response = await fetch('/api/segments/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: segmentTitle,
-          geojson: segment,
-        }),
+        body: JSON.stringify(payload),
       });
-
+  
+      const responseData = await response.json();
+      console.log('Response:', {
+        status: response.status,
+        data: responseData
+      });
+  
       if (!response.ok) {
-        throw new Error('Failed to save segment');
+        throw new Error(responseData.error || 'Failed to save segment');
       }
-
+  
       toast({
         title: "Success",
         description: "Segment saved successfully",
       });
-
+  
       setSegmentTitle('');
       setShowSaveDialog(false);
       clearDrawing();
-    } catch (error) {
-      console.error('Error saving segment:', error);
+    } catch (error: any) {
+      console.error('Error saving segment:', {
+        message: error.message,
+        stack: error.stack,
+        error
+      });
+      
       toast({
         title: "Error",
-        description: "Failed to save segment. Please try again.",
+        description: error.message || "Failed to save segment. Please try again.",
         variant: "destructive",
       });
     } finally {
