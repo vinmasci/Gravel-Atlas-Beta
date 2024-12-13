@@ -18,7 +18,7 @@ import { Search, Layers, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MapContext } from '@/app/contexts/map-context';
-import { SegmentDialog } from '@/components/segments/segment-dialog';
+import { SegmentSheet } from '@/components/segments/segment-sheet';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -203,6 +203,8 @@ export function MapView() {
   const [showAlert, setShowAlert] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
+  const [isDrawing, setIsDrawing] = useState(false); // Add this
+  const [elevationProfile, setElevationProfile] = useState<{ distance: number, elevation: number }[]>([]); // Add this here
 
   const [viewState, setViewState] = useState({
     longitude: 144.9631,
@@ -236,6 +238,33 @@ export function MapView() {
     averageRating?: number;
     totalVotes?: number;
   } | null>(null);
+
+    // Add the two new useEffect hooks here
+    useEffect(() => {
+      if (!mapInstance) return;
+      
+      const unsubscribe = mapInstance.on('draw.modechange', (e: any) => {
+        setIsDrawing(e.mode === 'draw');
+        if (e.mode !== 'draw') {
+          setElevationProfile([]);
+        }
+      });
+  
+      return () => {
+        if (unsubscribe) {
+          mapInstance.off('draw.modechange', unsubscribe);
+        }
+      };
+    }, [mapInstance]);
+  
+    useEffect(() => {
+      const handleElevationUpdate = (event: CustomEvent<{ distance: number, elevation: number }[]>) => {
+        setElevationProfile(event.detail);
+      };
+  
+      window.addEventListener('elevation-update', handleElevationUpdate as EventListener);
+      return () => window.removeEventListener('elevation-update', handleElevationUpdate as EventListener);
+    }, []);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -593,63 +622,95 @@ export function MapView() {
     );
   }
 
-  // Render Mapbox
-  return (
-    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <div className="w-full h-full relative">
-        <Map
-          {...viewState}
-          onMove={evt => setViewState(evt.viewState)}
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          style={mapContainerStyle}
-          mapStyle={
-            selectedStyle === 'osm-cycle'
-              ? MAP_STYLES[selectedStyle].style
-              : selectedStyle === 'mapbox'
-              ? MAP_STYLES[selectedStyle].style
-              : 'mapbox://styles/mapbox/empty-v9'
+// Render Mapbox
+return (
+  <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+    <div className="w-full h-full relative">
+      <Map
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+        style={mapContainerStyle}
+        mapStyle={
+          selectedStyle === 'osm-cycle'
+            ? MAP_STYLES[selectedStyle].style
+            : selectedStyle === 'mapbox'
+            ? MAP_STYLES[selectedStyle].style
+            : 'mapbox://styles/mapbox/empty-v9'
+        }
+        projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+        reuseMaps
+        ref={mapRef}
+        onLoad={(evt) => {
+          const map = evt.target;
+          setMapInstance(map);
+
+          // Add terrain source if it doesn't exist
+          if (!map.getSource('mapbox-dem')) {
+            map.addSource('mapbox-dem', {
+              'type': 'raster-dem',
+              'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+              'tileSize': 512,
+              'maxzoom': 14
+            });
+
+            // Enable terrain
+            map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1 });
           }
-          projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-          reuseMaps
-          ref={mapRef}
-          onLoad={(evt) => {
-            setMapInstance(evt.target);
-          }}
+        }}
+      />
+
+      {/* Loading and Alert overlays */}
+      {isLoading && <LoadingSpinner />}
+      {showAlert && (
+        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+      )}
+
+{/* Mobile or Desktop Controls */}
+{isMobile ? (
+        <MobileControls
+          onSearch={handleSearch}
+          onLocationClick={handleLocationClick}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onLayerToggle={handleLayerToggle}
+          selectedStyle={selectedStyle}
+          onStyleChange={handleStyleChange}
+          overlayStates={overlayStates}
+          mapillaryVisible={mapillaryVisible}
         />
-        {isLoading && <LoadingSpinner />}
-        {showAlert && (
-          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-        )}
-        {isMobile ? (
-          <MobileControls
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
-          />
-        ) : (
-          <MapSidebar
-            isOpen={isOpen}
-            setIsOpen={handleSidebarToggle}
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            availableLayers={layers}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            mapillaryVisible={mapillaryVisible}
-            overlayStates={overlayStates}
-          />
-        )}
-        
-      </div>
-    </MapContext.Provider>
-  );
+      ) : (
+        <MapSidebar
+          isOpen={isOpen}
+          setIsOpen={handleSidebarToggle}
+          onSearch={handleSearch}
+          onLocationClick={handleLocationClick}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          availableLayers={layers}
+          onLayerToggle={handleLayerToggle}
+          selectedStyle={selectedStyle}
+          onStyleChange={handleStyleChange}
+          mapillaryVisible={mapillaryVisible}
+          overlayStates={overlayStates}
+        />
+      )}
+
+      {/* Real-time elevation profile */}
+      {isDrawing && elevationProfile.length > 0 && (
+        <ElevationProfile
+          data={elevationProfile}
+          className="absolute bottom-4 right-4 z-50"
+        />
+      )}
+
+      {/* Segment Details Sheet */}
+      <SegmentSheet
+        open={!!selectedSegment}
+        onOpenChange={(open) => !open && setSelectedSegment(null)}
+        segment={selectedSegment}
+      />
+    </div>
+  </MapContext.Provider>
+);
 }

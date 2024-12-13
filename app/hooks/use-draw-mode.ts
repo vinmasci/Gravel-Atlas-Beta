@@ -1,16 +1,38 @@
 // app/hooks/use-draw-mode.ts
 import { useState, useCallback } from 'react';
 import type { Map } from 'mapbox-gl';
+import * as turf from '@turf/turf';
+
+interface ElevationPoint {
+  distance: number;
+  elevation: number;
+}
 
 interface SegmentInfo {
   points: [number, number][];
   isSnapped: boolean;
-  clickPoint: [number, number];  // Store the original click point
+  clickPoint: [number, number];
+  elevation?: number;
+}
+
+async function getElevation(map: mapboxgl.Map, lngLat: [number, number]): Promise<number | null> {
+  if (!map.getTerrain()) {
+    map.setTerrain({ source: 'mapbox-dem', exaggeration: 1 });
+  }
+  
+  try {
+    const elevation = await map.queryTerrainElevation(lngLat);
+    return elevation;
+  } catch (error) {
+    console.error('Error getting elevation:', error);
+    return null;
+  }
 }
 
 export const useDrawMode = (map: Map | null) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);
+  const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
   const [drawingLayer, setDrawingLayer] = useState<string | null>(null);
   const [markersLayer, setMarkersLayer] = useState<string | null>(null);
   const [snapToRoad, setSnapToRoad] = useState(true);
@@ -73,7 +95,13 @@ export const useDrawMode = (map: Map | null) => {
     
     setIsDrawing(true);
     setDrawnCoordinates([]);
+    setElevationProfile([]);
     setSegments([]);
+    
+    // Enable terrain if not already enabled
+    if (!map.getTerrain()) {
+      map.setTerrain({ source: 'mapbox-dem', exaggeration: 1 });
+    }
     
     map.getCanvas().style.cursor = 'crosshair';
 
@@ -162,12 +190,42 @@ export const useDrawMode = (map: Map | null) => {
     } else {
       newPoints = [clickedPoint];
     }
+
+    // Sample elevations for new points
+    let totalDistance = elevationProfile.length > 0 ? elevationProfile[elevationProfile.length - 1].distance : 0;
+    const newElevationPoints: ElevationPoint[] = [];
+
+    for (let i = 0; i < newPoints.length; i++) {
+      const point = newPoints[i];
+      const elevation = await getElevation(map, point);
+
+      if (elevation !== null) {
+        if (i > 0 || drawnCoordinates.length > 0) {
+          const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
+          const distance = turf.distance(
+            turf.point(prevPoint),
+            turf.point(point),
+            { units: 'kilometers' }
+          );
+          totalDistance += distance;
+        }
+
+        newElevationPoints.push({
+          distance: totalDistance,
+          elevation: elevation
+        });
+      }
+    }
     
-    // Store both the snapped points and the original click point
+    // Update elevation profile
+    setElevationProfile(prev => [...prev, ...newElevationPoints]);
+    
+    // Store points, snap state, and elevation
     setSegments(prev => [...prev, {
       points: newPoints,
       isSnapped: snapToRoad && newPoints.length > 1,
-      clickPoint: clickedPoint
+      clickPoint: clickedPoint,
+      elevation: newElevationPoints[0]?.elevation
     }]);
 
     const newCoordinates = [...drawnCoordinates, ...newPoints];
@@ -186,9 +244,14 @@ export const useDrawMode = (map: Map | null) => {
       });
     }
 
-    // Update markers with only click points
-    updateMarkers([...segments, { points: newPoints, isSnapped: snapToRoad && newPoints.length > 1, clickPoint: clickedPoint }]);
-  }, [isDrawing, map, drawingLayer, drawnCoordinates, snapToRoad, segments, updateMarkers]);
+    // Update markers
+    updateMarkers([...segments, { 
+      points: newPoints, 
+      isSnapped: snapToRoad && newPoints.length > 1, 
+      clickPoint: clickedPoint,
+      elevation: newElevationPoints[0]?.elevation
+    }]);
+  }, [isDrawing, map, drawingLayer, drawnCoordinates, snapToRoad, segments, updateMarkers, elevationProfile]);
 
   const undoLastPoint = useCallback(() => {
     if (!map || !drawingLayer || segments.length === 0) return;
@@ -198,6 +261,9 @@ export const useDrawMode = (map: Map | null) => {
 
     const newCoordinates = newSegments.flatMap(segment => segment.points);
     setDrawnCoordinates(newCoordinates);
+
+    // Update elevation profile
+    setElevationProfile(prev => prev.slice(0, -1));
 
     // Update line
     const source = map.getSource(drawingLayer) as mapboxgl.GeoJSONSource;
@@ -212,7 +278,7 @@ export const useDrawMode = (map: Map | null) => {
       });
     }
 
-    // Update markers with only click points
+    // Update markers
     updateMarkers(newSegments);
   }, [map, drawingLayer, segments, updateMarkers]);
 
@@ -224,13 +290,15 @@ export const useDrawMode = (map: Map | null) => {
 
     return {
       type: 'Feature' as const,
-      properties: {},
+      properties: {
+        elevationProfile: elevationProfile
+      },
       geometry: {
         type: 'LineString' as const,
         coordinates: drawnCoordinates
       }
     };
-  }, [map, isDrawing, drawnCoordinates]);
+  }, [map, isDrawing, drawnCoordinates, elevationProfile]);
 
   const clearDrawing = useCallback(() => {
     if (!map || !drawingLayer) return;
@@ -254,6 +322,7 @@ export const useDrawMode = (map: Map | null) => {
     setDrawingLayer(null);
     setMarkersLayer(null);
     setDrawnCoordinates([]);
+    setElevationProfile([]);
     setSegments([]);
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
@@ -266,6 +335,7 @@ export const useDrawMode = (map: Map | null) => {
   return {
     isDrawing,
     drawnCoordinates,
+    elevationProfile,
     snapToRoad,
     startDrawing,
     handleClick,

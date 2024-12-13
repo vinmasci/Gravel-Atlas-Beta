@@ -24,6 +24,7 @@ export function DrawSegmentPanel() {
     isDrawing, 
     drawnCoordinates, 
     snapToRoad,
+    elevationProfile,  // Add this
     startDrawing, 
     handleClick, 
     finishDrawing, 

@@ -1,18 +1,19 @@
-// components/segments/segment-dialog.tsx
+// components/segments/segment-sheet.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from '@/components/ui/use-toast';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 const surfaceConditions = {
   '0': 'Smooth surface, any bike',
@@ -24,7 +25,28 @@ const surfaceConditions = {
   '6': 'Hike-A-Bike'
 } as const;
 
-interface SegmentDialogProps {
+export const conditionColors = {
+  '0': 'text-emerald-500', // Pure Green
+  '1': 'text-lime-500',    // Green-Yellow
+  '2': 'text-yellow-500',  // Yellow
+  '3': 'text-orange-500',  // Yellow-Red
+  '4': 'text-red-500',     // Red
+  '5': 'text-red-800',     // Dark Red
+  '6': 'text-purple-900'   // Maroon
+} as const;
+
+// For map lines (without text- prefix)
+export const segmentLineColors = {
+  '0': '#10B981', // emerald-500
+  '1': '#84CC16', // lime-500
+  '2': '#EAB308', // yellow-500
+  '3': '#F97316', // orange-500
+  '4': '#EF4444', // red-500
+  '5': '#991B1B', // red-800
+  '6': '#581C87'  // purple-900
+} as const;
+
+interface SegmentSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   segment: {
@@ -37,7 +59,7 @@ interface SegmentDialogProps {
   } | null;
 }
 
-export function SegmentDialog({ open, onOpenChange, segment }: SegmentDialogProps) {
+export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const [rating, setRating] = useState<keyof typeof surfaceConditions | null>(null);
@@ -96,11 +118,19 @@ export function SegmentDialog({ open, onOpenChange, segment }: SegmentDialogProp
   if (!segment) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{segment.title}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent 
+        side="right"
+        className={cn(
+          "w-full sm:w-[400px] p-6",
+          "sm:h-full",
+          "h-[80vh] rounded-t-[10px] sm:rounded-none",
+          "bottom-0 sm:bottom-auto"
+        )}
+      >
+        <SheetHeader>
+          <SheetTitle>{segment.title}</SheetTitle>
+        </SheetHeader>
         
         <div className="grid gap-4 py-4">
           <div className="space-y-1">
@@ -116,15 +146,28 @@ export function SegmentDialog({ open, onOpenChange, segment }: SegmentDialogProp
           </div>
 
           <div className="space-y-4">
-            <Label className="text-muted-foreground">Rate Surface Condition</Label>
+            <Label className="text-base font-semibold">Rate Surface Condition</Label>
             <RadioGroup
               value={rating || undefined}
               onValueChange={(value) => setRating(value as keyof typeof surfaceConditions)}
+              className="space-y-3"
             >
               {Object.entries(surfaceConditions).map(([value, label]) => (
-                <div key={value} className="flex items-center space-x-2">
+                <div key={value} className="flex items-center space-x-3">
+                  <i 
+                    className={cn(
+                      `fa-solid fa-circle-${value}`,
+                      "text-lg",
+                      conditionColors[value as keyof typeof conditionColors]
+                    )}
+                  />
                   <RadioGroupItem value={value} id={`condition-${value}`} />
-                  <Label htmlFor={`condition-${value}`}>{label}</Label>
+                  <Label 
+                    htmlFor={`condition-${value}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {label}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -132,13 +175,13 @@ export function SegmentDialog({ open, onOpenChange, segment }: SegmentDialogProp
             <Button 
               onClick={handleVote}
               disabled={!rating || isVoting}
-              className="w-full"
+              className="w-full mt-4"
             >
               {isVoting ? 'Submitting...' : 'Submit Rating'}
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
