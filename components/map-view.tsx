@@ -205,8 +205,8 @@ export function MapView() {
   const [showAlert, setShowAlert] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
-  const [isDrawing, setIsDrawing] = useState(false); // Add this
-  const [elevationProfile, setElevationProfile] = useState<{ distance: number, elevation: number }[]>([]); // Add this here
+  const drawMode = useDrawMode(mapInstance);
+  const { isDrawing, elevationProfile } = drawMode;
 
   const [viewState, setViewState] = useState({
     longitude: 144.9631,
@@ -240,33 +240,6 @@ export function MapView() {
     averageRating?: number;
     totalVotes?: number;
   } | null>(null);
-
-    // Add the two new useEffect hooks here
-    useEffect(() => {
-      if (!mapInstance) return;
-      
-      const unsubscribe = mapInstance.on('draw.modechange', (e: any) => {
-        setIsDrawing(e.mode === 'draw');
-        if (e.mode !== 'draw') {
-          setElevationProfile([]);
-        }
-      });
-  
-      return () => {
-        if (unsubscribe) {
-          mapInstance.off('draw.modechange', unsubscribe);
-        }
-      };
-    }, [mapInstance]);
-  
-    useEffect(() => {
-      const handleElevationUpdate = (event: CustomEvent<{ distance: number, elevation: number }[]>) => {
-        setElevationProfile(event.detail);
-      };
-  
-      window.addEventListener('elevation-update', handleElevationUpdate as EventListener);
-      return () => window.removeEventListener('elevation-update', handleElevationUpdate as EventListener);
-    }, []);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -730,13 +703,13 @@ return (
     </MapContext.Provider>
 
     {/* Elevation profile at root level, outside both map container and context */}
-    {map && (
-    <FloatingElevationProfile 
-      data={drawMode.elevationProfile}
-      onClose={drawMode.clearDrawing}
-      isDrawing={drawMode.isDrawing}
-    />
-  )}
+    {mapInstance && (
+  <FloatingElevationProfile 
+    data={drawMode.elevationProfile}
+    onClose={drawMode.clearDrawing}
+    isDrawing={drawMode.isDrawing}
+  />
+)}
   </>
 );
 }
