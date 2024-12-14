@@ -81,21 +81,18 @@ interface SegmentSheetProps {
   segment: {
     id: string;
     title: string;
-    auth0Id: string; // Add this
-    uploadedBy: {
-      id: string;
-      name: string;
-      picture: string;
-      website?: string;
-      socialLinks?: {
-        instagram?: string;
-        strava?: string;
-        facebook?: string;
-      };
-    };
+    userName: string;
+    userImage?: string;
+    bioName?: string;
+    website?: string;
     length: number;
     averageRating?: number;
     totalVotes?: number;
+    metadata?: {
+      elevationProfile?: ElevationPoint[];
+      elevationGain?: number;
+      elevationLoss?: number;
+    };
   } | null;
 }
 
@@ -107,32 +104,28 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
-  const [userData, setUserData] = useState<{
-    name: string;
-    picture: string;
-    website?: string;
-    socialLinks?: {
-      instagram?: string;
-      strava?: string;
-      facebook?: string;
-    };
-  } | null>(null);
+  const [userData, setUserData] = useState<{ bioName?: string; image?: string; website?: string } | null>(null);
 
   useEffect(() => {
     if (segment?.id && user) {
       loadComments(segment.id);
     }
-    if (segment?.uploadedBy.id) { // Use the uploadedBy.id which should be the auth0Id
-      fetch(`/api/user/${segment.uploadedBy.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (!data.error) {
-            setUserData(data);
-          }
-        })
-        .catch(error => console.error('Error fetching user data:', error));
+    if (segment?.userName) {
+      fetchUserData(segment.userName);
     }
-  }, [segment?.id, segment?.uploadedBy.id, user]);
+  }, [segment?.id, segment?.userName, user]);
+
+  const fetchUserData = async (userName: string) => {
+    try {
+      const response = await fetch(`/api/user/${userName}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const loadComments = async (segmentId: string) => {
     setIsLoadingComments(true);
@@ -227,7 +220,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
     }
   };
 
-  if (!segment) return null;
+   if (!segment) return null;
 
   const elevationProfile = segment.metadata?.elevationProfile || [];
   const elevations = elevationProfile.map(point => point.elevation);
@@ -254,47 +247,25 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         <div className="grid gap-4 py-4">
           {/* User Info */}
           <div className="flex items-center space-x-3">
-  <div className="w-8 h-8 rounded-full overflow-hidden border border-border">
-    <img 
-      src={userData?.picture || segment.uploadedBy.picture}
-      alt={userData?.name || segment.uploadedBy.name}
-      className="w-full h-full object-cover"
-    />
-  </div>
-  <div className="space-y-1">
-    <p className="text-sm font-medium">{userData?.name || segment.uploadedBy.name}</p>
-    <div className="flex items-center space-x-2 text-sm">
-                {userData?.website && (
-                  <a 
-                    href={userData.website} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <i className="fa-solid fa-globe w-4 h-4"></i>
-                  </a>
-                )}
-                {userData?.socialLinks?.instagram && (
-                  <a 
-                    href={userData.socialLinks.instagram} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-[#E1306C] transition-colors"
-                  >
-                    <i className="fa-brands fa-instagram w-4 h-4"></i>
-                  </a>
-                )}
-                {userData?.socialLinks?.strava && (
-                  <a 
-                    href={userData.socialLinks.strava} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-[#FC4C02] transition-colors"
-                  >
-                    <i className="fa-brands fa-strava w-4 h-4"></i>
-                  </a>
-                )}
-              </div>
+            <img 
+              src={userData?.image || segment.userImage}
+              alt={userData?.bioName || segment.userName}
+              className="w-8 h-8 rounded-full"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{userData?.bioName || segment.userName}</p>
+              {(userData?.website || segment.website) && (
+                <a 
+                  href={userData?.website || segment.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  {new URL(userData?.website || segment.website || '').hostname}
+                </a>
+              )}
             </div>
           </div>
 
@@ -421,6 +392,8 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
                           src={comment.userImage} 
                           alt={comment.userName}
                           className="w-6 h-6 rounded-full"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium">{comment.userName}</p>
