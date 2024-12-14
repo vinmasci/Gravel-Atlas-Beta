@@ -81,7 +81,7 @@ interface SegmentSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   segment: {
-    id: string;
+    _id: string;  // Changed to match MongoDB's _id
     title: string;
     auth0Id: string;
     userName: string;
@@ -164,7 +164,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
   
     setIsVoting(true);
     try {
-      const response = await fetch(`/api/segments/${segment.id}/vote`, {
+      const response = await fetch(`/api/segments/${segment._id}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
