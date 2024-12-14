@@ -2,14 +2,13 @@
 
 import React, { useEffect, useRef } from 'react';
 import {
-  LineChart,
-  Line,
+  AreaChart,  // Change this
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Area  // Add this
+  ResponsiveContainer
 } from 'recharts';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -123,56 +122,56 @@ export function FloatingElevationProfile() {
           )}
         </div>
         <div className="h-[140px]">
-          <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={displayData}>
-  <defs>
-    <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
-    </linearGradient>
-  </defs>
-  <CartesianGrid 
-    strokeDasharray="3 3" 
-    vertical={false} 
-    stroke="rgba(255,255,255,0.1)" 
-  />
-  <XAxis 
-    dataKey="distance" 
-    type="number"
-    domain={[0, Math.max(maxDistance, 1)]}
-    tickFormatter={(value) => `${value.toFixed(1)}km`}
-    stroke="#666"
-    fontSize={12}
-  />
-  <YAxis 
-    domain={[
-      minElevation - elevationPadding,
-      maxElevation + elevationPadding
-    ]}
-    tickFormatter={(value) => `${Math.round(value)}m`}
-    stroke="#666"
-    fontSize={12}
-  />
-  <Tooltip 
-    formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
-    labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-    contentStyle={{
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      border: 'none',
-      borderRadius: '8px',
-      color: 'white'
-    }}
-  />
-  <Area
-    type="monotone"
-    dataKey="elevation"
-    stroke="#ef4444"
-    strokeWidth={2}
-    fill="url(#elevationGradient)"
-    dot={false}
-  />
-</LineChart>
-          </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="100%">
+  <AreaChart data={displayData}>
+    <defs>
+      <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="5%" stopColor="#ef4444" stopOpacity={1}/> {/* Increased from 0.3 */}
+      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.2}/> {/* Increased from 0.1 */}
+      </linearGradient>
+    </defs>
+    <CartesianGrid 
+      strokeDasharray="3 3" 
+      vertical={false} 
+      stroke="rgba(255,255,255,0.1)" 
+    />
+    <XAxis 
+      dataKey="distance" 
+      type="number"
+      domain={[0, Math.max(maxDistance, 1)]}
+      tickFormatter={(value) => `${value.toFixed(1)}km`}
+      stroke="#666"
+      fontSize={12}
+    />
+    <YAxis 
+      domain={[
+        minElevation - elevationPadding,
+        maxElevation + elevationPadding
+      ]}
+      tickFormatter={(value) => `${Math.round(value)}m`}
+      stroke="#666"
+      fontSize={12}
+    />
+    <Tooltip 
+      formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
+      labelFormatter={(value: number) => `${value.toFixed(1)} km`}
+      contentStyle={{
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        border: 'none',
+        borderRadius: '8px',
+        color: 'white'
+      }}
+    />
+    <Area
+      type="monotone"
+      dataKey="elevation"
+      stroke="#ef4444"
+      strokeWidth={2}
+      fill="url(#elevationGradient)"
+      dot={false}
+    />
+  </AreaChart>
+</ResponsiveContainer>
         </div>
       </div>
     </div>

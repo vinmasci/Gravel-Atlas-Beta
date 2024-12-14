@@ -2,10 +2,10 @@
 "use client"
 
 import React, { useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/app/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Button } from "../components/ui/button";
+import { Progress } from "../components/ui/progress";
+import { useToast } from "../app/hooks/use-toast";
 import { MapPin, CheckCircle, XCircle, X, Upload, Loader2 } from 'lucide-react';
 import exifr from 'exifr';
 import imageCompression from 'browser-image-compression';
