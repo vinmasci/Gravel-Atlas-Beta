@@ -305,26 +305,23 @@ export const useDrawMode = (map: Map | null) => {
         return newClickPoints;
       });
   
-      // Update coordinates
-      const allCoordinates = [...segments, newSegment].flatMap(segment => segment.roadPoints);
-      setDrawnCoordinates(allCoordinates);
-      logStateChange('Coordinates updated', { 
-        totalCoordinates: allCoordinates.length 
-      });
-      
-      // Update map sources
-      const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
-      const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
-  
-      if (lineSource && markerSource) {
-        lineSource.setData({
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: allCoordinates
-          }
-        });
+// Update coordinates with elevation data
+const allCoordinates = elevationData; // Use elevation data directly since it has [lon, lat, elevation]
+setDrawnCoordinates(allCoordinates);
+
+// Update map sources
+const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
+const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
+
+if (lineSource && markerSource) {
+  lineSource.setData({
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: allCoordinates // This will now include elevation data
+    }
+  });
   
         markerSource.setData({
           type: 'FeatureCollection',
@@ -452,15 +449,10 @@ properties: {
 
     const result = {
       type: 'Feature' as const,
-      properties: {
-        metadata: {  // Move it into properties.metadata
-          elevationProfile: elevationProfile,
-          // Add any other metadata here
-        }
-      },
+      properties: {},
       geometry: {
         type: 'LineString' as const,
-        coordinates: drawnCoordinates
+        coordinates: drawnCoordinates // This will now include the elevation data
       }
     };
 

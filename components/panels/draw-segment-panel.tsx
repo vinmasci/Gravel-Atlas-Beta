@@ -243,15 +243,15 @@ const payload = {
     type: 'Feature' as const,
     geometry: {
       type: 'LineString' as const,
-      coordinates: segment.geometry.coordinates
+      coordinates: segment.geometry.coordinates // This should now be [lon, lat, elevation] arrays
     },
     properties: {}
   },
   metadata: {
     title: segmentTitle,
-    elevationProfile: elevationProfile,
-    elevationGain: elevationGain,  // Use the one we calculated above
-    elevationLoss: elevationLoss,  // Use the one we calculated above
+    length,
+    elevationGain,
+    elevationLoss,
     surfaceTypes: []
   }
 };
