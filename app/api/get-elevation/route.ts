@@ -9,7 +9,7 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
         // Process one coordinate at a time for accurate elevation data
         const results = await Promise.all(coordinates.map(async ([lng, lat]) => {
             // Make individual point query
-            const url = `https://api.mapbox.com/v4/mapbox.terrain-dem-v1/tilequery/${lng},${lat}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+            const url = `https://api.mapbox.com/v4/mapbox-terrain-dem-v1/tilequery/${lng},${lat}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
             
             console.log('Requesting elevation for point:', { lng, lat, url });
             
