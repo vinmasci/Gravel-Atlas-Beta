@@ -694,6 +694,8 @@ return (
             />
           )}
 
+          <FloatingElevationProfile />
+
           <SegmentSheet
             open={!!selectedSegment}
             onOpenChange={(open) => !open && setSelectedSegment(null)}
@@ -701,8 +703,6 @@ return (
           />
         </div>
       </MapContext.Provider>
-      
-      <FloatingElevationProfile />
     </DrawModeProvider>
   </>
 );

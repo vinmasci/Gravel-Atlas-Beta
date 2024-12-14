@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   LineChart,
   Line,
@@ -22,57 +22,96 @@ interface ElevationPoint {
 
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
+  const renderCount = useRef(0);
   
-  // Only check if drawing is active
-  if (!drawMode.isDrawing) return null;
+  useEffect(() => {
+    console.log('FloatingElevationProfile mounted:', {
+      timestamp: new Date().toISOString(),
+      drawModeAvailable: !!drawMode,
+    });
 
-  // Determine if we have actual data
-  const hasData = drawMode.elevationProfile.length >= 2;
-  const displayData = hasData ? drawMode.elevationProfile : [{ distance: 0, elevation: 0 }];
+    return () => {
+      console.log('FloatingElevationProfile unmounted:', {
+        timestamp: new Date().toISOString(),
+      });
+    };
+  }, []);
 
-  // Calculate statistics based on data availability
-  const elevations = drawMode.elevationProfile.map(p => p.elevation);
-  const minElevation = hasData ? Math.min(...elevations) : 0;
-  const maxElevation = hasData ? Math.max(...elevations) : 100;
-  
-  const elevationGain = hasData ? drawMode.elevationProfile.reduce((gain, point, i) => {
-    if (i === 0) return 0;
-    const climb = point.elevation - drawMode.elevationProfile[i-1].elevation;
-    return gain + (climb > 0 ? climb : 0);
-  }, 0) : 0;
-  
-  const elevationLoss = hasData ? drawMode.elevationProfile.reduce((loss, point, i) => {
-    if (i === 0) return 0;
-    const drop = point.elevation - drawMode.elevationProfile[i-1].elevation;
-    return loss + (drop < 0 ? Math.abs(drop) : 0);
-  }, 0) : 0;
+  // Log every render
+  renderCount.current += 1;
+  console.log('FloatingElevationProfile render #' + renderCount.current, {
+    timestamp: new Date().toISOString(),
+    drawModeExists: !!drawMode,
+    isDrawing: drawMode?.isDrawing,
+    elevationProfileLength: drawMode?.elevationProfile?.length,
+    fullDrawModeContext: drawMode
+  });
 
-  const totalDistance = hasData 
-    ? drawMode.elevationProfile[drawMode.elevationProfile.length - 1].distance 
-    : 0;
+  // Component visibility check
+  useEffect(() => {
+    console.log('DrawMode state changed:', {
+      timestamp: new Date().toISOString(),
+      isDrawing: drawMode?.isDrawing,
+      elevationProfileLength: drawMode?.elevationProfile?.length
+    });
+  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+
+  // Debug render visibility
+  if (!drawMode?.isDrawing) {
+    console.log('Not rendering - drawing mode inactive', {
+      timestamp: new Date().toISOString(),
+      drawMode
+    });
+    return null;
+  }
+
+  // Empty state data for the chart
+  const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
+  const displayData = drawMode.elevationProfile.length >= 2 
+    ? drawMode.elevationProfile 
+    : emptyData;
+
+  console.log('Preparing to render elevation profile:', {
+    timestamp: new Date().toISOString(),
+    displayData,
+    isUsingEmptyData: drawMode.elevationProfile.length < 2,
+    containerStyles: {
+      position: 'fixed',
+      zIndex: 50,
+      left: '360px',
+      right: '4px',
+      bottom: '4px'
+    }
+  });
 
   return (
     <div 
-      className="fixed left-0 right-0 bottom-0 bg-background/95 backdrop-blur-sm border-t border-border"
+      className="fixed left-[360px] right-4 bottom-4 bg-red-500/50 backdrop-blur-sm border border-border rounded-lg shadow-lg"
       style={{
         height: '200px',
-        zIndex: 50,
+        zIndex: 9999,
       }}
     >
       <div className="p-4 h-full">
         <div className="flex justify-between items-start mb-2">
           <div className="text-sm space-x-4">
-            <span className="font-medium">Gain: {Math.round(elevationGain)}m</span>
-            <span className="font-medium">Loss: {Math.round(elevationLoss)}m</span>
-            <span>Dist: {totalDistance.toFixed(1)}km</span>
-            {!hasData && <span className="text-muted-foreground">Start drawing to see elevation data</span>}
+            <span className="font-medium">DEBUG: Elevation Profile</span>
+            <span>Render #{renderCount.current}</span>
+            <span>Drawing: {drawMode.isDrawing ? 'YES' : 'NO'}</span>
+            <span>Points: {drawMode.elevationProfile.length}</span>
+            {drawMode.elevationProfile.length < 2 && (
+              <span className="text-muted-foreground">Click points on the map to see elevation data</span>
+            )}
           </div>
           {drawMode.clearDrawing && (
             <Button
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
-              onClick={drawMode.clearDrawing}
+              onClick={() => {
+                console.log('Clear drawing clicked');
+                drawMode.clearDrawing();
+              }}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -80,7 +119,12 @@ export function FloatingElevationProfile() {
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={displayData}>
+            <LineChart 
+              data={displayData}
+              onMouseMove={(e) => {
+                console.log('Chart mouse move:', e);
+              }}
+            >
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 vertical={false} 
@@ -89,13 +133,13 @@ export function FloatingElevationProfile() {
               <XAxis 
                 dataKey="distance" 
                 type="number"
-                domain={hasData ? ['dataMin', 'dataMax'] : [0, 1]}
+                domain={[0, 1]}
                 tickFormatter={(value) => `${value.toFixed(1)}km`}
                 stroke="#666"
                 fontSize={12}
               />
               <YAxis 
-                domain={[minElevation - 10, maxElevation + 10]}
+                domain={[0, 100]}
                 tickFormatter={(value) => `${Math.round(value)}m`}
                 stroke="#666"
                 fontSize={12}
@@ -109,13 +153,6 @@ export function FloatingElevationProfile() {
                   borderRadius: '8px',
                   color: 'white'
                 }}
-              />
-              <Area 
-                type="monotone"
-                dataKey="elevation"
-                fill="#ef4444"
-                fillOpacity={0.2}
-                strokeWidth={0}
               />
               <Line
                 type="monotone"

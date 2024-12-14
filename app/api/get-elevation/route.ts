@@ -10,19 +10,14 @@ interface Coords {
 async function getElevationFromMapbox(coordinates: [number, number][]) {
     if (coordinates.length === 0) return [];
     
-    // If only one coordinate, duplicate it to meet the API requirement
-    const coordsToQuery = coordinates.length === 1 
-        ? [coordinates[0], coordinates[0]] 
-        : coordinates;
-    
     // Format coordinates for Mapbox API
-    const coordinatesString = coordsToQuery
+    const coordinatesString = coordinates
         .map(([lng, lat]) => `${lng},${lat}`)
         .join(';');
 
     try {
         const response = await fetch(
-            `https://api.mapbox.com/v4/mapbox.terrain-rgb/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            `https://api.mapbox.com/v4/mapbox.terrain-rgb-v1/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
 
         if (!response.ok) {
@@ -32,16 +27,20 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
         const data = await response.json();
         
         // Map the results back to coordinate format
-        // If we duplicated the point, only return the first one
-        const results = coordsToQuery.map((coord, index) => {
-            const elevation = data.features[index]?.properties?.elevation || 0;
-            return [...coord, elevation];
+        return coordinates.map((coord, index) => {
+            const feature = data.features[index];
+            if (!feature) return [...coord, 0];
+            
+            // Parse elevation from RGB values
+            const rgb = feature.properties;
+            const elevation = rgb ? 
+                -10000 + ((rgb.r * 256 * 256 + rgb.g * 256 + rgb.b) * 0.1) : 
+                0;
+            
+            return [...coord, Math.round(elevation)];
         });
-
-        return coordinates.length === 1 ? [results[0]] : results;
     } catch (error) {
         console.error('Error fetching elevation:', error);
-        // Return coordinates with 0 elevation on error
         return coordinates.map(coord => [...coord, 0]);
     }
 }
