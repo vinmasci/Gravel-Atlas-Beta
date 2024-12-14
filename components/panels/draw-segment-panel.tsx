@@ -262,7 +262,7 @@ export function DrawSegmentPanel() {
     timestamp: new Date().toISOString(),
     isDrawing,
     coordinatesCount: drawnCoordinates.length,
-    showingSaveDialog,
+    showSaveDialog,  // <-- Fixed variable name
     isSaving
   });
 

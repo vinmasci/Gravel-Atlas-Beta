@@ -404,7 +404,7 @@ export const useDrawMode = (map: Map | null) => {
             type: 'Point',
             coordinates: point.coordinates
           },
-          properties: {
+properties: {
             timestamp: point.timestamp
           }
         }))
