@@ -1,5 +1,5 @@
 // components/ui/custom-alert.tsx
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "../../components/ui/alert"
 import { XCircle } from "lucide-react"
 
 // In components/ui/custom-alert.tsx
