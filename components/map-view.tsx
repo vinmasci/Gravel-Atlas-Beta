@@ -22,6 +22,7 @@ import { DrawModeProvider } from '@/app/contexts/draw-mode-context';
 import { SegmentSheet } from '@/components/segments/segment-sheet';
 import { FloatingElevationProfile } from './segments/floating-elevation-profile';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
+import { useDrawModeContext } from '@/app/contexts/draw-mode-context';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
@@ -648,7 +649,7 @@ console.log('Rendering Mapbox view with drawMode:', {
 return (
   <>
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <DrawModeProvider map={mapInstance}>
+    <DrawModeProvider value={drawMode}>
         <div className="w-full h-full relative">
           <Map
             {...viewState}
