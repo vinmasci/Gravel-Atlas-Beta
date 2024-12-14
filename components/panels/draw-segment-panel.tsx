@@ -29,6 +29,20 @@ export function DrawSegmentPanel() {
   const [segmentTitle, setSegmentTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Debug mount
+  useEffect(() => {
+    console.log('DrawSegmentPanel mounted:', {
+      timestamp: new Date().toISOString(),
+      mapExists: !!map,
+      userExists: !!user
+    });
+    return () => {
+      console.log('DrawSegmentPanel unmounted:', {
+        timestamp: new Date().toISOString()
+      });
+    };
+  }, [map, user]);
+
   // Initialize draw mode hook
   const drawMode = useDrawMode(map);
   const { 
@@ -44,19 +58,51 @@ export function DrawSegmentPanel() {
     toggleSnapToRoad
   } = drawMode;
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('DrawSegmentPanel state updated:', {
+      timestamp: new Date().toISOString(),
+      isDrawing,
+      coordinatesCount: drawnCoordinates.length,
+      elevationPointCount: elevationProfile.length,
+      snapToRoad,
+      showingSaveDialog: showSaveDialog,
+      isSaving
+    });
+  }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, showSaveDialog, isSaving]);
+
   // Set up map click handler once
   useEffect(() => {
     if (!map) return;
 
+    console.log('Setting up map click handler:', {
+      timestamp: new Date().toISOString(),
+      isDrawing,
+      mapExists: !!map
+    });
+
     if (isDrawing) {
       map.on('click', handleClick);
-      return () => map.off('click', handleClick);
+      return () => {
+        console.log('Removing map click handler');
+        map.off('click', handleClick);
+      };
     }
   }, [map, isDrawing, handleClick]);
 
   // Handler functions
   const handleDrawingToggle = useCallback(() => {
+    console.log('Drawing toggle clicked:', {
+      timestamp: new Date().toISOString(),
+      currentState: {
+        isDrawing,
+        coordinates: drawnCoordinates.length,
+        userExists: !!user
+      }
+    });
+
     if (!user) {
+      console.log('No user, redirecting to login');
       toast({
         title: "Authentication Required",
         description: "Please sign in to draw segments",
@@ -67,17 +113,36 @@ export function DrawSegmentPanel() {
     }
 
     if (isDrawing) {
+      console.log('Ending drawing mode:', {
+        coordinatesDrawn: drawnCoordinates.length
+      });
+      
       if (drawnCoordinates.length > 1) {
+        console.log('Opening save dialog');
         setShowSaveDialog(true);
       } else {
+        console.log('Clearing drawing - insufficient points');
         clearDrawing();
       }
     } else {
+      console.log('Starting drawing mode');
       startDrawing();
     }
+
+    console.log('Drawing toggle complete:', {
+      timestamp: new Date().toISOString(),
+      newDrawingState: !isDrawing,
+      coordinates: drawnCoordinates.length
+    });
   }, [user, isDrawing, drawnCoordinates.length, clearDrawing, startDrawing, toast]);
 
   const handleSnapToggle = useCallback((enabled: boolean) => {
+    console.log('Snap toggle clicked:', {
+      timestamp: new Date().toISOString(),
+      newState: enabled,
+      currentCoordinates: drawnCoordinates.length
+    });
+
     toggleSnapToRoad(enabled);
     toast({
       title: enabled ? "Snap to Road Enabled" : "Snap to Road Disabled",
@@ -85,10 +150,18 @@ export function DrawSegmentPanel() {
         ? "Points will now snap to the nearest road" 
         : "Points will be placed exactly where you click",
     });
-  }, [toggleSnapToRoad, toast]);
+  }, [toggleSnapToRoad, toast, drawnCoordinates.length]);
 
   const handleSave = useCallback(async () => {
+    console.log('Save attempt:', {
+      timestamp: new Date().toISOString(),
+      title: segmentTitle,
+      coordinates: drawnCoordinates.length,
+      elevationPoints: elevationProfile.length
+    });
+
     if (!segmentTitle.trim()) {
+      console.log('Save cancelled - no title');
       toast({
         title: "Title Required",
         description: "Please enter a title for your segment",
@@ -99,10 +172,15 @@ export function DrawSegmentPanel() {
   
     setIsSaving(true);
     try {
+      console.log('Finishing drawing for save');
       const segment = finishDrawing();
-      if (!segment) return;
+      if (!segment) {
+        console.log('No segment data available');
+        return;
+      }
   
       // Create GPX data
+      console.log('Creating GPX data');
       const coordinates = segment.geometry.coordinates;
       const trackpoints = coordinates
         .map((coord: [number, number]) => {
@@ -138,6 +216,7 @@ export function DrawSegmentPanel() {
         }
       };
   
+      console.log('Sending save request');
       const response = await fetch('/api/segments/save', {
         method: 'POST',
         headers: {
@@ -151,6 +230,7 @@ export function DrawSegmentPanel() {
         throw new Error(responseData.error || 'Failed to save segment');
       }
   
+      console.log('Save successful');
       toast({
         title: "Success",
         description: "Segment saved successfully",
@@ -169,13 +249,22 @@ export function DrawSegmentPanel() {
     } finally {
       setIsSaving(false);
     }
-  }, [segmentTitle, finishDrawing, clearDrawing, toast]);
+  }, [segmentTitle, finishDrawing, clearDrawing, toast, drawnCoordinates, elevationProfile]);
 
   const handleCancel = useCallback(() => {
+    console.log('Save cancelled by user');
     setShowSaveDialog(false);
     setSegmentTitle('');
     clearDrawing();
   }, [clearDrawing]);
+
+  console.log('DrawSegmentPanel render:', {
+    timestamp: new Date().toISOString(),
+    isDrawing,
+    coordinatesCount: drawnCoordinates.length,
+    showingSaveDialog,
+    isSaving
+  });
 
   return (
     <div>

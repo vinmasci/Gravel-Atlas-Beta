@@ -1,5 +1,5 @@
 // app/hooks/use-draw-mode.ts
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Map } from 'mapbox-gl';
 import * as turf from '@turf/turf';
 
@@ -18,13 +18,22 @@ interface Segment {
   roadPoints: [number, number][];
 }
 
+// Debugging function
+const logStateChange = (action: string, data: any) => {
+  console.log(`DrawMode - ${action}:`, {
+    timestamp: new Date().toISOString(),
+    ...data
+  });
+};
+
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
-    console.log('getElevation called with:', coordinates);
+    logStateChange('getElevation called', { coordinates });
     
     // If we have less than 2 coordinates, pad with a duplicate point
     if (coordinates.length < 2) {
         const point = coordinates[0];
         coordinates = point ? [point, point] : [[0,0], [0,0]];
+        logStateChange('Padded coordinates', { paddedCoordinates: coordinates });
     }
 
     try {
@@ -41,15 +50,24 @@ async function getElevation(coordinates: [number, number][]): Promise<[number, n
         }
 
         const data = await response.json();
+        logStateChange('Elevation data received', { data });
         return data.coordinates;
     } catch (error) {
         console.error('Error fetching elevation:', error);
         // Return original coordinates with 0 elevation if there's an error
-        return coordinates.map(([lng, lat]) => [lng, lat, 0]);
+        const fallbackData = coordinates.map(([lng, lat]) => [lng, lat, 0]);
+        logStateChange('Using fallback elevation data', { fallbackData });
+        return fallbackData;
     }
 }
 
 export const useDrawMode = (map: Map | null) => {
+  const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
+  logStateChange('Hook initialized', { 
+    instanceId: hookInstanceId.current,
+    mapExists: !!map 
+  });
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);
   const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
@@ -61,25 +79,45 @@ export const useDrawMode = (map: Map | null) => {
   const pendingOperation = useRef<AbortController | null>(null);
   const isProcessingClick = useRef(false);
 
+  // Debug state changes
+  useEffect(() => {
+    logStateChange('State updated', {
+      instanceId: hookInstanceId.current,
+      isDrawing,
+      coordinatesCount: drawnCoordinates.length,
+      elevationPointCount: elevationProfile.length,
+      snapToRoad,
+      clickPointsCount: clickPoints.length,
+      segmentsCount: segments.length
+    });
+  }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
+
   const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<[number, number][]> => {
+    logStateChange('Snapping to road', {
+      clickedPoint,
+      previousPoint,
+      snapEnabled: snapToRoad
+    });
+
     if (!snapToRoad) return [clickedPoint];
 
     try {
         if (!previousPoint) {
-            // For a single point, we can use the Mapbox Tilequery API instead of Directions API
+            logStateChange('Snapping single point');
             const response = await fetch(
                 `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const data = await response.json();
             if (data.features && data.features.length > 0) {
-                // Return the closest road point
-                return [data.features[0].geometry.coordinates as [number, number]];
+                const snappedPoint = data.features[0].geometry.coordinates as [number, number];
+                logStateChange('Single point snapped', { original: clickedPoint, snapped: snappedPoint });
+                return [snappedPoint];
             }
             return [clickedPoint];
         }
 
-        // For multiple points, use the Directions API as before
+        logStateChange('Snapping line segment');
         const response = await fetch(
             `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
@@ -87,7 +125,12 @@ export const useDrawMode = (map: Map | null) => {
         const data = await response.json();
         
         if (data.code === 'Ok' && data.routes.length > 0) {
-            return data.routes[0].geometry.coordinates as [number, number][];
+            const snappedPoints = data.routes[0].geometry.coordinates as [number, number][];
+            logStateChange('Line segment snapped', {
+                originalPoints: [previousPoint, clickedPoint],
+                snappedPointCount: snappedPoints.length
+            });
+            return snappedPoints;
         }
         
         return [clickedPoint];
@@ -95,17 +138,20 @@ export const useDrawMode = (map: Map | null) => {
         console.error('Error snapping to road:', error);
         return [clickedPoint];
     }
-};
+  };
 
   const initializeLayers = useCallback(() => {
+    logStateChange('Initializing layers', { mapExists: !!map });
     if (!map) return;
 
     // Clean up existing layers
     if (layerRefs.current.drawing) {
+      logStateChange('Cleaning up existing drawing layer');
       map.removeLayer(layerRefs.current.drawing);
       map.removeSource(layerRefs.current.drawing);
     }
     if (layerRefs.current.markers) {
+      logStateChange('Cleaning up existing markers layer');
       map.removeLayer(layerRefs.current.markers);
       map.removeSource(layerRefs.current.markers);
     }
@@ -113,6 +159,7 @@ export const useDrawMode = (map: Map | null) => {
     // Create new layers with unique IDs
     const drawingId = `drawing-${Date.now()}`;
     const markersId = `markers-${Date.now()}`;
+    logStateChange('Creating new layers', { drawingId, markersId });
 
     // Add drawing layer
     map.addSource(drawingId, {
@@ -151,19 +198,27 @@ export const useDrawMode = (map: Map | null) => {
     });
 
     layerRefs.current = { drawing: drawingId, markers: markersId };
+    logStateChange('Layers initialized', layerRefs.current);
   }, [map]);
 
   const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent) => {
-    if (!isDrawing || !map || !layerRefs.current.drawing || isProcessingClick.current) return;
-    
-    console.log('Handle click event:', {
-        isDrawingActive: isDrawing,
-        existingPoints: drawnCoordinates.length,
-        newPoint: [e.lngLat.lng, e.lngLat.lat],
-        currentElevationProfile: elevationProfile
+    logStateChange('Click event received', {
+      isDrawing,
+      mapExists: !!map,
+      layerExists: !!layerRefs.current.drawing,
+      isProcessing: isProcessingClick.current,
+      coordinates: [e.lngLat.lng, e.lngLat.lat]
+    });
+
+    if (!isDrawing || !map || !layerRefs.current.drawing || isProcessingClick.current) {
+      logStateChange('Click event ignored', {
+        reason: !isDrawing ? 'not drawing' : !map ? 'no map' : !layerRefs.current.drawing ? 'no layer' : 'processing'
       });
+      return;
+    }
 
     if (pendingOperation.current) {
+      logStateChange('Aborting pending operation');
       pendingOperation.current.abort();
     }
 
@@ -185,14 +240,10 @@ export const useDrawMode = (map: Map | null) => {
 
       // Get snapped points and elevation
       const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
-
-      console.log('About to fetch elevation for:', {
-        clickedPoint,
-        previousPoint,
-        newPoints
-    });
+      logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
 
       const elevationData = await getElevation([clickedPoint]);
+      logStateChange('Elevation data received', { elevationData });
 
       // Create new segment
       const newSegment: Segment = {
@@ -221,19 +272,36 @@ export const useDrawMode = (map: Map | null) => {
         };
       });
       
-      console.log('Elevation response:', {
-        elevationData,
-        newElevationPoints,
-        currentProfile: elevationProfile
-    });
+      logStateChange('New elevation points calculated', {
+        newPoints: newElevationPoints,
+        totalDistance
+      });
 
       // Update state with new segment
-      setSegments(prev => [...prev, newSegment]);
-      setClickPoints(prev => [...prev, newClickPoint]);
+      setSegments(prev => {
+        const newSegments = [...prev, newSegment];
+        logStateChange('Segments updated', { 
+          previousCount: prev.length,
+          newCount: newSegments.length 
+        });
+        return newSegments;
+      });
 
-      // Update coordinates by concatenating all road points from all segments
+      setClickPoints(prev => {
+        const newClickPoints = [...prev, newClickPoint];
+        logStateChange('Click points updated', {
+          previousCount: prev.length,
+          newCount: newClickPoints.length
+        });
+        return newClickPoints;
+      });
+
+      // Update coordinates
       const allCoordinates = [...segments, newSegment].flatMap(segment => segment.roadPoints);
       setDrawnCoordinates(allCoordinates);
+      logStateChange('Coordinates updated', { 
+        totalCoordinates: allCoordinates.length 
+      });
       
       // Update map sources
       const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
@@ -263,19 +331,29 @@ export const useDrawMode = (map: Map | null) => {
           }))
         });
 
-        setElevationProfile(prev => [...prev, ...newElevationPoints]);
+        setElevationProfile(prev => {
+          const newProfile = [...prev, ...newElevationPoints];
+          logStateChange('Elevation profile updated', {
+            previousCount: prev.length,
+            newCount: newProfile.length
+          });
+          return newProfile;
+        });
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Error processing click:', error);
+        logStateChange('Click processing error', { error });
       }
     } finally {
       isProcessingClick.current = false;
       pendingOperation.current = null;
+      logStateChange('Click processing complete');
     }
   }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
   const startDrawing = useCallback(() => {
+    logStateChange('Starting drawing mode', { mapExists: !!map });
     if (!map) return;
     
     setIsDrawing(true);
@@ -286,16 +364,23 @@ export const useDrawMode = (map: Map | null) => {
     
     map.getCanvas().style.cursor = 'crosshair';
     initializeLayers();
+    logStateChange('Drawing mode started');
   }, [map, initializeLayers]);
 
   const undoLastPoint = useCallback(() => {
+    logStateChange('Undoing last point', {
+      mapExists: !!map,
+      layerExists: !!layerRefs.current.drawing,
+      segmentsCount: segments.length
+    });
+
     if (!map || !layerRefs.current.drawing || segments.length === 0) return;
 
     // Remove the last segment
     const newSegments = segments.slice(0, -1);
     const newClickPoints = clickPoints.slice(0, -1);
     
-    // Reconstruct coordinates from remaining segments
+    // Reconstruct coordinates
     const newCoordinates = newSegments.flatMap(segment => segment.roadPoints);
     
     const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
@@ -328,17 +413,35 @@ export const useDrawMode = (map: Map | null) => {
       setSegments(newSegments);
       setClickPoints(newClickPoints);
       setDrawnCoordinates(newCoordinates);
-      setElevationProfile(prev => prev.slice(0, -1));
+      setElevationProfile(prev => {
+        const newProfile = prev.slice(0, -1);
+        logStateChange('Elevation profile updated after undo', {
+          previousCount: prev.length,
+          newCount: newProfile.length
+        });
+        return newProfile;
+      });
     }
   }, [map, segments, clickPoints]);
 
   const finishDrawing = useCallback(() => {
-    if (!map || !isDrawing || drawnCoordinates.length < 2) return null;
+    logStateChange('Finishing drawing', {
+      mapExists: !!map,
+      isDrawing,
+      coordinatesCount: drawnCoordinates.length
+    });
+
+    if (!map || !isDrawing || drawnCoordinates.length < 2) {
+      logStateChange('Cannot finish drawing', {
+        reason: !map ? 'no map' : !isDrawing ? 'not drawing' : 'insufficient coordinates'
+      });
+      return null;
+    }
 
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
 
-    return {
+    const result = {
       type: 'Feature' as const,
       properties: {
         elevationProfile: elevationProfile
@@ -348,12 +451,28 @@ export const useDrawMode = (map: Map | null) => {
         coordinates: drawnCoordinates
       }
     };
+
+    logStateChange('Drawing finished', {
+      coordinatesCount: drawnCoordinates.length,
+      elevationPointCount: elevationProfile.length
+    });
+
+    return result;
   }, [map, isDrawing, drawnCoordinates, elevationProfile]);
 
   const clearDrawing = useCallback(() => {
+    logStateChange('Clearing drawing', {
+      mapExists: !!map,
+      layersExist: {
+        drawing: !!layerRefs.current.drawing,
+        markers: !!layerRefs.current.markers
+      }
+    });
+
     if (!map) return;
     
     if (pendingOperation.current) {
+      logStateChange('Aborting pending operation');
       pendingOperation.current.abort();
     }
 
@@ -368,13 +487,33 @@ export const useDrawMode = (map: Map | null) => {
     }
 
     layerRefs.current = { drawing: null, markers: null };
+    
     setDrawnCoordinates([]);
     setElevationProfile([]);
     setClickPoints([]);
     setSegments([]);
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
+
+    logStateChange('Drawing cleared', {
+      isDrawing: false,
+      coordinatesCount: 0,
+      elevationPointCount: 0
+    });
   }, [map]);
+
+  // Effect to debug state changes
+  useEffect(() => {
+    logStateChange('Draw mode state change', {
+      instanceId: hookInstanceId.current,
+      isDrawing,
+      coordinatesCount: drawnCoordinates.length,
+      elevationPointCount: elevationProfile.length,
+      clickPointsCount: clickPoints.length,
+      segmentsCount: segments.length,
+      layerIds: layerRefs.current
+    });
+  }, [isDrawing, drawnCoordinates, elevationProfile, clickPoints, segments]);
 
   return {
     isDrawing,
@@ -386,6 +525,9 @@ export const useDrawMode = (map: Map | null) => {
     finishDrawing,
     clearDrawing,
     undoLastPoint,
-    toggleSnapToRoad: setSnapToRoad
+    toggleSnapToRoad: (enabled: boolean) => {
+      logStateChange('Toggling snap to road', { newState: enabled });
+      setSnapToRoad(enabled);
+    }
   };
 };

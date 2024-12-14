@@ -43,24 +43,14 @@ export function FloatingElevationProfile() {
     timestamp: new Date().toISOString(),
     drawModeExists: !!drawMode,
     isDrawing: drawMode?.isDrawing,
-    elevationProfileLength: drawMode?.elevationProfile?.length,
-    fullDrawModeContext: drawMode
+    elevationProfileLength: drawMode?.elevationProfile?.length
   });
-
-  // Component visibility check
-  useEffect(() => {
-    console.log('DrawMode state changed:', {
-      timestamp: new Date().toISOString(),
-      isDrawing: drawMode?.isDrawing,
-      elevationProfileLength: drawMode?.elevationProfile?.length
-    });
-  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
 
   // Debug render visibility
   if (!drawMode?.isDrawing) {
     console.log('Not rendering - drawing mode inactive', {
       timestamp: new Date().toISOString(),
-      drawMode
+      isDrawing: drawMode?.isDrawing
     });
     return null;
   }
@@ -71,17 +61,10 @@ export function FloatingElevationProfile() {
     ? drawMode.elevationProfile 
     : emptyData;
 
-  console.log('Preparing to render elevation profile:', {
+  console.log('Rendering elevation profile:', {
     timestamp: new Date().toISOString(),
-    displayData,
-    isUsingEmptyData: drawMode.elevationProfile.length < 2,
-    containerStyles: {
-      position: 'fixed',
-      zIndex: 50,
-      left: '360px',
-      right: '4px',
-      bottom: '4px'
-    }
+    pointCount: drawMode.elevationProfile.length,
+    isUsingEmptyData: drawMode.elevationProfile.length < 2
   });
 
   return (
@@ -119,12 +102,7 @@ export function FloatingElevationProfile() {
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart 
-              data={displayData}
-              onMouseMove={(e) => {
-                console.log('Chart mouse move:', e);
-              }}
-            >
+            <LineChart data={displayData}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 vertical={false} 
