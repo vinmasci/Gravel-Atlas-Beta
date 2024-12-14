@@ -1,12 +1,12 @@
 import React from 'react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { useUser } from '@auth0/nextjs-auth0/client'
 import { LogOut, Upload } from 'lucide-react'
 import Link from 'next/link'
-import { useToast } from "@/app/hooks/use-toast"
+import { useToast } from "../app/hooks/use-toast"
 
 export default function ProfileSheet() {
     const [open, setOpen] = React.useState(false)
