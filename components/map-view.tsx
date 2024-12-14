@@ -5,24 +5,24 @@ import React, { useCallback, useState, useEffect, useRef } from 'react';
 import Map from 'react-map-gl';
 import { Loader } from '@googlemaps/js-api-loader';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { updatePhotoLayer } from '@/lib/photo-layer';
-import { updateSegmentLayer } from '@/lib/segment-layer';
+import { updatePhotoLayer } from '../lib/photo-layer';
+import { updateSegmentLayer } from '../lib/segment-layer';
 import { MapSidebar } from './map-sidebar';
-import { MAP_STYLES } from '@/app/constants/map-styles';
-import type { MapStyle } from '@/app/types/map';
-import { addMapillaryLayers } from '@/lib/mapillary';
+import { MAP_STYLES } from '../app/constants/map-styles';
+import type { MapStyle } from '../app/types/map';
+import { addMapillaryLayers } from '../lib/mapillary';
 import { CustomAlert } from './ui/custom-alert';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '../components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
 import { Search, Layers, Navigation } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { MapContext } from '@/app/contexts/map-context';
-import { DrawModeProvider } from '@/app/contexts/draw-mode-context';
-import { SegmentSheet } from '@/components/segments/segment-sheet';
+import { Input } from '../components/ui/input';
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { MapContext } from '../app/contexts/map-context';
+import { DrawModeProvider } from '../app/contexts/draw-mode-context';
+import { SegmentSheet } from '../components/segments/segment-sheet';
 import { FloatingElevationProfile } from './segments/floating-elevation-profile';
-import { useDrawMode } from '@/app/hooks/use-draw-mode';
-import { useDrawModeContext } from '@/app/contexts/draw-mode-context';
+import { useDrawMode } from '../app/hooks/use-draw-mode';
+import { useDrawModeContext } from '../app/contexts/draw-mode-context';
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
