@@ -26,6 +26,7 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       }
     });
 
+    // Add the main line layer
     map.addLayer({
       id: layerId,
       type: 'line',
@@ -35,11 +36,39 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
         'line-cap': 'round'
       },
       paint: {
-        'line-color': '#ff0000',
+        'line-color': [
+          'match',
+          ['floor', ['coalesce', ['get', 'averageRating'], -1]],
+          -1, '#00FFFF',   // Cyan for unrated segments
+          0, '#10B981',    // emerald-500
+          1, '#84CC16',    // lime-500
+          2, '#EAB308',    // yellow-500
+          3, '#F97316',    // orange-500
+          4, '#EF4444',    // red-500
+          5, '#991B1B',    // red-800
+          6, '#4C0519',    // Even darker red for hike-a-bike
+          '#00FFFF'        // Default to cyan
+        ],
         'line-width': 3,
         'line-opacity': 0.8
       }
     });
+
+    // Add a black stroke layer that sits underneath
+    map.addLayer({
+      id: `${layerId}-stroke`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#000000',
+        'line-width': 5,
+        'line-opacity': 0.3
+      }
+    }, layerId); // This ensures the stroke is rendered beneath the main line
 
     // Add hover effect
     map.on('mouseenter', layerId, () => {
@@ -76,7 +105,10 @@ const cleanupSegmentLayer = (map: Map) => {
   map.off('mouseleave', layerId);
   map.off('click', layerId);
 
-  // Remove layer and source
+  // Remove layers and source
+  if (map.getLayer(`${layerId}-stroke`)) {
+    map.removeLayer(`${layerId}-stroke`);
+  }
   if (map.getLayer(layerId)) {
     map.removeLayer(layerId);
   }
