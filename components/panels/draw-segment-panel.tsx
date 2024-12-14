@@ -249,9 +249,9 @@ const payload = {
   },
   metadata: {
     title: segmentTitle,
-    elevationProfile: segment.elevationProfile,  // Get it from the segment
-    elevationGain: calculateElevationGain(segment.elevationProfile),
-    elevationLoss: calculateElevationLoss(segment.elevationProfile),
+    elevationProfile: elevationProfile,
+    elevationGain: elevationGain,  // Use the one we calculated above
+    elevationLoss: elevationLoss,  // Use the one we calculated above
     surfaceTypes: []
   }
 };
