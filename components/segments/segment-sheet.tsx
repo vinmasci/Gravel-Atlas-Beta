@@ -44,13 +44,13 @@ const surfaceConditions = {
 } as const;
 
 export const conditionColors = {
-  '0': 'text-emerald-500', // Pure Green
-  '1': 'text-lime-500',    // Green-Yellow
-  '2': 'text-yellow-500',  // Yellow
-  '3': 'text-orange-500',  // Yellow-Red
-  '4': 'text-red-500',     // Red
-  '5': 'text-red-800',     // Dark Red
-  '6': 'text-purple-900'   // Maroon
+  '0': 'text-emerald-500',    // Changed to match #10B981
+  '1': 'text-lime-500',       // Changed to match #84CC16
+  '2': 'text-yellow-500',     // Changed to match #EAB308
+  '3': 'text-orange-500',     // Changed to match #F97316
+  '4': 'text-red-500',        // Changed to match #EF4444
+  '5': 'text-red-800',        // Changed to match #991B1B
+  '6': 'text-red-900'         // Changed to match #4C0519
 } as const;
 
 export const segmentLineColors = {
@@ -101,7 +101,7 @@ interface SegmentSheetProps {
   onUpdate?: (updatedSegment: any) => void;  
 }
 
-export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps) {
+export function SegmentSheet({ open, onOpenChange, segment, onUpdate }: SegmentSheetProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const [rating, setRating] = useState<keyof typeof surfaceConditions | null>(null);
@@ -119,6 +119,27 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
       facebook?: string;
     };
   } | null>(null);
+
+  useEffect(() => {
+    const fetchLatestSegmentData = async () => {
+      if (!segment?._id) return;
+      
+      try {
+        const response = await fetch(`/api/segments/${segment._id}`);
+        const data = await response.json();
+        
+        if (onUpdate) {
+          onUpdate(data);
+        }
+      } catch (error) {
+        console.error('Error fetching segment data:', error);
+      }
+    };
+  
+    if (open) {
+      fetchLatestSegmentData();
+    }
+  }, [open, segment?._id]);
 
   useEffect(() => {
     if (segment?.id && user) {
@@ -164,7 +185,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
   
     setIsVoting(true);
     try {
-      const response = await fetch(`/api/segments/${segment._id}/vote`, {
+const response = await fetch(`/api/segments/${segment._id}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +290,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         )}
       >
         <SheetHeader>
-          <SheetTitle>{segment.title}</SheetTitle>
+          <SheetTitle className="text-xl font-bold">{segment.metadata?.title || "NaNm"}</SheetTitle>
         </SheetHeader>
         
         <div className="grid gap-4 py-4">
@@ -283,7 +304,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
               />
             </div>
             <div className="space-y-1">
-            <p className="text-sm font-medium">{userData?.bioName || segment.userName}</p>
+              <p className="text-sm font-medium">{userData?.bioName || segment.userName}</p>
               <div className="flex items-center space-x-2 text-sm">
                 {userData?.website && (
                   <a 
@@ -319,16 +340,25 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
             </div>
           </div>
 
-          {/* Segment Stats */}
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Distance: {Math.round(segment.length)}m</p>
-            {segment.averageRating !== undefined && (
-              <p className="text-sm text-muted-foreground">
-                Average Rating: {Number(segment.averageRating).toFixed(1)}/6
-                {segment.totalVotes && ` (${segment.totalVotes} votes)`}
-              </p>
-            )}
-          </div>
+{/* Segment Stats */}
+<div className="space-y-1">
+<p className="text-sm text-muted-foreground">Distance: {segment.metadata?.length ? `${Math.round(segment.metadata.length)}m` : 'NaNm'}</p>
+  {segment.stats?.averageRating !== undefined && (
+    <div className="flex items-center space-x-2">
+      <p className="text-sm text-muted-foreground">
+        Average Rating: {Number(segment.stats.averageRating).toFixed(1)}/6
+        {segment.stats.totalVotes && ` (${segment.stats.totalVotes} votes)`}
+      </p>
+      <i 
+        className={cn(
+          `fa-solid fa-circle-${Math.round(Number(segment.stats.averageRating))}`,
+          "text-lg",
+          conditionColors[Math.round(Number(segment.stats.averageRating)).toString() as keyof typeof conditionColors]
+        )}
+      />
+    </div>
+  )}
+</div>
 
           {/* Elevation Profile */}
           {elevationProfile.length > 0 && (

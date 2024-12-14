@@ -721,10 +721,14 @@ return (
           {mapInstance && <FloatingElevationProfile />}
 
           <SegmentSheet
-            open={!!selectedSegment}
-            onOpenChange={(open) => !open && setSelectedSegment(null)}
-            segment={selectedSegment}
-          />
+  open={!!selectedSegment}
+  onOpenChange={(open) => !open && setSelectedSegment(null)}
+  segment={selectedSegment}
+  onUpdate={(updatedSegment) => {
+    setSelectedSegment(updatedSegment);
+    // This will keep the stats updated in the sheet
+  }}
+/>
         </div>
       </DrawModeProvider>
     </MapContext.Provider>

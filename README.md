@@ -194,3 +194,18 @@ The core functionality is in place but needs adjustments to the data flow betwee
 - Modified segment-layer.ts to fetch complete segment data on click
 - Using MongoDB's 3D coordinate storage `[longitude, latitude, elevation]`
 - Seamless integration between drawing mode and saved segment visualization
+
+## 🔄 Recent Updates (December 2024)
+Fixed several issues with the segment sheet display and interaction:
+
+### Segment Sheet Improvements
+- Fixed distance display to correctly show segment length from metadata
+- Added surface condition rating indicator that matches segment line colors
+- Ensured rating persistence and display after voting
+- Corrected title display in segment sheet
+- Unified color scheme between segment lines and rating indicators
+
+### Data Flow Improvements
+- Properly integrated MongoDB stats for segment ratings
+- Fixed voting system to update and persist ratings
+- Ensured consistent color representation across the application
