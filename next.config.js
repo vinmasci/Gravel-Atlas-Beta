@@ -7,8 +7,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    appDir: true,
-    serverComponentsExternalPackages: ['canvas']
+    serverExternalPackages: ['canvas']
   },
   images: {
     domains: [
@@ -22,5 +21,3 @@ const nextConfig = {
     NEXT_PUBLIC_THUNDERFOREST_API_KEY: process.env.NEXT_PUBLIC_THUNDERFOREST_API_KEY
   }
 }
-
-module.exports = nextConfig

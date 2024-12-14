@@ -1,8 +1,8 @@
 // app/api/segments/save/route.ts
 import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
-import { DrawnSegment } from '@/app/models/DrawnSegment';
-import { dbConnect } from '@/lib/mongodb';
+import { DrawnSegment } from '../../../../app/models/DrawnSegment'
+import { dbConnect } from '../../../../lib/mongodb';
 
 export async function POST(req: Request) {
   console.log('🚀 Starting segment save process');
