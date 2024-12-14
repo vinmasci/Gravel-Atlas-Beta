@@ -81,6 +81,7 @@ interface SegmentSheetProps {
   segment: {
     id: string;
     title: string;
+    auth0Id: string; // Add this
     uploadedBy: {
       id: string;
       name: string;
@@ -121,8 +122,8 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
     if (segment?.id && user) {
       loadComments(segment.id);
     }
-    if (segment?.auth0Id) {
-      fetch(`/api/user/${segment.auth0Id}`)
+    if (segment?.uploadedBy.id) { // Use the uploadedBy.id which should be the auth0Id
+      fetch(`/api/user/${segment.uploadedBy.id}`)
         .then(res => res.json())
         .then(data => {
           if (!data.error) {
@@ -131,7 +132,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         })
         .catch(error => console.error('Error fetching user data:', error));
     }
-  }, [segment?.id, segment?.auth0Id, user]);
+  }, [segment?.id, segment?.uploadedBy.id, user]);
 
   const loadComments = async (segmentId: string) => {
     setIsLoadingComments(true);
@@ -253,16 +254,16 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         <div className="grid gap-4 py-4">
           {/* User Info */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-border">
-              <img 
-                src={userData?.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${segment.userName}`}
-                alt={userData?.name || segment.userName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">{userData?.name || segment.userName}</p>
-              <div className="flex items-center space-x-2 text-sm">
+  <div className="w-8 h-8 rounded-full overflow-hidden border border-border">
+    <img 
+      src={userData?.picture || segment.uploadedBy.picture}
+      alt={userData?.name || segment.uploadedBy.name}
+      className="w-full h-full object-cover"
+    />
+  </div>
+  <div className="space-y-1">
+    <p className="text-sm font-medium">{userData?.name || segment.uploadedBy.name}</p>
+    <div className="flex items-center space-x-2 text-sm">
                 {userData?.website && (
                   <a 
                     href={userData.website} 
