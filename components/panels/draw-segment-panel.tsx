@@ -239,9 +239,11 @@ const payload = {
     properties: {}
   },
   metadata: {
-    elevationProfile,
-    elevationGain,
-    elevationLoss
+    title: segmentTitle,
+    elevationProfile: elevationProfile,  // Use the elevationProfile from useDrawModeContext
+    elevationGain: calculateElevationGain(elevationProfile),
+    elevationLoss: calculateElevationLoss(elevationProfile),
+    surfaceTypes: []
   }
 };
   
