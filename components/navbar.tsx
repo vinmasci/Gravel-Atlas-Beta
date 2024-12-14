@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '../components/ui/button'
 import { Menu } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import { useUser } from '@auth0/nextjs-auth0/client'
-import ProfileSheet from '@/components/ProfileSheet'
+import ProfileSheet from '../components/ProfileSheet'
 
 export function Navbar() {
   const { user, error, isLoading } = useUser()
