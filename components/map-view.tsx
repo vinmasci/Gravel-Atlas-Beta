@@ -436,28 +436,23 @@ const handleLayerToggle = useCallback((layerId: string) => {
       }
       return newState;
     });
-  } else if (layerId === 'segments') {
-    setOverlayStates(prev => {
-      const newState = { ...prev, segments: !prev.segments };
-      const map = mapRef.current?.getMap();
-      if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        updateSegmentLayer(
-          map, 
-          newState.segments,
-          (segment) => setSelectedSegment(segment)
-        ).catch(error => console.error('Error updating segments layer:', error));
-      }
-      return newState;
-    });
+    
   } else if (layerId === 'gravel-roads') {
     setOverlayStates(prev => {
       const newState = { ...prev, 'gravel-roads': !prev['gravel-roads'] };
+      console.log('Toggling gravel roads:', {
+        oldState: prev['gravel-roads'],
+        newState: newState['gravel-roads']
+      });
       const map = mapRef.current?.getMap();
       if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+        console.log('Updating gravel roads visibility');
         updateGravelRoadsLayer(map, newState['gravel-roads']);
+        debugMapLayers();  // Add debug call here
       }
       return newState;
     });
+
   } else if (layerId === 'mapillary') {
     if (MAP_STYLES[selectedStyle].type === 'google') {
       setShowAlert(true);
@@ -497,6 +492,21 @@ const handleLayerToggle = useCallback((layerId: string) => {
     }));
   }
 }, [selectedStyle]);
+
+// Debug function
+const debugMapLayers = () => {
+  const map = mapRef.current?.getMap();
+  if (map) {
+    console.log('Current map sources:', map.getStyle().sources);
+    console.log('Current map layers:', map.getStyle().layers);
+    
+    const gravelSource = map.getSource('gravel-roads');
+    console.log('Gravel roads source:', gravelSource);
+    
+    const gravelLayer = map.getLayer('gravel-roads');
+    console.log('Gravel roads layer:', gravelLayer);
+  }
+};
 
   // Handle style change
   const handleStyleChange = useCallback((newStyle: MapStyle) => {
@@ -546,24 +556,35 @@ const handleLayerToggle = useCallback((layerId: string) => {
     }
   }, [selectedStyle, isGoogleLoaded, viewState, mapContainer]);
 
-// Update photo layer on style change
+// Update layers on style change
 useEffect(() => {
   const map = mapRef.current?.getMap();
   if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
     map.once('style.load', () => {
-      if (overlayStates.photos) {
-        updatePhotoLayer(map, overlayStates.photos)
-          .catch(error => console.error('Error updating photo layer:', error));
-      }
-      if (overlayStates.segments) {
-        updateSegmentLayer(map, overlayStates.segments)
-          .catch(error => console.error('Error updating segments layer:', error));
-      }
-      // Add gravel roads layer
-      addGravelRoadsSource(map);
-      addGravelRoadsLayer(map);
-      if (overlayStates['gravel-roads']) {
-        updateGravelRoadsLayer(map, true);
+      console.log('Style loaded, initializing layers. States:', overlayStates);
+      
+      try {
+        // Add gravel roads first since it's a base layer
+        addGravelRoadsSource(map);
+        addGravelRoadsLayer(map);
+        console.log('Gravel roads status:', {
+          visible: overlayStates['gravel-roads'],
+          sourceExists: !!map.getSource('gravel-roads'),
+          layerExists: !!map.getLayer('gravel-roads')
+        });
+        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+
+        // Then add other layers
+        if (overlayStates.photos) {
+          updatePhotoLayer(map, overlayStates.photos)
+            .catch(error => console.error('Error updating photo layer:', error));
+        }
+        if (overlayStates.segments) {
+          updateSegmentLayer(map, overlayStates.segments)
+            .catch(error => console.error('Error updating segments layer:', error));
+        }
+      } catch (error) {
+        console.error('Error initializing map layers:', error);
       }
     });
   }
