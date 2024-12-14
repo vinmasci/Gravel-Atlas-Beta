@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSession } from '@auth0/nextjs-auth0'
-import { getCollection } from '@/lib/db'
+import { getCollection } from '../../../../lib/db'
 import { PhotoDocument, PhotoMetadata, PhotoUploadResponse, GeoPoint } from '@/app/types/photos'
 
 // Initialize S3 client

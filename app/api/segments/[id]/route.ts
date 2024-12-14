@@ -1,8 +1,8 @@
 // app/api/segments/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
-import { DrawnSegment } from '@/app/models/DrawnSegment';
-import { dbConnect } from '@/lib/mongodb';
+import { DrawnSegment } from '../../../models/DrawnSegment';
+import { dbConnect } from '../../../../lib/mongodb';
 
 // Get single segment
 export async function GET(

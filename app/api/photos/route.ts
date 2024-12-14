@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getCollection } from '@/lib/db'
+import { getCollection } from '../../../lib/db'
 import { PhotoDocument, PhotoDisplayData } from '@/app/types/photos'
 
 export async function GET() {
