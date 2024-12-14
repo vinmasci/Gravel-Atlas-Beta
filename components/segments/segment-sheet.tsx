@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from '@/components/ui/use-toast';
 import * as turf from '@turf/turf'; 
+import { updateSegmentLayer } from '@/lib/segment-layer';
 import {
   Sheet,
   SheetContent,
@@ -97,6 +98,7 @@ interface SegmentSheetProps {
       elevationLoss?: number;
     };
   } | null;
+  onUpdate?: (updatedSegment: any) => void;  
 }
 
 export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps) {
@@ -157,9 +159,9 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
       window.location.href = '/api/auth/login';
       return;
     }
-
+  
     if (!rating || !segment) return;
-
+  
     setIsVoting(true);
     try {
       const response = await fetch(`/api/segments/${segment.id}/vote`, {
@@ -169,22 +171,29 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         },
         body: JSON.stringify({ condition: rating }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to submit vote');
       }
-
+  
       const data = await response.json();
       
-      toast({
-        title: "Vote Submitted",
-        description: "Thank you for your contribution!",
-      });
-
+      // Update the segment's stats with the new rating data
       if (segment && data.stats) {
         segment.averageRating = data.stats.averageRating;
         segment.totalVotes = data.stats.totalVotes;
       }
+  
+      // Force a refresh of the segments layer to update colors
+      const map = (window as any).map;  // Assuming you've stored the map instance globally
+      if (map) {
+        updateSegmentLayer(map, true);  // Refresh the segment layer
+      }
+  
+      toast({
+        title: "Vote Submitted",
+        description: "Thank you for your contribution!",
+      });
     } catch (error) {
       toast({
         title: "Error",

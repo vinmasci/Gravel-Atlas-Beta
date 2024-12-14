@@ -80,25 +80,23 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
     });
 
     // Add click handler for segment details
-    map.on('click', layerId, (e) => {
+    // Add click handler for segment details
+    map.on('click', layerId, async (e) => {
       if (!e.features?.[0]) return;
       
       const properties = e.features[0].properties;
+      
+      try {
+        // Fetch full segment data
+        const response = await fetch(`/api/segments/${properties.id}`);
+        if (!response.ok) throw new Error('Failed to fetch segment');
+        const segmentData = await response.json();
 
-      if (onSegmentClick) {
-        onSegmentClick({
-          id: properties.id,
-          title: properties.title,
-          userName: properties.userName,
-          auth0Id: properties.auth0Id,  // Add this line
-          length: properties.length,
-          averageRating: properties.averageRating,
-          totalVotes: properties.totalVotes,
-          metadata: {  // Add this section
-            elevationProfile: properties.metadata.elevationProfile,
-            elevationGain: properties.metadata.elevationGain,
-            elevationLoss: properties.metadata.elevationLoss }
-        });
+        if (onSegmentClick) {
+          onSegmentClick(segmentData);
+        }
+      } catch (error) {
+        console.error('Error fetching segment:', error);
       }
     });
   }

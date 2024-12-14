@@ -173,3 +173,24 @@ We've implemented elevation profile functionality with partial success:
 4. Add elevation data to GPX export
 
 The core functionality is in place but needs adjustments to the data flow between the drawing interface and data persistence layer.
+
+## 🔄 Updates (December 14, 2024)
+
+### Elevation Profile Fix
+- Fixed elevation data persistence and display in segment viewer
+- Modified segment click handler to fetch complete segment data from MongoDB
+- Elevation profile now correctly displays using 3D coordinates from GeoJSON
+- Successfully mapped elevation gain/loss and terrain profile visualization
+- Implemented full data fetching strategy: instead of relying on map layer properties, we now fetch the complete segment data when clicked
+
+### What's Working
+- Full elevation profile visualization for saved segments
+- Real-time elevation data during drawing
+- Elevation gain/loss calculations
+- Segment details include complete elevation data
+- 3D coordinates (longitude, latitude, elevation) properly stored and retrieved
+
+### Implementation Details
+- Modified segment-layer.ts to fetch complete segment data on click
+- Using MongoDB's 3D coordinate storage `[longitude, latitude, elevation]`
+- Seamless integration between drawing mode and saved segment visualization
