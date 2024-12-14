@@ -10,8 +10,13 @@ interface Coords {
 async function getElevationFromMapbox(coordinates: [number, number][]) {
     if (coordinates.length === 0) return [];
     
+    // If only one coordinate, duplicate it to meet the API requirement
+    const coordsToQuery = coordinates.length === 1 
+        ? [coordinates[0], coordinates[0]] 
+        : coordinates;
+    
     // Format coordinates for Mapbox API
-    const coordinatesString = coordinates
+    const coordinatesString = coordsToQuery
         .map(([lng, lat]) => `${lng},${lat}`)
         .join(';');
 
@@ -27,10 +32,13 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
         const data = await response.json();
         
         // Map the results back to coordinate format
-        return coordinates.map((coord, index) => {
+        // If we duplicated the point, only return the first one
+        const results = coordsToQuery.map((coord, index) => {
             const elevation = data.features[index]?.properties?.elevation || 0;
             return [...coord, elevation];
         });
+
+        return coordinates.length === 1 ? [results[0]] : results;
     } catch (error) {
         console.error('Error fetching elevation:', error);
         // Return coordinates with 0 elevation on error
@@ -51,13 +59,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 });
         }
 
-        if (coordinates.length < 2) {
-            return NextResponse.json(
-                { error: 'Not enough input coordinates given; minimum number of coordinates is 2.' },
-                { status: 422 }
-            );
-        }
-
+        // Remove the minimum coordinates check
         const elevationData = await getElevationFromMapbox(coordinates);
         return NextResponse.json({ coordinates: elevationData });
 

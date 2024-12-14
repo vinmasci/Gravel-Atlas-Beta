@@ -20,26 +20,33 @@ interface Segment {
 
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
     console.log('getElevation called with:', coordinates);
-  try {
-    const response = await fetch('/api/get-elevation', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ coordinates }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    
+    // If we have less than 2 coordinates, pad with a duplicate point
+    if (coordinates.length < 2) {
+        const point = coordinates[0];
+        coordinates = point ? [point, point] : [[0,0], [0,0]];
     }
 
-    const data = await response.json();
-    return data.coordinates;
-  } catch (error) {
-    console.error('Error fetching elevation:', error);
-    // Return original coordinates with 0 elevation if there's an error
-    return coordinates.map(([lng, lat]) => [lng, lat, 0]);
-  }
+    try {
+        const response = await fetch('/api/get-elevation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ coordinates }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.coordinates;
+    } catch (error) {
+        console.error('Error fetching elevation:', error);
+        // Return original coordinates with 0 elevation if there's an error
+        return coordinates.map(([lng, lat]) => [lng, lat, 0]);
+    }
 }
 
 export const useDrawMode = (map: Map | null) => {
@@ -314,16 +321,6 @@ export const useDrawMode = (map: Map | null) => {
           }
         }))
       });
-
-      setElevationProfile(prev => {
-        const newProfile = [...prev, ...newElevationPoints];
-        console.log('Setting new elevation profile:', {
-            newProfile,
-            length: newProfile.length,
-            isDrawing
-        });
-        return newProfile;
-    });
 
       setSegments(newSegments);
       setClickPoints(newClickPoints);

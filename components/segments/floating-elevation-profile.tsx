@@ -23,40 +23,33 @@ interface ElevationPoint {
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
   
-  console.log('FloatingElevationProfile render attempt:', {
-    drawModeExists: !!drawMode,
-    isDrawing: drawMode.isDrawing,
-    elevationProfileLength: drawMode.elevationProfile.length,
-    elevationData: drawMode.elevationProfile
-  });
-  
-  if (!drawMode.isDrawing || drawMode.elevationProfile.length < 2) return null;
+  // Only check if drawing is active
+  if (!drawMode.isDrawing) return null;
 
-  console.log('Should render elevation profile:', {
-    elevationPoints: drawMode.elevationProfile,
-    isDrawing: drawMode.isDrawing,
-    elevationLength: drawMode.elevationProfile.length,
-    elevationData: drawMode.elevationProfile.map(p => ({
-        distance: p.distance,
-        elevation: p.elevation
-    }))
-});
+  // Determine if we have actual data
+  const hasData = drawMode.elevationProfile.length >= 2;
+  const displayData = hasData ? drawMode.elevationProfile : [{ distance: 0, elevation: 0 }];
 
+  // Calculate statistics based on data availability
   const elevations = drawMode.elevationProfile.map(p => p.elevation);
-  const minElevation = Math.min(...elevations);
-  const maxElevation = Math.max(...elevations);
-  const elevationGain = drawMode.elevationProfile.reduce((gain, point, i) => {
+  const minElevation = hasData ? Math.min(...elevations) : 0;
+  const maxElevation = hasData ? Math.max(...elevations) : 100;
+  
+  const elevationGain = hasData ? drawMode.elevationProfile.reduce((gain, point, i) => {
     if (i === 0) return 0;
     const climb = point.elevation - drawMode.elevationProfile[i-1].elevation;
     return gain + (climb > 0 ? climb : 0);
-  }, 0);
-  const elevationLoss = drawMode.elevationProfile.reduce((loss, point, i) => {
+  }, 0) : 0;
+  
+  const elevationLoss = hasData ? drawMode.elevationProfile.reduce((loss, point, i) => {
     if (i === 0) return 0;
     const drop = point.elevation - drawMode.elevationProfile[i-1].elevation;
     return loss + (drop < 0 ? Math.abs(drop) : 0);
-  }, 0);
+  }, 0) : 0;
 
-  const totalDistance = drawMode.elevationProfile[drawMode.elevationProfile.length - 1].distance;
+  const totalDistance = hasData 
+    ? drawMode.elevationProfile[drawMode.elevationProfile.length - 1].distance 
+    : 0;
 
   return (
     <div 
@@ -72,6 +65,7 @@ export function FloatingElevationProfile() {
             <span className="font-medium">Gain: {Math.round(elevationGain)}m</span>
             <span className="font-medium">Loss: {Math.round(elevationLoss)}m</span>
             <span>Dist: {totalDistance.toFixed(1)}km</span>
+            {!hasData && <span className="text-muted-foreground">Start drawing to see elevation data</span>}
           </div>
           {drawMode.clearDrawing && (
             <Button
@@ -86,7 +80,7 @@ export function FloatingElevationProfile() {
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={drawMode.elevationProfile}>
+            <LineChart data={displayData}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 vertical={false} 
@@ -95,7 +89,7 @@ export function FloatingElevationProfile() {
               <XAxis 
                 dataKey="distance" 
                 type="number"
-                domain={['dataMin', 'dataMax']}
+                domain={hasData ? ['dataMin', 'dataMax'] : [0, 1]}
                 tickFormatter={(value) => `${value.toFixed(1)}km`}
                 stroke="#666"
                 fontSize={12}
