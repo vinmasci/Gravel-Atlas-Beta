@@ -148,3 +148,87 @@ MONGODB_URI=
 - Debug elevation profile data flow
 - Complete comments system implementation
 - Add error handling for missing profile images
+
+## 🔄 Recent Updates (December 2024)
+Looking at your MongoDB document, I can see that the elevation data isn't being stored when the segment is created. The metadata object shows:
+jsonCopy"metadata": {
+    "title": "dszdsfzdsff",
+    "length": {"$numberInt":"3641"},
+    "elevationGain": null,
+    "elevationLoss": null,
+    "surfaceTypes": []
+}
+We need to check where the elevation data is supposed to be saved when drawing/creating a segment. Let me check your draw mode handler:
+
+Ah! I found the issue. In your segments/save/route.ts, when creating a new segment, it's initializing the elevation data as null:
+typescriptCopysegment = new DrawnSegment({
+  gpxData,
+  geojson,
+  metadata: {
+    title,
+    length,
+    elevationGain: null,  // Here
+    elevationLoss: null,  // And here
+    surfaceTypes: []
+  },
+  // ...
+});
+
+Got it! The elevation data isn't being passed to the save endpoint. In draw-segment-panel.tsx, when saving the segment, we need to include the elevation data. Here's what needs to be fixed:
+
+// In draw-segment-panel.tsx, modify the handleSave function:
+
+const payload = {
+  title: segmentTitle,
+  gpxData,
+  geojson: {
+    type: 'Feature' as const,
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: segment.geometry.coordinates
+    },
+    properties: {}
+  },
+  // Add this section
+  metadata: {
+    elevationProfile: elevationProfile,
+    // Calculate elevation gain/loss from the profile
+    elevationGain: calculateElevationGain(elevationProfile),
+    elevationLoss: calculateElevationLoss(elevationProfile)
+  }
+};
+
+// Add these helper functions
+function calculateElevationGain(profile: { distance: number; elevation: number; }[]) {
+  let gain = 0;
+  for (let i = 1; i < profile.length; i++) {
+    const diff = profile[i].elevation - profile[i-1].elevation;
+    if (diff > 0) gain += diff;
+  }
+  return Math.round(gain);
+}
+
+function calculateElevationLoss(profile: { distance: number; elevation: number; }[]) {
+  let loss = 0;
+  for (let i = 1; i < profile.length; i++) {
+    const diff = profile[i].elevation - profile[i-1].elevation;
+    if (diff < 0) loss += Math.abs(diff);
+  }
+  return Math.round(loss);
+}
+
+Then in your save endpoint (segments/save/route.ts), modify the segment creation
+
+segment = new DrawnSegment({
+  gpxData,
+  geojson,
+  metadata: {
+    title,
+    length,
+    elevationProfile: body.metadata?.elevationProfile || [],
+    elevationGain: body.metadata?.elevationGain || null,
+    elevationLoss: body.metadata?.elevationLoss || null,
+    surfaceTypes: []
+  },
+  // ... rest of the segment data
+});
