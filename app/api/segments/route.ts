@@ -25,33 +25,33 @@ export async function GET(req: Request) {
     }
 
     if (bounds) {
+      // Create a polygon in the correct format for MongoDB
+      const boundingBox = {
+        type: 'Polygon',
+        coordinates: [[
+          [bounds[0], bounds[1]], // west, south
+          [bounds[0], bounds[3]], // west, north
+          [bounds[2], bounds[3]], // east, north
+          [bounds[2], bounds[1]], // east, south
+          [bounds[0], bounds[1]]  // closing point (same as first)
+        ]]
+      };
+    
+      // Use $geoWithin instead of $geoIntersects for better performance with bounding boxes
       query['geojson.geometry'] = {
-        $geoIntersects: {
-          $geometry: {
-            type: 'Polygon',
-            coordinates: [[
-              [bounds[0], bounds[1]],
-              [bounds[2], bounds[1]],
-              [bounds[2], bounds[3]],
-              [bounds[0], bounds[3]],
-              [bounds[0], bounds[1]]
-            ]]
-          }
+        $geoWithin: {
+          $geometry: boundingBox
         }
       };
     }
-
+    
+    // Also, we need to include all necessary fields in the select
     const segments = await DrawnSegment
-      .find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .select({
-        gpxData: 0,  // exclude
-        'metadata.elevationProfile': 1,  // include
-        'metadata.elevationGain': 1,
-        'metadata.elevationLoss': 1
-      });
+    .find(query)
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .select('-gpxData'); // Just exclude gpxData, include everything else
 
     const total = await DrawnSegment.countDocuments(query);
 

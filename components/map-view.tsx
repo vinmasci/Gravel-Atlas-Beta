@@ -241,10 +241,21 @@ export function MapView() {
     id: string;
     title: string;
     userName: string;
+    auth0Id: string;
     length: number;
     averageRating?: number;
     totalVotes?: number;
+    metadata?: {
+      elevationProfile?: ElevationPoint[];
+      elevationGain?: number;
+      elevationLoss?: number;
+    };
   } | null>(null);
+  
+  interface ElevationPoint {
+    distance: number;
+    elevation: number;
+  }
 
   // Initialize Google Maps
   useEffect(() => {
