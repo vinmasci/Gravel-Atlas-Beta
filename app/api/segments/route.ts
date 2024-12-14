@@ -46,7 +46,12 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .select('-gpxData metadata.elevationProfile metadata.elevationGain metadata.elevationLoss'); // Add these fields
+      .select({
+        gpxData: 0,  // exclude
+        'metadata.elevationProfile': 1,  // include
+        'metadata.elevationGain': 1,
+        'metadata.elevationLoss': 1
+      });
 
     const total = await DrawnSegment.countDocuments(query);
 
