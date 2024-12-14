@@ -1,7 +1,7 @@
 // app/api/segments/[id]/stats/route.ts - Get segment stats
 import { NextResponse } from 'next/server';
-import { DrawnSegment } from '@/app/models/DrawnSegment';
-import { dbConnect } from '@/lib/mongodb';
+import { DrawnSegment } from '../../../../models/DrawnSegment';
+import { dbConnect } from '../../../../../lib/mongodb';
 
 export async function GET(
   req: Request,
