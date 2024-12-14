@@ -201,6 +201,11 @@ export function MapView() {
   const styleTimeout = useRef<NodeJS.Timeout | null>(null);
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
   const drawMode = useDrawMode(mapInstance);
+  console.log('MapView drawMode state:', {
+    isDrawing: drawMode.isDrawing,
+    coordinates: drawMode.drawnCoordinates.length,
+    elevationProfile: drawMode.elevationProfile.length
+  });
   const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox');
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -636,6 +641,10 @@ if (MAP_STYLES[selectedStyle].type === 'google') {
   }
 
 // Render Mapbox
+console.log('Rendering Mapbox view with drawMode:', {
+  isDrawing: drawMode.isDrawing,
+  hasElevationProfile: drawMode.elevationProfile.length > 0
+});
 return (
   <>
     <DrawModeProvider value={drawMode}>
@@ -659,6 +668,10 @@ return (
             onLoad={(evt) => {
               const map = evt.target;
               setMapInstance(map);
+              console.log('Map instance set:', {
+                mapExists: !!map,
+                drawModeActive: drawMode.isDrawing
+              });
             }}
           />
           {isLoading && <LoadingSpinner />}
