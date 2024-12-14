@@ -230,6 +230,12 @@ const elevationGain = calculateElevationGain(elevationProfile);
 const elevationLoss = calculateElevationLoss(elevationProfile);
 
 // Format data according to schema
+// NEW CODE
+console.log('Creating save payload with elevation data:', {
+  profileLength: segment.elevationProfile?.length,
+  samplePoints: segment.elevationProfile?.slice(0, 2)
+});
+
 const payload = {
   title: segmentTitle,
   gpxData,
@@ -243,9 +249,9 @@ const payload = {
   },
   metadata: {
     title: segmentTitle,
-    elevationProfile: segmentElevationProfile,  // Use the profile from finishDrawing
-    elevationGain: calculateElevationGain(segmentElevationProfile),
-    elevationLoss: calculateElevationLoss(segmentElevationProfile),
+    elevationProfile: segment.elevationProfile,  // Get it from the segment
+    elevationGain: calculateElevationGain(segment.elevationProfile),
+    elevationLoss: calculateElevationLoss(segment.elevationProfile),
     surfaceTypes: []
   }
 };

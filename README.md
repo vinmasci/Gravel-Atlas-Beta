@@ -149,86 +149,27 @@ MONGODB_URI=
 - Complete comments system implementation
 - Add error handling for missing profile images
 
-## 🔄 Recent Updates (December 2024)
-Looking at your MongoDB document, I can see that the elevation data isn't being stored when the segment is created. The metadata object shows:
-jsonCopy"metadata": {
-    "title": "dszdsfzdsff",
-    "length": {"$numberInt":"3641"},
-    "elevationGain": null,
-    "elevationLoss": null,
-    "surfaceTypes": []
-}
-We need to check where the elevation data is supposed to be saved when drawing/creating a segment. Let me check your draw mode handler:
+## 🔄 Recent Updates (December 2024) - WHAT WE ARE UP TO NOW
+We've implemented elevation profile functionality with partial success:
 
-Ah! I found the issue. In your segments/save/route.ts, when creating a new segment, it's initializing the elevation data as null:
-typescriptCopysegment = new DrawnSegment({
-  gpxData,
-  geojson,
-  metadata: {
-    title,
-    length,
-    elevationGain: null,  // Here
-    elevationLoss: null,  // And here
-    surfaceTypes: []
-  },
-  // ...
-});
+### What's Working
+- Real-time elevation data collection during segment drawing
+- Live elevation profile visualization while drawing segments
+- Elevation gain/loss calculations (visible in saved segments)
+- Successful integration with Mapbox elevation API
 
-Got it! The elevation data isn't being passed to the save endpoint. In draw-segment-panel.tsx, when saving the segment, we need to include the elevation data. Here's what needs to be fixed:
+### Current Issues
+- Elevation profile data points are not being persisted in MongoDB
+- While elevationGain (23m) and elevationLoss (14m) are saved, the detailed point-by-point elevation data is missing
+- The elevation profile graph only works during drawing but not when viewing saved segments
 
-// In draw-segment-panel.tsx, modify the handleSave function:
+### Next Steps
+1. Fix elevation profile data persistence:
+   - Modify how elevation data is transferred from drawing state to save payload
+   - Ensure elevation profile array is included in MongoDB document
+   - Update segment schema to properly store the elevation point array
+2. Implement elevation profile visualization for saved segments
+3. Add server-side validation for elevation data
+4. Add elevation data to GPX export
 
-const payload = {
-  title: segmentTitle,
-  gpxData,
-  geojson: {
-    type: 'Feature' as const,
-    geometry: {
-      type: 'LineString' as const,
-      coordinates: segment.geometry.coordinates
-    },
-    properties: {}
-  },
-  // Add this section
-  metadata: {
-    elevationProfile: elevationProfile,
-    // Calculate elevation gain/loss from the profile
-    elevationGain: calculateElevationGain(elevationProfile),
-    elevationLoss: calculateElevationLoss(elevationProfile)
-  }
-};
-
-// Add these helper functions
-function calculateElevationGain(profile: { distance: number; elevation: number; }[]) {
-  let gain = 0;
-  for (let i = 1; i < profile.length; i++) {
-    const diff = profile[i].elevation - profile[i-1].elevation;
-    if (diff > 0) gain += diff;
-  }
-  return Math.round(gain);
-}
-
-function calculateElevationLoss(profile: { distance: number; elevation: number; }[]) {
-  let loss = 0;
-  for (let i = 1; i < profile.length; i++) {
-    const diff = profile[i].elevation - profile[i-1].elevation;
-    if (diff < 0) loss += Math.abs(diff);
-  }
-  return Math.round(loss);
-}
-
-Then in your save endpoint (segments/save/route.ts), modify the segment creation
-
-segment = new DrawnSegment({
-  gpxData,
-  geojson,
-  metadata: {
-    title,
-    length,
-    elevationProfile: body.metadata?.elevationProfile || [],
-    elevationGain: body.metadata?.elevationGain || null,
-    elevationLoss: body.metadata?.elevationLoss || null,
-    surfaceTypes: []
-  },
-  // ... rest of the segment data
-});
+The core functionality is in place but needs adjustments to the data flow between the drawing interface and data persistence layer.

@@ -452,13 +452,12 @@ properties: {
 
     const result = {
       type: 'Feature' as const,
-      properties: {
-        elevationProfile: elevationProfile
-      },
+      properties: {},  // Empty properties - we don't need to store it here
       geometry: {
         type: 'LineString' as const,
         coordinates: drawnCoordinates
-      }
+      },
+      elevationProfile: elevationProfile  // Store it at the top level
     };
 
     logStateChange('Drawing finished', {
