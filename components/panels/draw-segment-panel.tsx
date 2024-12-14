@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../../components/ui/button';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useToast } from "@/app/hooks/use-toast";
+import { useToast } from "../../app/hooks/use-toast";
 import { Undo, RotateCcw, Save } from 'lucide-react';
-import { Switch } from "@/components/ui/switch";
-import { useMapContext } from '@/app/contexts/map-context';
+import { Switch } from "../../components/ui/switch";
+import { useMapContext } from '../../app/contexts/map-context';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
 import { FloatingElevationProfile } from '../segments/floating-elevation-profile';
 import { useDrawModeContext } from '@/app/contexts/draw-mode-context';

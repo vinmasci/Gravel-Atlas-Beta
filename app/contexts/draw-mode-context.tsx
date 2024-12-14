@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
-import type { UseDrawModeReturn } from '@/app/hooks/use-draw-mode';
+import type { UseDrawModeReturn } from '../../app/hooks/use-draw-mode';
 
 const DrawModeContext = createContext<UseDrawModeReturn | null>(null);
 
