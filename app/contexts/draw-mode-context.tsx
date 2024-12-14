@@ -9,4 +9,16 @@ export const useDrawModeContext = () => {
   return context;
 };
 
-export const DrawModeProvider = DrawModeContext.Provider;
+interface DrawModeProviderProps {
+    children: React.ReactNode;
+    map: mapboxgl.Map | null;
+  }
+  
+  export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
+    const drawMode = useDrawMode(map);
+    return (
+      <DrawModeContext.Provider value={drawMode}>
+        {children}
+      </DrawModeContext.Provider>
+    );
+  };

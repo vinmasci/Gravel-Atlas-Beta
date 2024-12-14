@@ -647,8 +647,8 @@ console.log('Rendering Mapbox view with drawMode:', {
 });
 return (
   <>
-    <DrawModeProvider value={drawMode}>
-      <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+      <DrawModeProvider map={mapInstance}>
         <div className="w-full h-full relative">
           <Map
             {...viewState}
@@ -666,10 +666,9 @@ return (
             reuseMaps
             ref={mapRef}
             onLoad={(evt) => {
-              const map = evt.target;
-              setMapInstance(map);
+              setMapInstance(evt.target);
               console.log('Map instance set:', {
-                mapExists: !!map,
+                mapExists: !!evt.target,
                 drawModeActive: drawMode.isDrawing
               });
             }}
@@ -707,7 +706,7 @@ return (
             />
           )}
 
-          <FloatingElevationProfile />
+          {mapInstance && <FloatingElevationProfile />}
 
           <SegmentSheet
             open={!!selectedSegment}
@@ -715,8 +714,8 @@ return (
             segment={selectedSegment}
           />
         </div>
-      </MapContext.Provider>
-    </DrawModeProvider>
+      </DrawModeProvider>
+    </MapContext.Provider>
   </>
 );
 }

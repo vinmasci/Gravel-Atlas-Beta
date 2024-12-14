@@ -44,7 +44,7 @@ export function DrawSegmentPanel() {
   }, [map, user]);
 
   // Initialize draw mode hook
-  const drawMode = useDrawMode(map);
+  const drawMode = useDrawModeContext();
   const { 
     isDrawing, 
     drawnCoordinates,

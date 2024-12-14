@@ -21,21 +21,35 @@ interface ElevationPoint {
 }
 
 export function FloatingElevationProfile() {
-  const drawMode = useDrawModeContext();
-  const renderCount = useRef(0);
-  
-  useEffect(() => {
-    console.log('FloatingElevationProfile mounted:', {
-      timestamp: new Date().toISOString(),
-      drawModeAvailable: !!drawMode,
-    });
-
-    return () => {
-      console.log('FloatingElevationProfile unmounted:', {
+    const drawMode = useDrawModeContext();
+    const renderCount = useRef(0);
+    
+    useEffect(() => {
+      console.log('FloatingElevationProfile mounted:', {
         timestamp: new Date().toISOString(),
+        drawModeAvailable: !!drawMode,
       });
-    };
-  }, []);
+  
+      return () => {
+        console.log('FloatingElevationProfile unmounted:', {
+          timestamp: new Date().toISOString(),
+        });
+      };
+    }, []);
+  
+    // Add this new useEffect right after the first one
+    useEffect(() => {
+      const element = document.querySelector('[data-elevation-profile]');
+      console.log('Elevation Profile Debug:', {
+        isComponentMounted: true,
+        elementExists: !!element,
+        position: element?.getBoundingClientRect(),
+        drawModeExists: !!drawMode,
+        isDrawing: drawMode?.isDrawing,
+        hasElevationData: drawMode?.elevationProfile?.length > 0,
+        timestamp: new Date().toISOString()
+      });
+    }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
 
   // Log every render
   renderCount.current += 1;
@@ -69,6 +83,7 @@ export function FloatingElevationProfile() {
 
   return (
     <div 
+      data-elevation-profile
       className="fixed left-[360px] right-4 bottom-4 bg-red-500/50 backdrop-blur-sm border border-border rounded-lg shadow-lg"
       style={{
         height: '200px',
