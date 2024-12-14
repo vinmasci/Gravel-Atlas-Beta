@@ -609,6 +609,36 @@ useEffect(() => {
     }
   }, [selectedStyle, overlayStates.segments]);
 
+// Add the new useEffect HERE, right before the existing terrain useEffect
+useEffect(() => {
+  const map = mapRef.current?.getMap();
+  if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+    map.once('style.load', () => {
+      console.log('Style loaded, checking gravel roads layer');
+      
+      // Check if the layer already exists
+      if (!map.getSource('gravel-roads')) {
+        try {
+          addGravelRoadsSource(map);
+          map.once('sourcedata', (e) => {
+            if (e.sourceId === 'gravel-roads' && e.isSourceLoaded) {
+              if (!map.getLayer('gravel-roads')) {
+                addGravelRoadsLayer(map);
+              }
+              updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+            }
+          });
+        } catch (error) {
+          console.error('Error reinitializing gravel roads after style change:', error);
+        }
+      } else {
+        // If source exists, just update visibility
+        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+      }
+    });
+  }
+}, [selectedStyle]); // Only re-run when style changes
+
 // Add terrain source and configuration
 useEffect(() => {
   if (!mapInstance || selectedStyle !== 'mapbox') return;
@@ -721,15 +751,49 @@ return (
                 drawModeActive: drawMode.isDrawing
               });
               
-              // Initialize gravel roads layer
+              // First, fetch and inspect the tileset metadata
+              fetch('https://api.maptiler.com/tiles/2378fd50-8c13-4408-babf-e7b2d62c857c/metadata.json?key=DFSAZFJXzvprKbxHrHXv')
+                .then(response => response.json())
+                .then(metadata => {
+                  console.log('Tileset metadata:', metadata);
+                  // This will show us the correct source-layer name
+                })
+                .catch(error => {
+                  console.error('Error fetching tileset metadata:', error);
+                });
+            
               const map = evt.target;
               if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-                console.log('Initializing gravel roads layer');
-                addGravelRoadsSource(map);
-                addGravelRoadsLayer(map);
-                // Set initial visibility based on state
-                updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-                debugMapLayers(); // Check if initialization worked
+                map.once('idle', () => {
+                  console.log('Map idle, adding gravel roads');
+                  try {
+                    addGravelRoadsSource(map);
+                    
+                    // Wait for source to be loaded before adding layer
+                    map.once('sourcedata', (e) => {
+                      if (e.sourceId === 'gravel-roads' && e.isSourceLoaded) {
+                        console.log('Gravel roads source loaded successfully');
+                        addGravelRoadsLayer(map);
+                        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+                        
+                        // Debug info
+                        const source = map.getSource('gravel-roads');
+                        const layer = map.getLayer('gravel-roads');
+                        console.log('Source details:', {
+                          exists: !!source,
+                          type: source ? (source as any).type : null
+                        });
+                        console.log('Layer details:', {
+                          exists: !!layer,
+                          type: layer ? layer.type : null,
+                          layout: layer ? (layer as any).layout : null
+                        });
+                      }
+                    });
+                  } catch (error) {
+                    console.error('Error in gravel roads setup:', error);
+                  }
+                });
               }
             }}
           />
