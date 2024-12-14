@@ -51,6 +51,14 @@ export function FloatingElevationProfile() {
 
   renderCount.current += 1;
 
+  console.log('FloatingElevationProfile data:', {
+    profileLength: drawMode?.elevationProfile?.length,
+    firstFewPoints: drawMode?.elevationProfile?.slice(0, 3),
+    elevation: drawMode?.elevationProfile?.map(p => p.elevation).slice(0, 3),
+    distances: drawMode?.elevationProfile?.map(p => p.distance).slice(0, 3),
+    timestamp: new Date().toISOString()
+  });
+
   if (!drawMode?.isDrawing) {
     return null;
   }
