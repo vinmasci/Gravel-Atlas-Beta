@@ -198,6 +198,9 @@ export function DrawSegmentPanel() {
         console.log('No segment data available');
         return;
       }
+      
+      // Get elevation profile from segment properties
+      const segmentElevationProfile = segment.properties.elevationProfile;
   
       // Create GPX data
       console.log('Creating GPX data');
@@ -240,9 +243,9 @@ const payload = {
   },
   metadata: {
     title: segmentTitle,
-    elevationProfile: elevationProfile,  // Use the elevationProfile from useDrawModeContext
-    elevationGain: calculateElevationGain(elevationProfile),
-    elevationLoss: calculateElevationLoss(elevationProfile),
+    elevationProfile: segmentElevationProfile,  // Use the profile from finishDrawing
+    elevationGain: calculateElevationGain(segmentElevationProfile),
+    elevationLoss: calculateElevationLoss(segmentElevationProfile),
     surfaceTypes: []
   }
 };
