@@ -65,34 +65,37 @@ export const useDrawMode = (map: Map | null) => {
     if (!snapToRoad) return [clickedPoint];
 
     try {
-      if (!previousPoint) {
-        const response = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-        );
-        const data = await response.json();
-        if (data.code === 'Ok' && data.waypoints.length > 0) {
-          const snappedPoint = data.waypoints[0].location;
-          return [snappedPoint];
+        if (!previousPoint) {
+            // For a single point, we can use the Mapbox Tilequery API instead of Directions API
+            const response = await fetch(
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            );
+            
+            const data = await response.json();
+            if (data.features && data.features.length > 0) {
+                // Return the closest road point
+                return [data.features[0].geometry.coordinates as [number, number]];
+            }
+            return [clickedPoint];
         }
-        return [clickedPoint];
-      }
 
-      const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-      );
-      
-      const data = await response.json();
-      
-      if (data.code === 'Ok' && data.routes.length > 0) {
-        return data.routes[0].geometry.coordinates as [number, number][];
-      }
-      
-      return [clickedPoint];
+        // For multiple points, use the Directions API as before
+        const response = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        );
+        
+        const data = await response.json();
+        
+        if (data.code === 'Ok' && data.routes.length > 0) {
+            return data.routes[0].geometry.coordinates as [number, number][];
+        }
+        
+        return [clickedPoint];
     } catch (error) {
-      console.error('Error snapping to road:', error);
-      return [clickedPoint];
+        console.error('Error snapping to road:', error);
+        return [clickedPoint];
     }
-  };
+};
 
   const initializeLayers = useCallback(() => {
     if (!map) return;
