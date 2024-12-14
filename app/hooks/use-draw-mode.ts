@@ -29,11 +29,8 @@ const logStateChange = (action: string, data: any) => {
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
     logStateChange('getElevation called', { coordinates });
     
-    // If we have less than 2 coordinates, pad with a duplicate point
-    if (coordinates.length < 2) {
-        const point = coordinates[0];
-        coordinates = point ? [point, point] : [[0,0], [0,0]];
-        logStateChange('Padded coordinates', { paddedCoordinates: coordinates });
+    if (coordinates.length === 0) {
+        return [];
     }
 
     try {
@@ -51,13 +48,18 @@ async function getElevation(coordinates: [number, number][]): Promise<[number, n
 
         const data = await response.json();
         logStateChange('Elevation data received', { data });
+        
+        // Log the actual elevation values for debugging
+        console.log('Elevation values:', {
+            coordinates: data.coordinates,
+            elevations: data.coordinates.map(([,,e]: [number, number, number]) => e)
+        });
+        
         return data.coordinates;
     } catch (error) {
         console.error('Error fetching elevation:', error);
         // Return original coordinates with 0 elevation if there's an error
-        const fallbackData = coordinates.map(([lng, lat]) => [lng, lat, 0]);
-        logStateChange('Using fallback elevation data', { fallbackData });
-        return fallbackData;
+        return coordinates.map(([lng, lat]) => [lng, lat, 0] as [number, number, number]);
     }
 }
 

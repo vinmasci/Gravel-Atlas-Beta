@@ -16,30 +16,39 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
     try {
         // Process each batch in parallel
         const results = await Promise.all(batches.map(async (batch) => {
-            // Format coordinates for the API
+            // Format coordinates for the API - use semicolons between points
             const coordinatesString = batch
                 .map(([lng, lat]) => `${lng},${lat}`)
-                .join(',');
+                .join(';');
 
-            // Use the Mapbox Terrain-DEM v1 API endpoint
-            const response = await fetch(
-                `https://api.mapbox.com/v4/mapbox.terrain-dem-v1/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-            );
+            // Log the request URL for debugging
+            const url = `https://api.mapbox.com/v4/mapbox.terrain-dem-v1/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+            console.log('Requesting elevation data:', { coordinatesString, url });
+
+            const response = await fetch(url);
 
             if (!response.ok) {
                 throw new Error(`Elevation API error: ${response.status}`);
             }
 
             const data = await response.json();
+            console.log('Elevation data received:', data);
             
             // Map the results to include elevation
             return batch.map((coord, index) => {
                 const feature = data.features[index];
-                // The elevation is directly provided in the elevation property
-                const elevation = feature?.properties?.elevation ?? 0;
+                // Use 'ele' property for elevation
+                const elevation = feature?.properties?.ele ?? 0;
                 return [...coord, elevation];
             });
         }));
+
+        // Log the results for debugging
+        console.log('Processed elevation data:', {
+            inputCount: coordinates.length,
+            outputCount: results.flat().length,
+            sampleData: results.flat().slice(0, 2)
+        });
 
         // Combine all batches
         return results.flat();
