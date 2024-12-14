@@ -209,3 +209,52 @@ Fixed several issues with the segment sheet display and interaction:
 - Properly integrated MongoDB stats for segment ratings
 - Fixed voting system to update and persist ratings
 - Ensured consistent color representation across the application
+
+## Recent Updates (December 15, 2024) - Gravel Roads Layer Implementation
+
+### Data Extraction
+Successfully extracted gravel/unpaved roads data from OpenStreetMap (australia-latest.osm.pbf):
+- Used GDAL/OGR with a custom query to extract roads with specific surfaces (unpaved, gravel, dirt, etc.)
+- Included NULL and unknown surface types for 'highway=track' to capture unmarked gravel roads
+- Command used:
+```bash
+ogr2ogr -f "GeoJSON" australia_gravel_roads.geojson -overwrite -oo CONFIG_FILE=osmconf.ini australia-latest.osm.pbf -sql "SELECT osm_id, name, highway, surface, maxspeed, access FROM lines WHERE highway IS NOT NULL AND (surface IN ('unpaved', 'compacted', 'fine_gravel', 'gravel', 'dirt', 'earth', 'ground', 'grass', 'mud', 'sand', 'wood', 'unknown') OR (highway = 'track' AND (surface IS NULL OR surface = 'unknown')))"
+Vector Tile Creation
+Converted to MBTiles using Tippecanoe with specific parameters for web optimization:
+bashCopytippecanoe -o australia_gravel_roads.mbtiles \
+--minimum-zoom=8 \
+--maximum-zoom=16 \
+--layer=gravel_roads \
+--force \
+--no-feature-limit \
+--no-tile-size-limit \
+--no-tile-compression \
+--preserve-input-order \
+--no-line-simplification \
+--simplify-only-low-zooms \
+--base-zoom=10 \
+australia_gravel_roads.geojson
+Current Implementation Status
+The layer is partially implemented in the web application:
+
+Successfully uploads to MapTiler (ID: 2378fd50-8c13-4408-babf-e7b2d62c857c)
+Source and layer are properly initialized in Mapbox GL JS
+Toggle functionality is implemented
+Layer and source are confirmed present in map instance
+
+Current Issue
+The layer is not visually rendering despite being properly initialized. Debugging shows:
+
+Source is correctly loaded with vector tiles
+Layer exists with correct styling
+Visibility property toggles correctly
+Next step is to verify source-layer name and tile data structure from MapTiler
+
+Next Steps
+
+Verify vector tile structure using MapTiler's tile JSON
+Confirm source-layer name matches the tile data
+Implement proper error handling for tile loading
+Add visibility debugging tools
+
+** WHEN WE SET  UP OUR PAVED LAYER, WE NEED TO MAKE SURE THE SOURCE NAME IS DIFFERENT THAN THE UNPAVED LAYER

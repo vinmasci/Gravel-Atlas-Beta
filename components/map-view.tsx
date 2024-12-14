@@ -720,6 +720,17 @@ return (
                 mapExists: !!evt.target,
                 drawModeActive: drawMode.isDrawing
               });
+              
+              // Initialize gravel roads layer
+              const map = evt.target;
+              if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+                console.log('Initializing gravel roads layer');
+                addGravelRoadsSource(map);
+                addGravelRoadsLayer(map);
+                // Set initial visibility based on state
+                updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+                debugMapLayers(); // Check if initialization worked
+              }
             }}
           />
           {isLoading && <LoadingSpinner />}
@@ -758,14 +769,14 @@ return (
           {mapInstance && <FloatingElevationProfile />}
 
           <SegmentSheet
-  open={!!selectedSegment}
-  onOpenChange={(open) => !open && setSelectedSegment(null)}
-  segment={selectedSegment}
-  onUpdate={(updatedSegment) => {
-    setSelectedSegment(updatedSegment);
-    // This will keep the stats updated in the sheet
-  }}
-/>
+            open={!!selectedSegment}
+            onOpenChange={(open) => !open && setSelectedSegment(null)}
+            segment={selectedSegment}
+            onUpdate={(updatedSegment) => {
+              setSelectedSegment(updatedSegment);
+              // This will keep the stats updated in the sheet
+            }}
+          />
         </div>
       </DrawModeProvider>
     </MapContext.Provider>
