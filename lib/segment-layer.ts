@@ -90,9 +90,14 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
           id: properties.id,
           title: properties.title,
           userName: properties.userName,
+          auth0Id: properties.auth0Id,  // Add this line
           length: properties.length,
           averageRating: properties.averageRating,
-          totalVotes: properties.totalVotes
+          totalVotes: properties.totalVotes,
+          metadata: {  // Add this section
+            elevationProfile: properties.metadata.elevationProfile,
+            elevationGain: properties.metadata.elevationGain,
+            elevationLoss: properties.metadata.elevationLoss }
         });
       }
     });
@@ -152,8 +157,13 @@ export const updateSegmentLayer = async (
             title: segment.metadata.title,
             length: segment.metadata.length,
             userName: segment.userName,
+            auth0Id: segment.auth0Id,  // Add this line
             averageRating: segment.stats?.averageRating,
-            totalVotes: segment.stats?.totalVotes
+            totalVotes: segment.stats?.totalVotes,
+            metadata: {  // Add this section
+              elevationProfile: segment.metadata.elevationProfile || [],
+              elevationGain: segment.metadata.elevationGain,
+              elevationLoss: segment.metadata.elevationLoss }
           }
         })) || []
       });

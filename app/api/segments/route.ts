@@ -46,7 +46,7 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .select('-gpxData'); // Exclude GPX data for list view
+      .select('-gpxData metadata.elevationProfile metadata.elevationGain metadata.elevationLoss'); // Add these fields
 
     const total = await DrawnSegment.countDocuments(query);
 
