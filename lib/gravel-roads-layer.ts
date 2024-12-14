@@ -3,7 +3,7 @@ export const addGravelRoadsSource = (map: mapboxgl.Map) => {
       map.addSource('gravel-roads', {
         type: 'vector',
         tiles: [
-          'https://api.maptiler.com/tiles/2378fd50-8c13-4408-babf-e7b2d62c857c/{z}/{x}/{y}.pbf?key=' + process.env.NEXT_PUBLIC_MAPTILER_KEY
+                    'https://api.maptiler.com/tiles/2378fd50-8c13-4408-babf-e7b2d62c857c/{z}/{x}/{y}.pbf?key=DFSAZFJXzvprKbxHrHXv'
         ],
         minzoom: 8,
         maxzoom: 16
