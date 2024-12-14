@@ -125,7 +125,7 @@ export async function POST(req: Request) {
           length,
           elevationGain: body.metadata?.elevationGain || null,
           elevationLoss: body.metadata?.elevationLoss || null,
-          elevationProfile: body.metadata?.elevationProfile || [],
+          elevationProfile: body.properties?.metadata?.elevationProfile || [],
           surfaceTypes: []
         },
         auth0Id: session.user.sub,

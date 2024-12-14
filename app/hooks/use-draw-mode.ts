@@ -452,18 +452,17 @@ properties: {
 
     const result = {
       type: 'Feature' as const,
-      properties: {},  // Empty properties - we don't need to store it here
+      properties: {
+        metadata: {  // Move it into properties.metadata
+          elevationProfile: elevationProfile,
+          // Add any other metadata here
+        }
+      },
       geometry: {
         type: 'LineString' as const,
         coordinates: drawnCoordinates
-      },
-      elevationProfile: elevationProfile  // Store it at the top level
+      }
     };
-
-    logStateChange('Drawing finished', {
-      coordinatesCount: drawnCoordinates.length,
-      elevationPointCount: elevationProfile.length
-    });
 
     return result;
   }, [map, isDrawing, drawnCoordinates, elevationProfile]);
