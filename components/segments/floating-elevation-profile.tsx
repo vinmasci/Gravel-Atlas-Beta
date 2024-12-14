@@ -11,8 +11,32 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useDrawModeContext } from '@/app/contexts/draw-mode-context';
+import { Button } from '../../components/ui/button';
+import { useDrawModeContext } from '../../app/contexts/draw-mode-context';
+
+function calculateGrades(elevationProfile: ElevationPoint[]): number[] {
+  const grades: number[] = [];
+  
+  for (let i = 0; i < elevationProfile.length - 1; i++) {
+    const current = elevationProfile[i];
+    let nextIndex = i + 1;
+    while (
+      nextIndex < elevationProfile.length - 1 && 
+      (elevationProfile[nextIndex].distance - current.distance) * 1000 < 100
+    ) {
+      nextIndex++;
+    }
+    const next = elevationProfile[nextIndex];
+    
+    const rise = next.elevation - current.elevation;
+    const run = (next.distance - current.distance) * 1000;
+    const grade = (rise / run) * 100;
+    
+    grades.push(Math.round(grade * 10) / 10);
+  }
+  
+  return grades;
+}
 
 interface ElevationPoint {
   distance: number;
@@ -72,7 +96,13 @@ export function FloatingElevationProfile() {
   // Empty state data for the chart
   const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
   const displayData = drawMode.elevationProfile.length >= 2 
-    ? drawMode.elevationProfile 
+    ? drawMode.elevationProfile.map((point, index, array) => {
+        const grades = calculateGrades(array);
+        return {
+          ...point,
+          grade: grades[index] || 0
+        };
+      })
     : emptyData;
 
   // Calculate the maximum distance for X-axis domain
@@ -101,6 +131,8 @@ export function FloatingElevationProfile() {
                 <span>Distance: {maxDistance.toFixed(1)}km</span>
                 <span>Min: {Math.round(minElevation)}m</span>
                 <span>Max: {Math.round(maxElevation)}m</span>
+                <span>Max Grade: {Math.max(...calculateGrades(drawMode.elevationProfile)).toFixed(1)}%</span>
+                <span>Min Grade: {Math.min(...calculateGrades(drawMode.elevationProfile)).toFixed(1)}%</span>
               </>
             )}
             {drawMode.elevationProfile.length < 2 && (
@@ -122,56 +154,81 @@ export function FloatingElevationProfile() {
           )}
         </div>
         <div className="h-[140px]">
-        <ResponsiveContainer width="100%" height="100%">
-  <AreaChart data={displayData}>
-    <defs>
-      <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="5%" stopColor="#ef4444" stopOpacity={1}/> {/* Increased from 0.3 */}
-      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.2}/> {/* Increased from 0.1 */}
-      </linearGradient>
-    </defs>
-    <CartesianGrid 
-      strokeDasharray="3 3" 
-      vertical={false} 
-      stroke="rgba(255,255,255,0.1)" 
-    />
-    <XAxis 
-      dataKey="distance" 
-      type="number"
-      domain={[0, Math.max(maxDistance, 1)]}
-      tickFormatter={(value) => `${value.toFixed(1)}km`}
-      stroke="#666"
-      fontSize={12}
-    />
-    <YAxis 
-      domain={[
-        minElevation - elevationPadding,
-        maxElevation + elevationPadding
-      ]}
-      tickFormatter={(value) => `${Math.round(value)}m`}
-      stroke="#666"
-      fontSize={12}
-    />
-    <Tooltip 
-      formatter={(value: number) => [`${Math.round(value)}m`, 'Elevation']}
-      labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-      contentStyle={{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        border: 'none',
-        borderRadius: '8px',
-        color: 'white'
-      }}
-    />
-    <Area
-      type="monotone"
-      dataKey="elevation"
-      stroke="#ef4444"
-      strokeWidth={2}
-      fill="url(#elevationGradient)"
-      dot={false}
-    />
-  </AreaChart>
-</ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={displayData}>
+              <defs>
+                <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3}/>
+                </linearGradient>
+                <linearGradient id="gradeGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false} 
+                stroke="rgba(255,255,255,0.1)" 
+              />
+              <XAxis 
+                dataKey="distance" 
+                type="number"
+                domain={[0, Math.max(maxDistance, 1)]}
+                tickFormatter={(value) => `${value.toFixed(1)}km`}
+                stroke="#666"
+                fontSize={12}
+              />
+              <YAxis 
+                domain={[
+                  minElevation - elevationPadding,
+                  maxElevation + elevationPadding
+                ]}
+                tickFormatter={(value) => `${Math.round(value)}m`}
+                stroke="#666"
+                fontSize={12}
+              />
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                domain={[-20, 20]}
+                tickFormatter={(value) => `${value}%`}
+                stroke="#3b82f6"
+                fontSize={12}
+              />
+              <Tooltip 
+                formatter={(value: number, name: string) => {
+                  if (name === 'elevation') return [`${Math.round(value)}m`, 'Elevation'];
+                  if (name === 'grade') return [`${value}%`, 'Grade'];
+                  return [value, name];
+                }}
+                labelFormatter={(value: number) => `${value.toFixed(1)} km`}
+                contentStyle={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white'
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="elevation"
+                stroke="#ef4444"
+                strokeWidth={2}
+                fill="url(#elevationGradient)"
+                dot={false}
+              />
+<Area
+  yAxisId="right"
+  type="monotone"
+  dataKey="grade"
+  stroke="#3b82f6"
+  strokeWidth={1}
+  fill="url(#gradeGradient)"
+  dot={false}
+/>
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

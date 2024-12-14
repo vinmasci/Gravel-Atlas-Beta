@@ -3,23 +3,23 @@
 
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '../../components/ui/use-toast';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+} from '../../components/ui/sheet';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
+import { Button } from '../../components/ui/button';
+import { Label } from '../../components/ui/label';
+import { cn } from '../../lib/utils';
 
 const surfaceConditions = {
   '0': 'Smooth surface, any bike',
   '1': 'Well maintained, gravel bike',
-  '2': 'Occasional rough surface',
-  '3': 'Frequent loose surface',
+  '2': 'Occasionaly rough surface',
+  '3': 'Frequently loose surface',
   '4': 'Very rough surface',
   '5': 'Extremely rough surface, MTB',
   '6': 'Hike-A-Bike'
