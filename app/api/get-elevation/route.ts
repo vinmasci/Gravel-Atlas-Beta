@@ -5,26 +5,14 @@ import fetch from 'node-fetch';
 async function getElevationFromMapbox(coordinates: [number, number][]) {
     if (coordinates.length === 0) return [];
     
-    // Process coordinates in batches of 25 (Mapbox API limit)
-    const batchSize = 25;
-    const batches = [];
-    
-    for (let i = 0; i < coordinates.length; i += batchSize) {
-        batches.push(coordinates.slice(i, i + batchSize));
-    }
-
     try {
-        // Process each batch in parallel
-        const results = await Promise.all(batches.map(async (batch) => {
-            // Format coordinates for the API - use semicolons between points
-            const coordinatesString = batch
-                .map(([lng, lat]) => `${lng},${lat}`)
-                .join(';');
-
-            // Log the request URL for debugging
-            const url = `https://api.mapbox.com/v4/mapbox.terrain-dem-v1/tilequery/${coordinatesString}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
-            console.log('Requesting elevation data:', { coordinatesString, url });
-
+        // Process one coordinate at a time for accurate elevation data
+        const results = await Promise.all(coordinates.map(async ([lng, lat]) => {
+            // Make individual point query
+            const url = `https://api.mapbox.com/v4/mapbox.terrain-dem-v1/tilequery/${lng},${lat}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+            
+            console.log('Requesting elevation for point:', { lng, lat, url });
+            
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -32,31 +20,38 @@ async function getElevationFromMapbox(coordinates: [number, number][]) {
             }
 
             const data = await response.json();
-            console.log('Elevation data received:', data);
-            
-            // Map the results to include elevation
-            return batch.map((coord, index) => {
-                const feature = data.features[index];
-                // Use 'ele' property for elevation
-                const elevation = feature?.properties?.ele ?? 0;
-                return [...coord, elevation];
+            console.log('Raw elevation response:', data);
+
+            console.log('Raw Mapbox response:', {
+                url,
+                status: response.status,
+                data: data,
+                features: data.features?.[0]
             });
+
+            if (!data.features || !data.features[0]) {
+                console.warn('No elevation data found for point:', { lng, lat });
+                return [lng, lat, 0];
+            }
+
+            // Get elevation directly from the ele property
+            const elevation = data.features[0].properties.ele ?? 0;
+
+            return [lng, lat, elevation] as [number, number, number];
         }));
 
         // Log the results for debugging
         console.log('Processed elevation data:', {
             inputCount: coordinates.length,
-            outputCount: results.flat().length,
-            sampleData: results.flat().slice(0, 2)
+            outputCount: results.length,
+            sampleData: results.slice(0, 2)
         });
 
-        // Combine all batches
-        return results.flat();
+        return results;
 
     } catch (error) {
         console.error('Error fetching elevation:', error);
-        // Return coordinates with 0 elevation in case of error
-        return coordinates.map(coord => [...coord, 0]);
+        return coordinates.map(coord => [...coord, 0] as [number, number, number]);
     }
 }
 
@@ -64,7 +59,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         console.log('Elevation API received:', {
-            coordinates: body.coordinates,
+            coordinates: body.coordinates?.slice(0, 2),
             coordinatesLength: body.coordinates?.length,
             timestamp: new Date().toISOString()
         });
@@ -82,7 +77,7 @@ export async function POST(req: NextRequest) {
         
         console.log('Elevation data returned:', {
             pointCount: elevationData.length,
-            samplePoints: elevationData.slice(0, 2), // Log first two points
+            samplePoints: elevationData.slice(0, 2),
             timestamp: new Date().toISOString()
         });
 
