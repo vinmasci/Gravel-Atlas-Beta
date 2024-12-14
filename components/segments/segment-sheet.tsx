@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from '@/components/ui/use-toast';
+import * as turf from '@turf/turf'; 
 import {
   Sheet,
   SheetContent,
@@ -86,8 +87,12 @@ interface SegmentSheetProps {
     length: number;
     averageRating?: number;
     totalVotes?: number;
+    geojson?: {
+      geometry: {
+        coordinates: [number, number, number][];
+      };
+    };
     metadata?: {
-      elevationProfile?: ElevationPoint[];
       elevationGain?: number;
       elevationLoss?: number;
     };
@@ -224,10 +229,22 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
 
   if (!segment) return null;
 
-  const elevationProfile = segment.metadata?.elevationProfile || [];
-  const elevations = elevationProfile.map(point => point.elevation);
-  const minElevation = Math.min(...elevations, 0);
-  const maxElevation = Math.max(...elevations, 100);
+  // Convert 3D coordinates to elevation profile with safety checks
+  const coordinates = segment.geojson?.geometry?.coordinates || [];
+  const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index) => ({
+    distance: index > 0 
+      ? turf.distance(
+          turf.point([coordinates[0][0], coordinates[0][1]]), 
+          turf.point([coord[0], coord[1]]),
+          { units: 'kilometers' }
+        )
+      : 0,
+    elevation: coord[2] // The elevation is the third number in each coordinate
+  })) : [];
+
+  const elevations = coordinates.map(coord => coord[2] || 0);
+  const minElevation = elevations.length > 0 ? Math.min(...elevations, 0) : 0;
+  const maxElevation = elevations.length > 0 ? Math.max(...elevations, 100) : 100;
   const elevationGain = segment.metadata?.elevationGain;
   const elevationLoss = segment.metadata?.elevationLoss;
 
