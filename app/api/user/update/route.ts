@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getCollection } from '@/lib/db'
+import { getCollection } from '../../../../lib/db'
 import { getSession } from '@auth0/nextjs-auth0'
 
 export async function POST(request: Request) {

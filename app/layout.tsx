@@ -3,10 +3,10 @@ import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
-import { Navbar } from '@/components/navbar'
-import { ThemeProvider } from "@/components/theme-provider"
+import { Navbar } from '../components/navbar'
+import { ThemeProvider } from "../components/theme-provider"
 import { UserProvider } from '@auth0/nextjs-auth0/client'
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "../components/ui/toaster"
 
 const inter = Inter({ subsets: ['latin'] })
 

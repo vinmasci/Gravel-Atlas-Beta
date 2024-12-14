@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSession } from '@auth0/nextjs-auth0'
-import { getCollection } from '@/lib/db'
+import { getCollection } from '../../../../lib/db'
 
 // Initialize S3 client
 const s3Client = new S3Client({
