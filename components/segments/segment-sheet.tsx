@@ -81,18 +81,20 @@ interface SegmentSheetProps {
   segment: {
     id: string;
     title: string;
-    userName: string;
-    userImage?: string;
-    bioName?: string;
-    website?: string;
+    uploadedBy: {
+      id: string;
+      name: string;
+      picture: string;
+      website?: string;
+      socialLinks?: {
+        instagram?: string;
+        strava?: string;
+        facebook?: string;
+      };
+    };
     length: number;
     averageRating?: number;
     totalVotes?: number;
-    metadata?: {
-      elevationProfile?: ElevationPoint[];
-      elevationGain?: number;
-      elevationLoss?: number;
-    };
   } | null;
 }
 
@@ -104,28 +106,32 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
-  const [userData, setUserData] = useState<{ bioName?: string; image?: string; website?: string } | null>(null);
+  const [userData, setUserData] = useState<{
+    name: string;
+    picture: string;
+    website?: string;
+    socialLinks?: {
+      instagram?: string;
+      strava?: string;
+      facebook?: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     if (segment?.id && user) {
       loadComments(segment.id);
     }
-    if (segment?.userName) {
-      fetchUserData(segment.userName);
+    if (segment?.auth0Id) {
+      fetch(`/api/user/${segment.auth0Id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) {
+            setUserData(data);
+          }
+        })
+        .catch(error => console.error('Error fetching user data:', error));
     }
-  }, [segment?.id, segment?.userName, user]);
-
-  const fetchUserData = async (userName: string) => {
-    try {
-      const response = await fetch(`/api/user/${userName}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUserData(data);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
+  }, [segment?.id, segment?.auth0Id, user]);
 
   const loadComments = async (segmentId: string) => {
     setIsLoadingComments(true);
@@ -247,26 +253,47 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
         <div className="grid gap-4 py-4">
           {/* User Info */}
           <div className="flex items-center space-x-3">
-            <img 
-              src={userData?.image || segment.userImage}
-              alt={userData?.bioName || segment.userName}
-              className="w-8 h-8 rounded-full"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${userData?.bioName || segment.userName}`;
-              }}
-            />
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-border">
+              <img 
+                src={userData?.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${segment.userName}`}
+                alt={userData?.name || segment.userName}
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium">{userData?.bioName || segment.userName}</p>
-              {(userData?.website || segment.website) && (
-                <a 
-                  href={userData?.website || segment.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-xs text-muted-foreground hover:underline"
-                >
-                  {new URL(userData?.website || segment.website || '').hostname}
-                </a>
-              )}
+              <p className="text-sm font-medium">{userData?.name || segment.userName}</p>
+              <div className="flex items-center space-x-2 text-sm">
+                {userData?.website && (
+                  <a 
+                    href={userData.website} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <i className="fa-solid fa-globe w-4 h-4"></i>
+                  </a>
+                )}
+                {userData?.socialLinks?.instagram && (
+                  <a 
+                    href={userData.socialLinks.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-[#E1306C] transition-colors"
+                  >
+                    <i className="fa-brands fa-instagram w-4 h-4"></i>
+                  </a>
+                )}
+                {userData?.socialLinks?.strava && (
+                  <a 
+                    href={userData.socialLinks.strava} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-[#FC4C02] transition-colors"
+                  >
+                    <i className="fa-brands fa-strava w-4 h-4"></i>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
@@ -346,7 +373,7 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
                     className="space-y-3"
                   >
                     {Object.entries(surfaceConditions).map(([value, label]) => (
-                      <div key={value} className="flex items-center space-x-3">
+                      <div key={`condition-${value}`} className="flex items-center space-x-3">
                         <i 
                           className={cn(
                             `fa-solid fa-circle-${value}`,
@@ -387,15 +414,12 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
                   <p className="text-sm text-muted-foreground">Loading comments...</p>
                 ) : comments && comments.length > 0 ? (
                   comments.map((comment) => (
-                    <div key={comment.id} className="space-y-2">
+                    <div key={`comment-${comment.id}`} className="space-y-2">
                       <div className="flex items-start space-x-2">
                         <img 
                           src={comment.userImage} 
                           alt={comment.userName}
                           className="w-6 h-6 rounded-full"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${comment.userName}`;
-                          }}
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium">{comment.userName}</p>
@@ -406,3 +430,31 @@ export function SegmentSheet({ open, onOpenChange, segment }: SegmentSheetProps)
                         </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment!</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Add a comment..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="min-h-[80px]"
+                />
+                <Button 
+                  onClick={handleSubmitComment}
+                  disabled={!newComment.trim()}
+                  className="w-full"
+                >
+                  Post Comment
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}

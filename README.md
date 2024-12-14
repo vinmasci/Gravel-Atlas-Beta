@@ -128,3 +128,23 @@ MONGODB_URI=
 4. Test all related features
 5. Deploy to Vercel
 6. Verify production build
+
+## 🔄 Recent Updates (December 2024)
+
+### Segment Sheet Enhancements
+- Added user profile section to match photo viewer functionality
+- Implemented social media links display (website, Instagram, Strava)
+- Added elevation profile visualization using Recharts
+- Integrated comments system with user avatars and timestamps
+- Surface condition voting now uses an accordion to save space
+
+### Known Issues
+- User information not loading properly in segment sheet - need to fix user data fetching
+- Elevation profile visualization not displaying - need to verify elevation data is being passed correctly
+- Comments API needs proper MongoDB connection
+
+### Next Steps
+- Fix user data population in segments API
+- Debug elevation profile data flow
+- Complete comments system implementation
+- Add error handling for missing profile images
