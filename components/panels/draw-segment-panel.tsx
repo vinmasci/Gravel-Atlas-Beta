@@ -20,6 +20,25 @@ import {
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 
+// Add helper functions for elevation calculations
+function calculateElevationGain(profile: { distance: number; elevation: number; }[]) {
+  let gain = 0;
+  for (let i = 1; i < profile.length; i++) {
+    const diff = profile[i].elevation - profile[i-1].elevation;
+    if (diff > 0) gain += diff;
+  }
+  return Math.round(gain);
+}
+
+function calculateElevationLoss(profile: { distance: number; elevation: number; }[]) {
+  let loss = 0;
+  for (let i = 1; i < profile.length; i++) {
+    const diff = profile[i].elevation - profile[i-1].elevation;
+    if (diff < 0) loss += Math.abs(diff);
+  }
+  return Math.round(loss);
+}
+
 export function DrawSegmentPanel() {
   const { map } = useMapContext();
   const { user } = useUser();
@@ -203,19 +222,28 @@ export function DrawSegmentPanel() {
   </trk>
 </gpx>`;
   
-      // Format data according to schema
-      const payload = {
-        title: segmentTitle,
-        gpxData,
-        geojson: {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: segment.geometry.coordinates
-          },
-          properties: {}
-        }
-      };
+// Calculate elevation data
+const elevationGain = calculateElevationGain(elevationProfile);
+const elevationLoss = calculateElevationLoss(elevationProfile);
+
+// Format data according to schema
+const payload = {
+  title: segmentTitle,
+  gpxData,
+  geojson: {
+    type: 'Feature' as const,
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: segment.geometry.coordinates
+    },
+    properties: {}
+  },
+  metadata: {
+    elevationProfile,
+    elevationGain,
+    elevationLoss
+  }
+};
   
       console.log('Sending save request');
       const response = await fetch('/api/segments/save', {

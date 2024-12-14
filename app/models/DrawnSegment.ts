@@ -26,6 +26,7 @@ interface IDrawnSegment extends Document {
     elevationGain?: number;
     elevationLoss?: number;
     surfaceTypes?: string[];
+    elevationProfile?: Array<{ distance: number; elevation: number; }>;
   };
   votes: Vote[];
   stats: {
@@ -75,7 +76,12 @@ const drawnSegmentSchema = new Schema<IDrawnSegment>({
     length: Number,
     elevationGain: Number,
     elevationLoss: Number,
-    surfaceTypes: [String]
+    surfaceTypes: [String],
+    elevationProfile: [{
+      distance: Number,
+      elevation: Number,
+      _id: false  // Prevents MongoDB from creating IDs for each point
+    }]
   },
   votes: [{
     user_id: {

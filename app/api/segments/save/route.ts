@@ -46,7 +46,11 @@ export async function POST(req: Request) {
         hasTitle: !!body.title,
         hasGeojson: !!body.geojson,
         hasGpxData: !!body.gpxData,
-        coordinatesLength: body.geojson?.geometry?.coordinates?.length
+        hasMetadata: !!body.metadata,
+        coordinatesLength: body.geojson?.geometry?.coordinates?.length,
+        hasElevationProfile: !!body.metadata?.elevationProfile,
+        elevationGain: body.metadata?.elevationGain,
+        elevationLoss: body.metadata?.elevationLoss
       });
     } catch (parseError: any) {
       console.error('❌ Request body parse error:', {
@@ -119,8 +123,9 @@ export async function POST(req: Request) {
         metadata: {
           title,
           length,
-          elevationGain: null,
-          elevationLoss: null,
+          elevationGain: body.metadata?.elevationGain || null,
+          elevationLoss: body.metadata?.elevationLoss || null,
+          elevationProfile: body.metadata?.elevationProfile || [],
           surfaceTypes: []
         },
         auth0Id: session.user.sub,
@@ -163,7 +168,10 @@ export async function POST(req: Request) {
         id: savedSegment._id,
         title: savedSegment.metadata.title,
         length: savedSegment.metadata.length,
-        coordinateCount: savedSegment.geojson.geometry.coordinates.length
+        coordinateCount: savedSegment.geojson.geometry.coordinates.length,
+        elevationGain: savedSegment.metadata.elevationGain,
+        elevationLoss: savedSegment.metadata.elevationLoss,
+        hasElevationProfile: !!savedSegment.metadata.elevationProfile
       });
 
       return NextResponse.json({
