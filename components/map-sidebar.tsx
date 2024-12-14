@@ -3,13 +3,13 @@
 
 import React, { useState } from 'react';
 import { Search, Layers, Map, Navigation, ChevronRight, ChevronLeft, Camera, Route, FileUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group"
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from "@/app/hooks/use-toast";
-import { PhotoUploadDialog } from '@/components/photo-upload-dialog';
-import { DrawSegmentPanel } from '@/components/panels/draw-segment-panel';
+import { PhotoUploadDialog } from '../components/photo-upload-dialog';
+import { DrawSegmentPanel } from '../components/panels/draw-segment-panel';
 import {
   Accordion,
   AccordionContent,
