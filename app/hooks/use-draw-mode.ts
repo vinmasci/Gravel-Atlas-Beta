@@ -209,56 +209,61 @@ export const useDrawMode = (map: Map | null) => {
       isProcessing: isProcessingClick.current,
       coordinates: [e.lngLat.lng, e.lngLat.lat]
     });
-
+  
     if (!isDrawing || !map || !layerRefs.current.drawing || isProcessingClick.current) {
       logStateChange('Click event ignored', {
         reason: !isDrawing ? 'not drawing' : !map ? 'no map' : !layerRefs.current.drawing ? 'no layer' : 'processing'
       });
       return;
     }
-
+  
     if (pendingOperation.current) {
       logStateChange('Aborting pending operation');
       pendingOperation.current.abort();
     }
-
+  
     isProcessingClick.current = true;
     const controller = new AbortController();
     pendingOperation.current = controller;
-
+  
     try {
       const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
       const previousPoint = drawnCoordinates.length > 0 
         ? drawnCoordinates[drawnCoordinates.length - 1] 
         : undefined;
-
-      // Add click point immediately
+  
+      // Create click point
       const newClickPoint = { 
         coordinates: clickedPoint,
         timestamp: Date.now()
       };
-
-      // Get snapped points and elevation
+  
+      // Get snapped points first
       const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
       logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
-
-      const elevationData = await getElevation([clickedPoint]);
+  
+      // Get elevation for ALL snapped points
+      const elevationData = await getElevation(newPoints);
       logStateChange('Elevation data received', { elevationData });
-
+  
       // Create new segment
       const newSegment: Segment = {
         clickPoint: newClickPoint,
         roadPoints: newPoints
       };
-
-      // Calculate new elevation profile
+  
+      // Calculate new elevation profile with proper distances
       let totalDistance = elevationProfile.length > 0 
         ? elevationProfile[elevationProfile.length - 1].distance 
         : 0;
-
+  
       const newElevationPoints = elevationData.map((point, i) => {
+        // Calculate distance from previous point
         if (i > 0 || drawnCoordinates.length > 0) {
-          const prevPoint = i > 0 ? newPoints[i - 1] : drawnCoordinates[drawnCoordinates.length - 1];
+          const prevPoint = i > 0 
+            ? newPoints[i - 1] 
+            : drawnCoordinates[drawnCoordinates.length - 1];
+          
           const distance = turf.distance(
             turf.point(prevPoint),
             turf.point([point[0], point[1]]),
@@ -266,17 +271,19 @@ export const useDrawMode = (map: Map | null) => {
           );
           totalDistance += distance;
         }
+  
         return {
           distance: totalDistance,
           elevation: point[2]
         };
       });
-      
+  
       logStateChange('New elevation points calculated', {
         newPoints: newElevationPoints,
-        totalDistance
+        totalDistance,
+        pointCount: newElevationPoints.length
       });
-
+  
       // Update state with new segment
       setSegments(prev => {
         const newSegments = [...prev, newSegment];
@@ -286,7 +293,7 @@ export const useDrawMode = (map: Map | null) => {
         });
         return newSegments;
       });
-
+  
       setClickPoints(prev => {
         const newClickPoints = [...prev, newClickPoint];
         logStateChange('Click points updated', {
@@ -295,7 +302,7 @@ export const useDrawMode = (map: Map | null) => {
         });
         return newClickPoints;
       });
-
+  
       // Update coordinates
       const allCoordinates = [...segments, newSegment].flatMap(segment => segment.roadPoints);
       setDrawnCoordinates(allCoordinates);
@@ -306,7 +313,7 @@ export const useDrawMode = (map: Map | null) => {
       // Update map sources
       const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
       const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
-
+  
       if (lineSource && markerSource) {
         lineSource.setData({
           type: 'Feature',
@@ -316,7 +323,7 @@ export const useDrawMode = (map: Map | null) => {
             coordinates: allCoordinates
           }
         });
-
+  
         markerSource.setData({
           type: 'FeatureCollection',
           features: [...clickPoints, newClickPoint].map(point => ({
@@ -330,7 +337,7 @@ export const useDrawMode = (map: Map | null) => {
             }
           }))
         });
-
+  
         setElevationProfile(prev => {
           const newProfile = [...prev, ...newElevationPoints];
           logStateChange('Elevation profile updated', {

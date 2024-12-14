@@ -4,7 +4,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   LineChart,
   Line,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,53 +20,46 @@ interface ElevationPoint {
 }
 
 export function FloatingElevationProfile() {
-    const drawMode = useDrawModeContext();
-    const renderCount = useRef(0);
-    
-    useEffect(() => {
-      console.log('FloatingElevationProfile mounted:', {
-        timestamp: new Date().toISOString(),
-        drawModeAvailable: !!drawMode,
-      });
+  const drawMode = useDrawModeContext();
+  const renderCount = useRef(0);
   
-      return () => {
-        console.log('FloatingElevationProfile unmounted:', {
-          timestamp: new Date().toISOString(),
-        });
-      };
-    }, []);
-  
-    // Add this new useEffect right after the first one
-    useEffect(() => {
-      const element = document.querySelector('[data-elevation-profile]');
-      console.log('Elevation Profile Debug:', {
-        isComponentMounted: true,
-        elementExists: !!element,
-        position: element?.getBoundingClientRect(),
-        drawModeExists: !!drawMode,
-        isDrawing: drawMode?.isDrawing,
-        hasElevationData: drawMode?.elevationProfile?.length > 0,
-        timestamp: new Date().toISOString()
-      });
-    }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
-
-  // Log every render
-  renderCount.current += 1;
-  console.log('FloatingElevationProfile render #' + renderCount.current, {
-    timestamp: new Date().toISOString(),
-    drawModeExists: !!drawMode,
-    isDrawing: drawMode?.isDrawing,
-    elevationProfileLength: drawMode?.elevationProfile?.length
-  });
-
-  // Debug render visibility
-  if (!drawMode?.isDrawing) {
-    console.log('Not rendering - drawing mode inactive', {
+  useEffect(() => {
+    console.log('FloatingElevationProfile mounted:', {
       timestamp: new Date().toISOString(),
-      isDrawing: drawMode?.isDrawing
+      drawModeAvailable: !!drawMode,
     });
+
+    return () => {
+      console.log('FloatingElevationProfile unmounted:', {
+        timestamp: new Date().toISOString(),
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    const element = document.querySelector('[data-elevation-profile]');
+    console.log('Elevation Profile Debug:', {
+      isComponentMounted: true,
+      elementExists: !!element,
+      position: element?.getBoundingClientRect(),
+      drawModeExists: !!drawMode,
+      isDrawing: drawMode?.isDrawing,
+      hasElevationData: drawMode?.elevationProfile?.length > 0,
+      timestamp: new Date().toISOString()
+    });
+  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+
+  renderCount.current += 1;
+
+  if (!drawMode?.isDrawing) {
     return null;
   }
+
+  // Get actual elevation range for dynamic Y-axis domain
+  const elevations = drawMode.elevationProfile.map(point => point.elevation);
+  const minElevation = Math.min(...elevations, 0);
+  const maxElevation = Math.max(...elevations, 100);
+  const elevationPadding = (maxElevation - minElevation) * 0.1; // 10% padding
 
   // Empty state data for the chart
   const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
@@ -75,28 +67,34 @@ export function FloatingElevationProfile() {
     ? drawMode.elevationProfile 
     : emptyData;
 
-  console.log('Rendering elevation profile:', {
-    timestamp: new Date().toISOString(),
-    pointCount: drawMode.elevationProfile.length,
-    isUsingEmptyData: drawMode.elevationProfile.length < 2
-  });
+  // Calculate the maximum distance for X-axis domain
+  const maxDistance = Math.max(
+    ...drawMode.elevationProfile.map(point => point.distance),
+    1
+  );
 
   return (
     <div 
       data-elevation-profile
-      className="fixed left-[360px] right-4 bottom-4 bg-red-500/50 backdrop-blur-sm border border-border rounded-lg shadow-lg"
+      className="fixed mx-auto inset-x-0 bottom-4 bg-background/80 backdrop-blur-sm border border-border rounded-lg shadow-lg max-w-4xl"
       style={{
         height: '200px',
         zIndex: 9999,
+        left: '360px', // Account for sidebar
+        right: '16px',
       }}
     >
       <div className="p-4 h-full">
         <div className="flex justify-between items-start mb-2">
           <div className="text-sm space-x-4">
-            <span className="font-medium">DEBUG: Elevation Profile</span>
-            <span>Render #{renderCount.current}</span>
-            <span>Drawing: {drawMode.isDrawing ? 'YES' : 'NO'}</span>
-            <span>Points: {drawMode.elevationProfile.length}</span>
+            <span className="font-medium">Elevation Profile</span>
+            {drawMode.elevationProfile.length >= 2 && (
+              <>
+                <span>Distance: {maxDistance.toFixed(1)}km</span>
+                <span>Min: {Math.round(minElevation)}m</span>
+                <span>Max: {Math.round(maxElevation)}m</span>
+              </>
+            )}
             {drawMode.elevationProfile.length < 2 && (
               <span className="text-muted-foreground">Click points on the map to see elevation data</span>
             )}
@@ -126,13 +124,16 @@ export function FloatingElevationProfile() {
               <XAxis 
                 dataKey="distance" 
                 type="number"
-                domain={[0, 1]}
+                domain={[0, Math.max(maxDistance, 1)]}
                 tickFormatter={(value) => `${value.toFixed(1)}km`}
                 stroke="#666"
                 fontSize={12}
               />
               <YAxis 
-                domain={[0, 100]}
+                domain={[
+                  minElevation - elevationPadding,
+                  maxElevation + elevationPadding
+                ]}
                 tickFormatter={(value) => `${Math.round(value)}m`}
                 stroke="#666"
                 fontSize={12}

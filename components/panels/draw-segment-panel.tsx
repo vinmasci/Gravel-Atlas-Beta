@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useMapContext } from '@/app/contexts/map-context';
 import { useDrawMode } from '@/app/hooks/use-draw-mode';
 import { FloatingElevationProfile } from '../segments/floating-elevation-profile';
+import { useDrawModeContext } from '@/app/contexts/draw-mode-context';
 import { 
   Dialog,
   DialogContent,

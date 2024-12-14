@@ -649,7 +649,7 @@ console.log('Rendering Mapbox view with drawMode:', {
 return (
   <>
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-    <DrawModeProvider value={drawMode}>
+    <DrawModeProvider map={mapInstance}>
         <div className="w-full h-full relative">
           <Map
             {...viewState}
