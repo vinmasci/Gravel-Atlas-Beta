@@ -447,22 +447,6 @@ const handleLayerToggle = useCallback((layerId: string) => {
       }
       return newState;
     });
-    
-  } else if (layerId === 'gravel-roads') {
-    setOverlayStates(prev => {
-      const newState = { ...prev, 'gravel-roads': !prev['gravel-roads'] };
-      console.log('Toggling gravel roads:', {
-        oldState: prev['gravel-roads'],
-        newState: newState['gravel-roads']
-      });
-      const map = mapRef.current?.getMap();
-      if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        console.log('Updating gravel roads visibility');
-        updateGravelRoadsLayer(map, newState['gravel-roads']);
-        debugMapLayers();  // Add debug call here
-      }
-      return newState;
-    });
 
   } else if (layerId === 'mapillary') {
     if (MAP_STYLES[selectedStyle].type === 'google') {

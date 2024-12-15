@@ -28,7 +28,7 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
         'id': 'gravel-roads',
         'type': 'line',
         'source': 'gravel-roads',
-        'source-layer': 'lines',
+        'source-layer': 'gravel_roads',
         'layout': {
           'visibility': 'visible',
           'line-join': 'round',
@@ -45,13 +45,13 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
           ],
           'line-opacity': 0.8
         },
-        'filter': [
+        'filter': [  // Remove this entire filter section
           'any',
           ['==', ['get', 'surface'], 'fine_gravel'],
           ['==', ['get', 'surface'], 'gravel'],
           ['==', ['get', 'surface'], 'unpaved']
         ]
-      }, firstSymbolId); // Add the layer before the first symbol layer
+      }, firstSymbolId);
       
       console.log('Layer order:', {
         beforeLayer: firstSymbolId,
