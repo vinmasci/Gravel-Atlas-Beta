@@ -717,6 +717,11 @@ properties: {
       marker.style.backgroundColor = '#009999'; // Darker cyan
       marker.style.border = '2px solid black';
       marker.style.borderRadius = '50%';
+      marker.style.position = 'absolute';
+      marker.style.transform = 'translate(-50%, -50%)';
+      marker.style.pointerEvents = 'none';
+      marker.style.zIndex = '1000';
+      map.getCanvasContainer().appendChild(marker);
     }
 
     const projectedPoint = map.project(point.coordinates);
