@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from '@/components/ui/use-toast';
 import * as turf from '@turf/turf'; 
+import { useContext } from 'react';
+import { MapContext } from '@/app/contexts/map-context';
 import { updateSegmentLayer } from '@/lib/segment-layer';
 import {
   Sheet,
@@ -106,6 +108,7 @@ export function SegmentSheet({ open, onOpenChange, segment, onUpdate }: SegmentS
   const { toast } = useToast();
   const [rating, setRating] = useState<keyof typeof surfaceConditions | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const { map } = useContext(MapContext);
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -208,8 +211,7 @@ const handleVote = async () => {
       });
     }
 
-    // Force a simple refresh of the segment layer
-    const map = (window as any).map;
+    // Use the map from context to update the layer
     if (map) {
       updateSegmentLayer(map, true);
     }
