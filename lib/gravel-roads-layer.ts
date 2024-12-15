@@ -49,9 +49,12 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
             'interpolate',
             ['linear'],
             ['zoom'],
-            8, 1,
-            16, 3,
-            22, 6
+            8, 1,    // Thinnest at zoom 8
+            12, 2,   // Medium thickness at zoom 12
+            14, 2.5, // Slightly thicker at zoom 14
+            16, 3,   // Base thickness at zoom 16
+            18, 4,   // Will scale up even though using zoom 16 tiles
+            20, 5    // Maximum thickness at zoom 20
           ],
           'line-opacity': 0.8
         }

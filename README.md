@@ -257,42 +257,77 @@ Confirm source-layer name matches the tile data
 Implement proper error handling for tile loading
 Add visibility debugging tools
 
-** WHEN WE SET  UP OUR PAVED LAYER, WE NEED TO MAKE SURE THE SOURCE NAME IS DIFFERENT THAN THE UNPAVED LAYER
+## 🔄 Gravel Roads Layer Implementation Details (December 2024)
+
+### Data Extraction and Processing
+- Successfully extracted unpaved/gravel road data from OpenStreetMap australia-latest.osm.pbf
+- Used GDAL/OGR with custom query to capture:
+  - Explicitly marked unpaved/gravel surfaces
+  - Unknown surface types
+  - Roads with NULL surface data
+- Converted to Vector Tiles using Tippecanoe for web optimization
+  ```bash
+  tippecanoe -o australia_gravel_roads.mbtiles \
+  --minimum-zoom=8 \
+  --maximum-zoom=16 \
+  --layer=gravel_roads \
+  --force \
+  --no-feature-limit \
+  --no-tile-size-limit \
+  --no-tile-compression \
+  --preserve-input-order \
+  --no-line-simplification \
+  --simplify-only-low-zooms \
+  --base-zoom=10 \
+  australia_gravel_roads.geojson
+
+  Layer Features
+
+Zoom levels 8-16 for optimal performance and file size
+Progressive line width scaling (1px at zoom 8 to 5px at zoom 20)
+Color coding:
+
+Orange: Standard accessible roads
+Red: Roads marked as private or no access
 
 
-In map-styles.ts:
+Hover popups showing:
+
+Road name (when available)
+Surface type
+Access restrictions
+Speed limits (when available)
 
 
-Using 'mapbox://styles/mapbox/outdoors-v12' which might be conflicting with custom layers
 
+Technical Implementation
 
-In layer-control.tsx:
+Source: Vector tiles hosted on MapTiler
+Layer type: 'line' with rounded caps and joins
+Source layer name: 'gravel_roads'
+Custom visibility controls integrated with map overlay system
+Progressive scaling even beyond max tile zoom (16)
 
+Optimization Notes
 
-The Switch component isn't properly connected to the layer visibility state
+Max zoom level kept at 16 for file size management
+Line width interpolation used to maintain visibility at higher zooms
+Tile size optimizations maintained through Tippecanoe settings
+Efficient attribute filtering for relevant road data
 
+Future Considerations
 
-In map-sidebar.tsx:
+Potential for separate layers based on surface types
+Speed limit data enrichment
+Additional attribute filtering options
+Style variations based on road classification
+Possible integration with elevation data
 
+Copy
+This will provide a good reference for:
+1. Future development work
+2. Understanding the current implementation
+3. Discussing potential improvements with Claude or other developers
+4. Documenting the technical decisions made
 
-Layer toggle uses overlayStates but the state might not be properly propagating
-
-
-In map-view.tsx:
-
-
-Layer initialization timing might be off with style loading
-The layer might be getting added before the style is fully loaded
-
-
-In gravel-roads-layer.ts:
-
-
-Source and layer are set up correctly but might be getting overwritten by style changes
-
-
-Additional key findings:
-
-
-No error handling for tile loading failures
-No console logs showing actual tile data being received
+Would you like me to add or modify any section of this summary?
