@@ -66,6 +66,28 @@ function resampleLineEvery100m(coordinates: [number, number][]): [number, number
   return resampled;
 }
 
+// Add this new function here
+function calculatePointDistances(points: [number, number, number][]) {
+  let distance = 0;
+  return points.map((point, index, array) => {
+    if (index === 0) return { distance: 0, elevation: point[2] };
+    
+    // Calculate distance from previous point
+    const prevPoint = array[index - 1];
+    const segmentDistance = turf.distance(
+      turf.point([prevPoint[0], prevPoint[1]]),
+      turf.point([point[0], point[1]]),
+      { units: 'kilometers' }
+    );
+    
+    distance += segmentDistance;
+    return {
+      distance: distance,
+      elevation: point[2]
+    };
+  });
+}
+
 function smoothElevationData(points: ElevationPoint[], windowSize: number = 3): ElevationPoint[] {  // reduced from 5 to 3
   if (points.length < windowSize) return points;
   
@@ -398,28 +420,26 @@ map.addLayer({
       };
   
 // Calculate new elevation profile with proper distances
-let totalDistance = 0;
-      let newElevationPoints;
-      let grades: number[] = [];
+// Calculate new elevation profile with proper distances
+let newElevationPoints;
+let grades: number[] = [];
       
-      if (resampledPoints.length >= 2) {
-        const fullLine = turf.lineString(resampledPoints);
-        totalDistance = turf.length(fullLine, { units: 'kilometers' });
+if (resampledPoints.length >= 2) {
+  // Convert elevation data to [lon, lat, elev] format
+  const pointsWithElevation = elevationData.map(point => [
+    point[0],
+    point[1],
+    point[2]
+  ] as [number, number, number]);
 
-        // Calculate raw elevation points
-        newElevationPoints = elevationData.map((point, i) => {
-          const section = turf.lineSlice(
-            turf.point(resampledPoints[0]), 
-            turf.point([point[0], point[1]]), 
-            fullLine
-          );
-          const distanceAlongLine = turf.length(section, { units: 'kilometers' });
+  // Calculate elevation points with actual distances
+  newElevationPoints = calculatePointDistances(pointsWithElevation);
 
-          return {
-            distance: distanceAlongLine,
-            elevation: point[2]
-          };
-        });
+  // Smooth elevation data
+  newElevationPoints = smoothElevationData(newElevationPoints);
+  
+  // Calculate grades with minimum distance
+  grades = calculateGrades(newElevationPoints);
 
         // Smooth elevation data
         newElevationPoints = smoothElevationData(newElevationPoints);
