@@ -25,7 +25,7 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
         'id': 'gravel-roads',
         'type': 'line',
         'source': 'gravel-roads',
-        'source-layer': 'roads',
+        'source-layer': 'lines',  // Changed to match your GeoJSON
         'layout': {
           'visibility': 'visible',
           'line-join': 'round',
@@ -42,29 +42,12 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
           ],
           'line-opacity': 0.8
         },
+        // Simpler filter to start with, just match surface
         'filter': [
           'any',
-          ['in', ['get', 'surface'], ['literal', [
-            'unpaved',
-            'compacted',
-            'fine_gravel',
-            'gravel',
-            'dirt',
-            'earth',
-            'ground',
-            'grass',
-            'mud',
-            'sand',
-            'wood',
-            'unknown'
-          ]]],
-          ['all',
-            ['==', ['get', 'highway'], 'track'],
-            ['any',
-              ['==', ['get', 'surface'], ''],
-              ['==', ['get', 'surface'], 'unknown']
-            ]
-          ]
+          ['==', ['get', 'surface'], 'fine_gravel'],
+          ['==', ['get', 'surface'], 'gravel'],
+          ['==', ['get', 'surface'], 'unpaved']
         ]
       });
       console.log('Gravel roads layer added successfully');
