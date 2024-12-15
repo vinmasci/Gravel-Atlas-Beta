@@ -15,12 +15,65 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-const colorToRating = {
+// Strict color list
+const validColors = {
   '#01bf11': '1', // Green -> Well maintained
   '#ffa801': '2', // Yellow -> Occasionally rough
   '#c0392b': '4', // Red -> Very rough
   '#751203': '6'  // Maroon -> Hike-A-Bike
 };
+
+// Helper function to calculate distance between two points
+function calculateElevationMetrics(coordinates) {
+  let gain = 0;
+  let loss = 0;
+  let cumulativeDistance = 0;
+  let elevationProfile = [];
+  let lastUniquePoint = coordinates[0]; // Keep track of last non-duplicate point
+
+  for (let i = 1; i < coordinates.length; i++) {
+    const currCoord = coordinates[i];
+    
+    // Skip if this is a duplicate point (from triple joins)
+    if (currCoord[0] === lastUniquePoint[0] && 
+        currCoord[1] === lastUniquePoint[1] && 
+        currCoord[2] === lastUniquePoint[2]) {
+      continue;
+    }
+
+    // Calculate distance only for non-duplicate points
+    const segmentDistance = calculateDistance(
+      [lastUniquePoint[0], lastUniquePoint[1]], 
+      [currCoord[0], currCoord[1]]
+    );
+
+    cumulativeDistance += segmentDistance;
+
+    // Calculate elevation change
+    const elevationDiff = currCoord[2] - lastUniquePoint[2];
+    if (elevationDiff > 0) {
+      gain += elevationDiff;
+    } else {
+      loss += Math.abs(elevationDiff);
+    }
+
+    // Store profile point
+    elevationProfile.push({
+      distance: cumulativeDistance,
+      elevation: currCoord[2]
+    });
+
+    // Update last unique point
+    lastUniquePoint = currCoord;
+  }
+
+  return {
+    length: Math.round(cumulativeDistance), // Distance in meters
+    elevationGain: Math.round(gain),
+    elevationLoss: Math.round(loss),
+    elevationProfile
+  };
+}
 
 async function migrateSegments() {
   const client = new MongoClient(uri);
@@ -49,7 +102,14 @@ async function migrateSegments() {
 
         // Get the color from the first feature's properties
         const color = segment.geojson.features[0].properties.color;
-        const rating = colorToRating[color] || '4';
+        
+        // Skip segments that don't have one of our valid colors
+        if (!validColors[color]) {
+          console.log(`Skipping segment with color ${color} - not in valid color list`);
+          continue;
+        }
+
+        const rating = validColors[color];
 
         // Get coordinates with triple duplicates at joins
         let allCoordinates = [];
@@ -77,6 +137,8 @@ async function migrateSegments() {
           }
         });
 
+        const metrics = calculateElevationMetrics(allCoordinates);
+
         const newSegment = {
           gpxData: segment.gpxData,
           geojson: {
@@ -91,10 +153,7 @@ async function migrateSegments() {
           metadata: {
             title: segment.metadata.title,
             surfaceTypes: ["2"],
-            length: null,
-            elevationGain: null,
-            elevationLoss: null,
-            elevationProfile: []
+            ...metrics
           },
           votes: [{
             user_id: segment.auth0Id,
@@ -103,8 +162,8 @@ async function migrateSegments() {
             timestamp: segment.createdAt
           }],
           stats: {
-            averageRating: { $numberInt: rating },
-            totalVotes: { $numberInt: "1" }
+            averageRating: parseInt(rating),
+            totalVotes: 1
           },
           auth0Id: segment.auth0Id,
           userName: "Unknown User",
@@ -115,6 +174,7 @@ async function migrateSegments() {
         await newCollection.insertOne(newSegment);
         successfulMigrations++;
         console.log(`Successfully migrated: ${segment.metadata.title} (Color: ${color} -> Rating: ${rating})`);
+        console.log(`Distance: ${metrics.length}km, Gain: ${metrics.elevationGain}m, Loss: ${metrics.elevationLoss}m`);
 
       } catch (error) {
         console.error(`Error migrating segment ${segment._id}:`, error);

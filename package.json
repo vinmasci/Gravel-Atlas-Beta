@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "vercel-build": "npm install --force canvas@2.11.2 && npm run build",
-    "migrate": "node scripts/migrate-segments.js"
+    "migrate": "node scripts/migrate-segments.js",
+    "stitch": "node scripts/stitch-segments.js"
 },
 
   "dependencies": {

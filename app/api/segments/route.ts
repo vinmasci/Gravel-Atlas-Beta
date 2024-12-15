@@ -1,21 +1,22 @@
-// app/api/segments/route.ts - List/Get segments
+// app/api/segments/route.ts
 import { NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+// import { getSession } from '@auth0/nextjs-auth0'; // Comment this out for now
 import { DrawnSegment } from '../../../app/models/DrawnSegment'
 import { dbConnect } from '../../../lib/mongodb';
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    // Remove session check for now
+    // const session = await getSession();
     const { searchParams } = new URL(req.url);
     
     await dbConnect();
 
     // Parse query parameters
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '3000'); // Increased limit
     const page = parseInt(searchParams.get('page') || '1');
     const userId = searchParams.get('userId');
-    const bounds = searchParams.get('bounds')?.split(',').map(Number); // [west, south, east, north]
+    const bounds = searchParams.get('bounds')?.split(',').map(Number);
 
     // Build query
     const query: any = {};
@@ -25,35 +26,38 @@ export async function GET(req: Request) {
     }
 
     if (bounds) {
-      // Create a polygon in the correct format for MongoDB
       const boundingBox = {
         type: 'Polygon',
         coordinates: [[
-          [bounds[0], bounds[1]], // west, south
-          [bounds[0], bounds[3]], // west, north
-          [bounds[2], bounds[3]], // east, north
-          [bounds[2], bounds[1]], // east, south
-          [bounds[0], bounds[1]]  // closing point (same as first)
+          [bounds[0], bounds[1]],
+          [bounds[0], bounds[3]],
+          [bounds[2], bounds[3]],
+          [bounds[2], bounds[1]],
+          [bounds[0], bounds[1]]
         ]]
       };
     
-      // Use $geoWithin instead of $geoIntersects for better performance with bounding boxes
       query['geojson.geometry'] = {
         $geoWithin: {
           $geometry: boundingBox
         }
       };
     }
+
+    // Add console.log to see what's happening
+    console.log('Query:', JSON.stringify(query));
     
-    // Also, we need to include all necessary fields in the select
     const segments = await DrawnSegment
-    .find(query)
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .select('-gpxData'); // Just exclude gpxData, include everything else
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select('-gpxData');
+
+    console.log(`Found ${segments.length} segments`);
 
     const total = await DrawnSegment.countDocuments(query);
+    console.log(`Total documents matching query: ${total}`);
 
     return NextResponse.json({
       segments,
