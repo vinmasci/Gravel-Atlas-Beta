@@ -9,6 +9,8 @@ import { updatePhotoLayer } from '../lib/photo-layer';
 import { updateSegmentLayer } from '../lib/segment-layer';
 import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } from '../lib/gravel-roads-layer';
 import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '../lib/bike-infrastructure-layer'; 
+import { addPrivateRoadsLayer, updatePrivateRoadsLayer } from '../lib/private-roads-layer'; 
+import { addUnknownSurfaceSource, addUnknownSurfaceLayer, updateUnknownSurfaceLayer } from '../lib/unknown-surface-layer';
 import { MapSidebar } from './map-sidebar';
 import { MAP_STYLES } from '../app/constants/map-styles';
 import type { MapStyle } from '../app/types/map';
@@ -232,7 +234,8 @@ export function MapView() {
     'speed-limits': false,
     'private-roads': false,
     mapillary: false,
-    'bike-infrastructure': false  // Add this line
+    'bike-infrastructure': false,
+    'unknown-surface': false 
   });
 
   const [layers] = useState([
@@ -492,6 +495,17 @@ else if (layerId === 'private-roads') {
   });
 }
 
+else if (layerId === 'unknown-surface') {
+  setOverlayStates(prev => {
+    const newState = { ...prev, 'unknown-surface': !prev['unknown-surface'] };
+    const map = mapRef.current?.getMap();
+    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+      updateUnknownSurfaceLayer(map, newState['unknown-surface']);
+    }
+    return newState;
+  });
+}
+
 else if (layerId === 'mapillary') {
     // ... rest of existing mapillary code ...
   } else {
@@ -718,6 +732,11 @@ return (
                   layerExists: !!map.getLayer('bike-infrastructure'),
                   layerType: map.getLayer('bike-infrastructure') ? map.getLayer('bike-infrastructure').type : null
                 });
+
+                  // Initialize unknown surface layer
+  addUnknownSurfaceSource(map);
+  addUnknownSurfaceLayer(map);
+  updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
 
                     // Initialize private roads layer
     addPrivateRoadsLayer(map);

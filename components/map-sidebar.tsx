@@ -151,9 +151,10 @@ export function MapSidebar({
                   { id: 'photos', label: 'Photos' },
                   { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
                   { id: 'bike-infrastructure', label: 'Bike Infrastructure' },  // Add this line
+                  { id: 'unknown-surface', label: 'Unknown Surface Roads' },
+                  { id: 'private-roads', label: 'Private Access Roads' },
                   { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
                   { id: 'speed-limits', label: 'Speed Limits' },
-                  { id: 'private-roads', label: 'Private Access Roads' },
                   { id: 'mapillary', label: 'Mapillary' }
                 ].map((overlay) => (
                   <div key={overlay.id} className="flex items-center space-x-2">
