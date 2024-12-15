@@ -173,10 +173,13 @@ const cleanupSegmentLayer = (map: Map) => {
   }
 };
 
+// In lib/segment-layer.ts, modify the updateSegmentLayer function:
+
 export const updateSegmentLayer = async (
   map: Map, 
   visible: boolean,
-  onSegmentClick?: SegmentClickHandler
+  onSegmentClick?: SegmentClickHandler,
+  updatedSegment?: any // Add this parameter
 ) => {
   try {
     if (!visible) {
@@ -187,64 +190,48 @@ export const updateSegmentLayer = async (
     // Set up the layer if it doesn't exist
     setupSegmentLayer(map, onSegmentClick);
 
-    // Get map bounds for query
+    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+    if (!source) return;
+
+    // If we have an updated segment, just update that one feature
+    if (updatedSegment) {
+      const currentData = (source as any)._data;
+      if (currentData && currentData.features) {
+        const updatedFeatures = currentData.features.map((feature: any) => {
+          if (feature.properties.id === updatedSegment._id) {
+            return {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                averageRating: updatedSegment.stats?.averageRating,
+                totalVotes: updatedSegment.stats?.totalVotes
+              }
+            };
+          }
+          return feature;
+        });
+
+        source.setData({
+          type: 'FeatureCollection',
+          features: updatedFeatures
+        });
+        return;
+      }
+    }
+
+    // Otherwise, fetch and update all segments
     const bounds = map.getBounds();
     const boundsString = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-
-    // Fetch segments from the API
     const response = await fetch(`/api/segments?bounds=${boundsString}`);
     const data = await response.json();
 
     // Update source data
-    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: data.segments?.map((segment: any) => {
-          if (segment.geojson.type === 'FeatureCollection') {
-            // Return all features with our properties
-            return segment.geojson.features.map(feature => ({
-              type: 'Feature',
-              geometry: feature.geometry,
-              properties: {
-                id: segment._id,
-                title: segment.metadata.title,
-                length: segment.metadata.length,
-                userName: segment.userName,
-                auth0Id: segment.auth0Id,
-                averageRating: segment.stats?.averageRating,
-                totalVotes: segment.stats?.totalVotes,
-                metadata: {
-                  elevationProfile: segment.metadata.elevationProfile || [],
-                  elevationGain: segment.metadata.elevationGain,
-                  elevationLoss: segment.metadata.elevationLoss
-                }
-              }
-            }));
-          } else {
-            // Handle single Feature case as before
-            return {
-              type: 'Feature',
-              geometry: segment.geojson.geometry,
-              properties: {
-                id: segment._id,
-                title: segment.metadata.title,
-                length: segment.metadata.length,
-                userName: segment.userName,
-                auth0Id: segment.auth0Id,
-                averageRating: segment.stats?.averageRating,
-                totalVotes: segment.stats?.totalVotes,
-                metadata: {
-                  elevationProfile: segment.metadata.elevationProfile || [],
-                  elevationGain: segment.metadata.elevationGain,
-                  elevationLoss: segment.metadata.elevationLoss
-                }
-              }
-            };
-          }
-        }).flat() || []  // Flatten the array since some items might be arrays of features
-      });
-    }
+    source.setData({
+      type: 'FeatureCollection',
+      features: data.segments?.map((segment: any) => {
+        // ... rest of your existing mapping code ...
+      }).flat() || []
+    });
   } catch (error) {
     console.error('Error updating segment layer:', error);
   }

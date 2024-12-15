@@ -200,19 +200,15 @@ const handleVote = async () => {
 
     const data = await response.json();
     
-    // Update the local state
+    // Update local state
     if (onUpdate) {
-      onUpdate({
-        ...segment,
-        stats: data.stats,
-      });
+      onUpdate(data.segment);
     }
 
-    // Force a refresh of the segments layer
+    // Update the map layer with just this segment
     const map = (window as any).map;
     if (map) {
-      // Pass true to make visible and include the onSegmentClick handler
-      updateSegmentLayer(map, true, onUpdate);
+      await updateSegmentLayer(map, true, onUpdate, data.segment);
     }
 
     toast({
@@ -220,6 +216,7 @@ const handleVote = async () => {
       description: "Thank you for your contribution!",
     });
   } catch (error) {
+    console.error('Error submitting vote:', error);
     toast({
       title: "Error",
       description: "Failed to submit vote. Please try again.",
