@@ -45,17 +45,17 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
             '#ff0000',  // Red for 'no' access or 'private'
             '#d35400'   // Original orange for all other roads
           ],
-          'line-width': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            8, 1,    // Thinnest at zoom 8
-            12, 2,   // Medium thickness at zoom 12
-            14, 2.5, // Slightly thicker at zoom 14
-            16, 3,   // Base thickness at zoom 16
-            18, 4,   // Will scale up even though using zoom 16 tiles
-            20, 5    // Maximum thickness at zoom 20
-          ],
+'line-width': [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  8, 0.5,    // Thinner at low zoom
+  12, 1,     // Still thin at medium zoom
+  14, 1.5,   // Slightly thicker
+  16, 2,     // Medium thickness
+  18, 2.5,   // Slightly thicker at high zoom
+  20, 3      // Maximum thickness
+],
           'line-opacity': 0.8
         }
       }, firstSymbolId);
