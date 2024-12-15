@@ -200,27 +200,52 @@ export const updateSegmentLayer = async (
     if (source) {
       source.setData({
         type: 'FeatureCollection',
-        features: data.segments?.map((segment: any) => ({
-          type: 'Feature',
-          geometry: segment.geojson.geometry,
-          properties: {
-            id: segment._id,
-            title: segment.metadata.title,
-            length: segment.metadata.length,
-            userName: segment.userName,
-            auth0Id: segment.auth0Id,  // Add this line
-            averageRating: segment.stats?.averageRating,
-            totalVotes: segment.stats?.totalVotes,
-            metadata: {  // Add this section
-              elevationProfile: segment.metadata.elevationProfile || [],
-              elevationGain: segment.metadata.elevationGain,
-              elevationLoss: segment.metadata.elevationLoss }
+        features: data.segments?.map((segment: any) => {
+          if (segment.geojson.type === 'FeatureCollection') {
+            // Return all features with our properties
+            return segment.geojson.features.map(feature => ({
+              type: 'Feature',
+              geometry: feature.geometry,
+              properties: {
+                id: segment._id,
+                title: segment.metadata.title,
+                length: segment.metadata.length,
+                userName: segment.userName,
+                auth0Id: segment.auth0Id,
+                averageRating: segment.stats?.averageRating,
+                totalVotes: segment.stats?.totalVotes,
+                metadata: {
+                  elevationProfile: segment.metadata.elevationProfile || [],
+                  elevationGain: segment.metadata.elevationGain,
+                  elevationLoss: segment.metadata.elevationLoss
+                }
+              }
+            }));
+          } else {
+            // Handle single Feature case as before
+            return {
+              type: 'Feature',
+              geometry: segment.geojson.geometry,
+              properties: {
+                id: segment._id,
+                title: segment.metadata.title,
+                length: segment.metadata.length,
+                userName: segment.userName,
+                auth0Id: segment.auth0Id,
+                averageRating: segment.stats?.averageRating,
+                totalVotes: segment.stats?.totalVotes,
+                metadata: {
+                  elevationProfile: segment.metadata.elevationProfile || [],
+                  elevationGain: segment.metadata.elevationGain,
+                  elevationLoss: segment.metadata.elevationLoss
+                }
+              }
+            };
           }
-        })) || []
+        }).flat() || []  // Flatten the array since some items might be arrays of features
       });
     }
-
   } catch (error) {
-    console.error('Error updating segments layer:', error);
+    console.error('Error updating segment layer:', error);
   }
 };
