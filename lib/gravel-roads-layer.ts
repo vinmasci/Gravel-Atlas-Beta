@@ -30,6 +30,11 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
         'type': 'line',
         'source': 'gravel-roads',
         'source-layer': 'gravel_roads',
+        'filter': [
+          'all',
+          ['!=', ['get', 'access'], 'private'],
+          ['!=', ['get', 'access'], 'no']
+        ],
         'layout': {
           'visibility': 'visible',
           'line-join': 'round',

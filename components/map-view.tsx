@@ -481,6 +481,17 @@ else if (layerId === 'bike-infrastructure') {
   });
 }
 
+else if (layerId === 'private-roads') {
+  setOverlayStates(prev => {
+    const newState = { ...prev, 'private-roads': !prev['private-roads'] };
+    const map = mapRef.current?.getMap();
+    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+      updatePrivateRoadsLayer(map, newState['private-roads']);
+    }
+    return newState;
+  });
+}
+
 else if (layerId === 'mapillary') {
     // ... rest of existing mapillary code ...
   } else {
@@ -707,6 +718,10 @@ return (
                   layerExists: !!map.getLayer('bike-infrastructure'),
                   layerType: map.getLayer('bike-infrastructure') ? map.getLayer('bike-infrastructure').type : null
                 });
+
+                    // Initialize private roads layer
+    addPrivateRoadsLayer(map);
+    updatePrivateRoadsLayer(map, overlayStates['private-roads']);
             
                 // Update visibility
                 updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
