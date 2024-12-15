@@ -26,6 +26,83 @@ const logStateChange = (action: string, data: any) => {
   });
 };
 
+function resampleLineEvery100m(coordinates: [number, number][]): [number, number][] {
+  if (coordinates.length < 2) return coordinates;
+  
+  // Create a line from the coordinates
+  const line = turf.lineString(coordinates);
+  
+  // Get total length in kilometers
+  const length = turf.length(line, {units: 'kilometers'});
+  
+  // Calculate how many points we need for 100m intervals
+  const pointsCount = Math.floor(length * 10) + 1; // *10 because 1km = 10 points at 100m intervals
+  
+  if (pointsCount <= 1) return coordinates;
+
+  // Create points at regular intervals
+  const resampled = [];
+  for (let i = 0; i < pointsCount; i++) {
+      const point = turf.along(line, i * 0.1, {units: 'kilometers'}); // 0.1 km = 100m
+      resampled.push(point.geometry.coordinates as [number, number]);
+  }
+  
+  // Always include the last point if it's not already included
+  const lastOriginal = coordinates[coordinates.length - 1];
+  const lastResampled = resampled[resampled.length - 1];
+  
+  if (lastOriginal[0] !== lastResampled[0] || lastOriginal[1] !== lastResampled[1]) {
+      resampled.push(lastOriginal);
+  }
+
+  return resampled;
+}
+
+function smoothElevationData(points: ElevationPoint[], windowSize: number = 3): ElevationPoint[] {  // reduced from 5 to 3
+  if (points.length < windowSize) return points;
+  
+  return points.map((point, i) => {
+      // Get surrounding points for averaging
+      const start = Math.max(0, i - Math.floor(windowSize / 2));
+      const end = Math.min(points.length, start + windowSize);
+      const window = points.slice(start, end);
+      
+      // Calculate average elevation for window
+      const avgElevation = window.reduce((sum, p) => sum + p.elevation, 0) / window.length;
+      
+      return {
+          distance: point.distance,
+          elevation: avgElevation
+      };
+  });
+}
+
+function calculateGrades(points: ElevationPoint[], minDistance: number = 0.05): number[] {  // reduced from 0.1 to 0.05
+  // Calculate grades over minimum distance (50m = 0.05km)
+  const grades: number[] = [];
+  
+  for (let i = 0; i < points.length; i++) {
+      // Find next point that's at least minDistance away
+      let j = i + 1;
+      while (j < points.length && (points[j].distance - points[i].distance) < minDistance) {
+          j++;
+      }
+      
+      if (j < points.length) {
+          const distance = points[j].distance - points[i].distance;
+          const elevationChange = points[j].elevation - points[i].elevation;
+          // Calculate grade as percentage
+          const grade = (elevationChange / (distance * 1000)) * 100;
+          grades.push(grade);
+      } else {
+          // For last points where we can't get full distance, use previous grade
+          grades.push(grades.length > 0 ? grades[grades.length - 1] : 0);
+      }
+  }
+  
+  return grades;
+}
+
 async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
     logStateChange('getElevation called', { coordinates });
     
@@ -260,9 +337,16 @@ map.addLayer({
       // Get snapped points first
       const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
       logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
-  
-      // Get elevation for ALL snapped points
-      const elevationData = await getElevation(newPoints);
+
+      // Resample points to 100m intervals
+      const resampledPoints = resampleLineEvery100m(newPoints);
+      logStateChange('Points resampled', { 
+          originalCount: newPoints.length, 
+          resampledCount: resampledPoints.length 
+      });
+
+      // Get elevation for resampled points only
+      const elevationData = await getElevation(resampledPoints);
       logStateChange('Elevation data received', { elevationData });
   
       // Create new segment
@@ -271,31 +355,58 @@ map.addLayer({
         roadPoints: newPoints
       };
   
-      // Calculate new elevation profile with proper distances
-      let totalDistance = elevationProfile.length > 0 
-        ? elevationProfile[elevationProfile.length - 1].distance 
-        : 0;
-  
-      const newElevationPoints = elevationData.map((point, i) => {
-        // Calculate distance from previous point
-        if (i > 0 || drawnCoordinates.length > 0) {
-          const prevPoint = i > 0 
-            ? newPoints[i - 1] 
-            : drawnCoordinates[drawnCoordinates.length - 1];
-          
-          const distance = turf.distance(
-            turf.point(prevPoint),
-            turf.point([point[0], point[1]]),
-            { units: 'kilometers' }
+// Calculate new elevation profile with proper distances
+let totalDistance = 0;
+      let newElevationPoints;
+      let grades: number[] = [];
+      
+      if (resampledPoints.length >= 2) {
+        const fullLine = turf.lineString(resampledPoints);
+        totalDistance = turf.length(fullLine, { units: 'kilometers' });
+
+        // Calculate raw elevation points
+        newElevationPoints = elevationData.map((point, i) => {
+          const section = turf.lineSlice(
+            turf.point(resampledPoints[0]), 
+            turf.point([point[0], point[1]]), 
+            fullLine
           );
-          totalDistance += distance;
-        }
-  
-        return {
-          distance: totalDistance,
-          elevation: point[2]
-        };
-      });
+          const distanceAlongLine = turf.length(section, { units: 'kilometers' });
+
+          return {
+            distance: distanceAlongLine,
+            elevation: point[2]
+          };
+        });
+
+        // Smooth elevation data
+        newElevationPoints = smoothElevationData(newElevationPoints);
+        
+        // Calculate grades with minimum distance
+        grades = calculateGrades(newElevationPoints);
+        
+        // Filter out unrealistic grades (anything over 25% or under -25%)
+        const filteredGrades = grades.filter(g => Math.abs(g) <= 25);
+        
+        // Update max/min grades
+        const maxGrade = filteredGrades.length > 0 ? 
+          Math.max(...filteredGrades) : 0;
+        const minGrade = filteredGrades.length > 0 ? 
+          Math.min(...filteredGrades) : 0;
+        
+        logStateChange('Grade calculations', { 
+          maxGrade, 
+          minGrade, 
+          pointCount: newElevationPoints.length 
+        });
+
+} else {
+  // Handle single point case
+  newElevationPoints = elevationData.map((point) => ({
+    distance: 0,
+    elevation: point[2]
+  }));
+}
   
       logStateChange('New elevation points calculated', {
         newPoints: newElevationPoints,
