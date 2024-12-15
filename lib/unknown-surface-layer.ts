@@ -30,12 +30,15 @@ export const addUnknownSurfaceLayer = (map: mapboxgl.Map) => {
         'id': 'unknown-surface',
         'type': 'line',
         'source': 'unknown-surface',
-        'source-layer': 'gravel_roads',
+        'source-layer': 'roads',
 'filter': [
   'any',
-  ['==', 'surface', 'unknown'],
-  ['==', 'surface', ''],
-  ['==', 'surface', null],
+  ['==', ['get', 'surface'], 'unknown'],
+  ['==', ['get', 'surface'], ''],
+  ['all', 
+    ['has', 'surface'],
+    ['==', ['get', 'surface'], null]
+  ],
   ['!has', 'surface']
 ],
         'layout': {
