@@ -491,3 +491,49 @@ Planning to implement using the same method that worked for gravel roads:
   - Surface types and access information
 - Will extract key properties: osm_id, name, highway, surface, maxspeed, access, bicycle, cycleway
 - Convert to vector tiles using identical tippecanoe settings that worked for gravel roads
+
+🔄 Bike Path Data Extraction (16th December 2024)
+Methodology
+Successfully extracted bike path data from OpenStreetMap (australia-latest.osm.pbf) using GDAL/OGR:
+
+Created custom osmconf.ini to capture bicycle-specific attributes
+Used ogr2ogr to extract paths with dedicated cycling infrastructure and bicycle designations
+Exported to GeoJSON format (~391.4MB)
+
+Configuration
+Created streamlined osmconf.ini with essential fields:
+iniCopy[lines]
+osm_id=yes
+osm_timestamp=no
+osm_version=no
+osm_uid=no
+osm_user=no
+osm_changeset=no
+attributes=name,highway,surface,maxspeed,access,bicycle,cycleway,designation
+Query Used
+bashCopyogr2ogr -f "GeoJSON" australia_bike_paths.geojson -overwrite -oo CONFIG_FILE=osmconf.ini australia-latest.osm.pbf -sql "SELECT osm_id, name, highway, surface, maxspeed, access, bicycle, cycleway, designation FROM lines WHERE highway = 'cycleway' OR bicycle = 'designated' OR bicycle = 'yes'"
+Results
+
+Successfully generated GeoJSON file containing bike paths
+Captured multiple types of cycling infrastructure:
+
+Dedicated cycleways
+Designated bike paths
+Shared paths
+Tracks marked for bicycle use
+
+
+
+Known Issues
+
+DeleteLayer() errors during extraction (didn't affect output)
+Initial field recognition issues with bicycle tags (resolved with custom osmconf.ini)
+Large file size may need optimization for web use
+
+Next Steps
+
+Convert to vector tiles using Tippecanoe
+Implement proper styling based on path types
+Add to map layer system with toggle functionality
+
+Would you like me to help you tackle any of these next steps?
