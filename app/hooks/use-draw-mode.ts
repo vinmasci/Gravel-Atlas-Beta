@@ -148,8 +148,8 @@ export const useDrawMode = (map: Map | null) => {
 
     // Clean up existing layers
     if (layerRefs.current.drawing) {
-      logStateChange('Cleaning up existing drawing layer');
       map.removeLayer(layerRefs.current.drawing);
+      map.removeLayer(`${layerRefs.current.drawing}-stroke`);
       map.removeSource(layerRefs.current.drawing);
     }
     if (layerRefs.current.markers) {
@@ -163,41 +163,58 @@ export const useDrawMode = (map: Map | null) => {
     const markersId = `markers-${Date.now()}`;
     logStateChange('Creating new layers', { drawingId, markersId });
 
-    // Add drawing layer
-    map.addSource(drawingId, {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'LineString', coordinates: [] }
-      }
-    });
+// Add drawing layer
+map.addSource(drawingId, {
+  type: 'geojson',
+  data: {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'LineString', coordinates: [] }
+  }
+});
 
-    map.addLayer({
-      id: drawingId,
-      type: 'line',
-      source: drawingId,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ff0000', 'line-width': 3 }
-    });
+map.addLayer({
+  id: `${drawingId}-stroke`,  // stroke layer (goes first/underneath)
+  type: 'line',
+  source: drawingId,
+  layout: { 'line-cap': 'round', 'line-join': 'round' },
+  paint: { 
+    'line-color': '#000000',  // black stroke
+    'line-width': 5,  // slightly wider than main line
+    'line-opacity': 1
+  }
+});
 
-    // Add markers layer
-    map.addSource(markersId, {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] }
-    });
+map.addLayer({
+  id: drawingId,  // main cyan line (goes on top of stroke)
+  type: 'line',
+  source: drawingId,
+  layout: { 'line-cap': 'round', 'line-join': 'round' },
+  paint: { 
+    'line-color': '#00ffff',  // cyan main line
+    'line-width': 3,
+    'line-opacity': 1
+  }
+});
 
-    map.addLayer({
-      id: markersId,
-      type: 'circle',
-      source: markersId,
-      paint: {
-        'circle-radius': 5,
-        'circle-color': '#ffffff',
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ff0000'
-      }
-    });
+// Add markers layer
+map.addSource(markersId, {
+  type: 'geojson',
+  data: { type: 'FeatureCollection', features: [] }
+});
+
+map.addLayer({
+  id: markersId,
+  type: 'circle',
+  source: markersId,
+  paint: {
+    'circle-radius': 5,
+    'circle-color': '#00ffff',
+    'circle-opacity': 1,
+    'circle-stroke-width': 1,
+    'circle-stroke-color': '#000000'
+  }
+});
 
     layerRefs.current = { drawing: drawingId, markers: markersId };
     logStateChange('Layers initialized', layerRefs.current);
@@ -306,7 +323,8 @@ export const useDrawMode = (map: Map | null) => {
       });
   
 // Update coordinates with elevation data
-const allCoordinates = elevationData; // Use elevation data directly since it has [lon, lat, elevation]
+// Update coordinates with elevation data
+const allCoordinates = [...drawnCoordinates, ...elevationData]; // Combine existing and new coordinates
 setDrawnCoordinates(allCoordinates);
 
 // Update map sources
@@ -467,24 +485,25 @@ properties: {
         markers: !!layerRefs.current.markers
       }
     });
-
+  
     if (!map) return;
     
     if (pendingOperation.current) {
       logStateChange('Aborting pending operation');
       pendingOperation.current.abort();
     }
-
+  
     if (layerRefs.current.drawing) {
-      map.removeLayer(layerRefs.current.drawing);
+      map.removeLayer(`${layerRefs.current.drawing}-stroke`); // Remove stroke layer
+      map.removeLayer(layerRefs.current.drawing);            // Remove main line layer
       map.removeSource(layerRefs.current.drawing);
     }
-
+  
     if (layerRefs.current.markers) {
       map.removeLayer(layerRefs.current.markers);
       map.removeSource(layerRefs.current.markers);
     }
-
+  
     layerRefs.current = { drawing: null, markers: null };
     
     setDrawnCoordinates([]);
@@ -493,7 +512,7 @@ properties: {
     setSegments([]);
     setIsDrawing(false);
     map.getCanvas().style.cursor = '';
-
+  
     logStateChange('Drawing cleared', {
       isDrawing: false,
       coordinatesCount: 0,

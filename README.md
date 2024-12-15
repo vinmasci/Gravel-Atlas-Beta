@@ -1,5 +1,9 @@
 # Gravel Atlas Essential Documentation
 
+SOME RULES
+1. Dont try to edit my files yourself
+2. Be specific when adding code suggestions.. always show precisely where and how to add code into existing files.. Before and after is a good technique.
+
 ## 🎯 Project Overview
 A web application for mapping and exploring gravel roads across Australia, built with Next.js, Mapbox, and modern web technologies.
 
