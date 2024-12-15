@@ -426,13 +426,24 @@ export function MapView() {
 
 // Handle layer toggle
 const handleLayerToggle = useCallback((layerId: string) => {
-  if (layerId === 'photos') {
+  if (layerId === 'gravel-roads') {
     setOverlayStates(prev => {
-      const newState = { ...prev, photos: !prev.photos };
+      const newState = { ...prev, 'gravel-roads': !prev['gravel-roads'] };
+      console.log('Toggling gravel roads:', {
+        oldState: prev['gravel-roads'],
+        newState: newState['gravel-roads']
+      });
       const map = mapRef.current?.getMap();
       if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        updatePhotoLayer(map, newState.photos)
-          .catch(error => console.error('Error updating photo layer:', error));
+        console.log('Updating gravel roads visibility to:', newState['gravel-roads']);
+        updateGravelRoadsLayer(map, newState['gravel-roads']);
+        
+        // Add debug call
+        console.log('Layer state after toggle:', {
+          layerExists: !!map.getLayer('gravel-roads'),
+          sourceExists: !!map.getSource('gravel-roads'),
+          currentVisibility: map.getLayoutProperty('gravel-roads', 'visibility')
+        });
       }
       return newState;
     });

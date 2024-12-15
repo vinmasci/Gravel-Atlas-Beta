@@ -1,3 +1,5 @@
+//IGNORE THIS FILE ITS NOT SET UP
+
 import { Switch } from '@/components/ui/switch';
 
 interface LayerControlProps {
