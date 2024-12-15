@@ -282,6 +282,40 @@ map.addLayer({
   }
 });
 
+// Add map hover handlers
+map.on('mousemove', drawingId, (e) => {
+  if (!e.features?.[0]) return;
+
+  const coordinates = e.lngLat.toArray() as [number, number];
+  const allCoords = drawnCoordinates;
+  let minDistance = Infinity;
+  let closestIndex = 0;
+
+  allCoords.forEach((coord, index) => {
+    const dist = turf.distance(
+      turf.point(coord),
+      turf.point(coordinates)
+    );
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestIndex = index;
+    }
+  });
+
+  if (minDistance < 0.0001) { // About 10 meters at the equator
+    handleHover({
+      coordinates: allCoords[closestIndex],
+      distance: elevationProfile[closestIndex]?.distance || 0,
+      elevation: elevationProfile[closestIndex]?.elevation || 0,
+      index: closestIndex
+    });
+  }
+});
+
+map.on('mouseleave', drawingId, () => {
+  handleHover(null);
+});
+
 // Add markers layer
 map.addSource(markersId, {
   type: 'geojson',
@@ -678,12 +712,11 @@ properties: {
     if (!marker) {
       marker = document.createElement('div');
       marker.id = 'hover-point-marker';
-      marker.className = 'w-4 h-4 bg-red-500 rounded-full border-2 border-white';
-      marker.style.position = 'absolute';
-      marker.style.transform = 'translate(-50%, -50%)';
-      marker.style.pointerEvents = 'none';
-      marker.style.zIndex = '1000';
-      map.getCanvasContainer().appendChild(marker);
+      marker.style.width = '12px';
+      marker.style.height = '12px';
+      marker.style.backgroundColor = '#009999'; // Darker cyan
+      marker.style.border = '2px solid black';
+      marker.style.borderRadius = '50%';
     }
 
     const projectedPoint = map.project(point.coordinates);
