@@ -268,17 +268,27 @@ const handleSubmitComment = async () => {
   if (!segment) return null;
 
   // Convert 3D coordinates to elevation profile with safety checks
-  const coordinates = segment.geojson?.geometry?.coordinates || [];
-  const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index) => ({
-    distance: index > 0 
-      ? turf.distance(
-          turf.point([coordinates[0][0], coordinates[0][1]]), 
-          turf.point([coord[0], coord[1]]),
-          { units: 'kilometers' }
-        )
-      : 0,
+// Convert 3D coordinates to elevation profile with safety checks
+const coordinates = segment.geojson?.geometry?.coordinates || [];
+const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index, array) => {
+  let cumulativeDistance = 0;
+  
+  // Calculate cumulative distance up to this point
+  for (let i = 1; i <= index; i++) {
+    const prevPoint = array[i - 1];
+    const currentPoint = array[i];
+    cumulativeDistance += turf.distance(
+      turf.point([prevPoint[0], prevPoint[1]]),
+      turf.point([currentPoint[0], currentPoint[1]]),
+      { units: 'kilometers' }
+    );
+  }
+  
+  return {
+    distance: cumulativeDistance,
     elevation: coord[2] // The elevation is the third number in each coordinate
-  })) : [];
+  };
+}) : [];
 
   const elevations = coordinates.map(coord => coord[2] || 0);
   const minElevation = elevations.length > 0 ? Math.min(...elevations, 0) : 0;
@@ -291,7 +301,7 @@ const handleSubmitComment = async () => {
 <SheetContent 
   side="right"
   className={cn(
-    "w-full sm:w-[400px] p-6",
+    "w-full sm:w-[600px] p-6",  // Increased from 400px to 600px
     "sm:h-full overflow-y-auto",
     "h-[80vh] rounded-t-[10px] sm:rounded-none",
     "bottom-0 sm:bottom-auto"
@@ -368,66 +378,100 @@ const handleSubmitComment = async () => {
   )}
 </div>
 
-          {/* Elevation Profile */}
-          {elevationProfile.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Elevation Gain: {elevationGain}m</span>
-                <span>Loss: {elevationLoss}m</span>
-              </div>
-              <div className="h-[200px] border rounded-lg p-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={elevationProfile}>
-                    <defs>
-                      <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                    <XAxis 
-  dataKey="distance" 
-  type="number"
-  domain={[0, elevationProfile[elevationProfile.length - 1]?.distance || 0]}
-  tickFormatter={(value) => `${value.toFixed(1)}km`}
-  stroke="#666"
-  fontSize={12}
-  ticks={[
-    0,
-    ...Array.from(
-      { length: 4 },
-      (_, i) => ((elevationProfile[elevationProfile.length - 1]?.distance || 0) * (i + 1)) / 5
-    )
-  ]}
-/>
-                    <YAxis 
-                      domain={[minElevation - 10, maxElevation + 10]}
-                      tickFormatter={(value) => `${Math.round(value)}m`}
-                      stroke="#666"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => `${Math.round(value)}m`}
-                      labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-                      contentStyle={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white'
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="elevation"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      fill="url(#elevationGradient)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
+{/* Elevation Profile */}
+{elevationProfile.length > 0 && (
+  <div className="space-y-2">
+    <div className="flex justify-between text-sm text-muted-foreground">
+      <span>Elevation Gain: {elevationGain}m</span>
+      <span>Loss: {elevationLoss}m</span>
+    </div>
+    <div className="h-[200px] w-full border rounded-lg p-4" style={{ minWidth: '300px' }}>
+    <ResponsiveContainer width="100%" height="100%" minWidth={280}>
+        <AreaChart data={elevationProfile.map((point, index, array) => {
+          // Calculate gradient for each point
+          let gradient = 0;
+          if (index > 0) {
+            const prevPoint = array[index - 1];
+            const rise = point.elevation - prevPoint.elevation;
+            const run = (point.distance - prevPoint.distance) * 1000; // Convert km to m
+            gradient = (rise / run) * 100;
+          }
+          return {
+            ...point,
+            gradient
+          };
+        })}>
+          <defs>
+            <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+          <XAxis 
+            dataKey="distance" 
+            type="number"
+            domain={[0, elevationProfile[elevationProfile.length - 1]?.distance || 0]}
+            tickFormatter={(value) => `${value.toFixed(1)}km`}
+            stroke="#666"
+            fontSize={12}
+            ticks={[
+              0,
+              ...Array.from(
+                { length: 4 },
+                (_, i) => ((elevationProfile[elevationProfile.length - 1]?.distance || 0) * (i + 1)) / 5
+              )
+            ]}
+          />
+          <YAxis 
+            domain={[minElevation - 10, maxElevation + 10]}
+            tickFormatter={(value) => `${Math.round(value)}m`}
+            stroke="#666"
+            fontSize={12}
+          />
+          <YAxis 
+            yAxisId="right"
+            orientation="right"
+            domain={[-15, 15]}
+            tickFormatter={(value) => `${value}%`}
+            stroke="#3b82f6"
+            fontSize={12}
+          />
+          <Tooltip 
+            formatter={(value: number, name: string) => {
+              if (name === 'elevation') return [`${Math.round(value)}m`, 'Elevation'];
+              if (name === 'gradient') return [`${value.toFixed(1)}%`, 'Gradient'];
+              return [value, name];
+            }}
+            labelFormatter={(value: number) => `${value.toFixed(1)} km`}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'white'
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="elevation"
+            stroke="#ef4444"
+            strokeWidth={2}
+            fill="url(#elevationGradient)"
+          />
+          <Area
+            yAxisId="right"
+            type="monotone"
+            dataKey="gradient"
+            stroke="#3b82f6"
+            strokeWidth={1}
+            fill="none"
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+)}
 
           {/* Rating Section in Accordion */}
           <Accordion type="single" collapsible>
