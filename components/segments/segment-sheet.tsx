@@ -301,10 +301,11 @@ const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index,
 <SheetContent 
   side="right"
   className={cn(
-    "w-full sm:w-[600px] p-6",  // Increased from 400px to 600px
-    "sm:h-full overflow-y-auto",
+    "w-full sm:w-[600px] p-6",
+    "sm:h-[calc(100vh-64px)] overflow-y-auto",
     "h-[80vh] rounded-t-[10px] sm:rounded-none",
-    "bottom-0 sm:bottom-auto"
+    "bottom-0 sm:top-16",
+    "bg-background/40" // This makes it more transparent
   )}
 >
         <SheetHeader>
@@ -363,18 +364,22 @@ const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index,
 <p className="text-sm text-muted-foreground">Distance: {segment.metadata?.length ? `${Math.round(segment.metadata.length).toLocaleString()}m` : 'NaNm'}</p>
   {segment.stats?.averageRating !== undefined && (
     <div className="flex items-center space-x-2">
-      <p className="text-sm text-muted-foreground">
-        Average Rating: {Number(segment.stats.averageRating).toFixed(1)}/6
-        {segment.stats.totalVotes && ` (${segment.stats.totalVotes} votes)`}
-      </p>
-      <i 
-        className={cn(
-          `fa-solid fa-circle-${Math.round(Number(segment.stats.averageRating))}`,
-          "text-lg",
-          conditionColors[Math.round(Number(segment.stats.averageRating)).toString() as keyof typeof conditionColors]
-        )}
-      />
-    </div>
+  <p className="text-sm text-muted-foreground">
+    Average Rating: {segment.stats?.totalVotes ? 
+      `${Number(segment.stats.averageRating).toFixed(1)}/6 (${segment.stats.totalVotes} votes)` : 
+      'Unrated'
+    }
+  </p>
+  <i 
+    className={cn(
+      `fa-solid ${segment.stats?.totalVotes ? `fa-circle-${Math.round(Number(segment.stats.averageRating))}` : 'fa-circle-question'}`,
+      "text-lg",
+      segment.stats?.totalVotes ? 
+        conditionColors[Math.round(Number(segment.stats.averageRating)).toString() as keyof typeof conditionColors] :
+        'text-cyan-500'  // Cyan only for segments with no votes
+    )}
+  />
+</div>
   )}
 </div>
 
@@ -385,22 +390,33 @@ const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index,
       <span>Elevation Gain: {elevationGain}m</span>
       <span>Loss: {elevationLoss}m</span>
     </div>
-    <div className="h-[200px] w-full border rounded-lg p-4" style={{ minWidth: '300px' }}>
-    <ResponsiveContainer width="100%" height="100%" minWidth={280}>
-        <AreaChart data={elevationProfile.map((point, index, array) => {
-          // Calculate gradient for each point
-          let gradient = 0;
-          if (index > 0) {
-            const prevPoint = array[index - 1];
-            const rise = point.elevation - prevPoint.elevation;
-            const run = (point.distance - prevPoint.distance) * 1000; // Convert km to m
-            gradient = (rise / run) * 100;
-          }
-          return {
-            ...point,
-            gradient
-          };
-        })}>
+    <div className="h-[200px] w-full border rounded-lg p-1 relative">
+  <div className="absolute inset-x-[-20px] mx-1 h-full">
+    <ResponsiveContainer width="100%" height="100%">
+    <AreaChart data={elevationProfile.map((point, index, array) => {
+  // Calculate gradient for each point using a larger window
+  let gradient = 0;
+  if (index > 0) {
+    // Look back up to 3 points or to the start
+    const lookBack = Math.max(0, index - 3);
+    const prevPoint = array[lookBack];
+    
+    // Calculate distance and elevation change
+    const rise = point.elevation - prevPoint.elevation;
+    const run = (point.distance - prevPoint.distance) * 1000; // Convert km to m
+    
+    // Only calculate gradient if we have a meaningful distance
+    if (run > 10) { // Minimum 10m distance to avoid spikes
+      gradient = (rise / run) * 100;
+      // Limit extreme gradients
+      gradient = Math.max(Math.min(gradient, 30), -30);
+    }
+  }
+  return {
+    ...point,
+    gradient
+  };
+})}>
           <defs>
             <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
@@ -429,14 +445,14 @@ const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index,
             stroke="#666"
             fontSize={12}
           />
-          <YAxis 
-            yAxisId="right"
-            orientation="right"
-            domain={[-15, 15]}
-            tickFormatter={(value) => `${value}%`}
-            stroke="#3b82f6"
-            fontSize={12}
-          />
+<YAxis 
+  yAxisId="right"
+  orientation="right"
+  domain={[-30, 30]}  // Changed from [-15, 15] to accommodate steeper sections
+  tickFormatter={(value) => `${value}%`}
+  stroke="#3b82f6"
+  fontSize={12}
+/>
           <Tooltip 
             formatter={(value: number, name: string) => {
               if (name === 'elevation') return [`${Math.round(value)}m`, 'Elevation'];
@@ -470,6 +486,7 @@ const elevationProfile = coordinates.length > 0 ? coordinates.map((coord, index,
         </AreaChart>
       </ResponsiveContainer>
     </div>
+  </div>
   </div>
 )}
 

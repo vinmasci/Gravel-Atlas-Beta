@@ -470,11 +470,14 @@ if (resampledPoints.length >= 2) {
   }));
 }
   
-      logStateChange('New elevation points calculated', {
-        newPoints: newElevationPoints,
-        totalDistance,
-        pointCount: newElevationPoints.length
-      });
+// Calculate total distance from the last elevation point
+const totalDistance = newElevationPoints[newElevationPoints.length - 1]?.distance || 0;
+
+logStateChange('New elevation points calculated', {
+  newPoints: newElevationPoints,
+  totalDistance,
+  pointCount: newElevationPoints.length
+});
   
       // Update state with new segment
       setSegments(prev => {

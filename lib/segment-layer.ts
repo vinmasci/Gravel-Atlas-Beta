@@ -66,19 +66,22 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
         'line-cap': 'round'
       },
       paint: {
-        'line-color': [
-          'match',
-          ['floor', ['coalesce', ['get', 'averageRating'], -1]],
-          -1, '#00FFFF',   // Cyan for unrated segments
-          0, '#10B981',    // emerald-500
-          1, '#84CC16',    // lime-500
-          2, '#EAB308',    // yellow-500
-          3, '#F97316',    // orange-500
-          4, '#EF4444',    // red-500
-          5, '#991B1B',    // red-800
-          6, '#450a0a',    // Even darker red for hike-a-bike (red-950)
-          '#00FFFF'        // Default to cyan
-        ],
+'line-color': [
+  'match',
+  ['case',
+    ['==', ['get', 'totalVotes'], 0], -1,  // If no votes, use -1 to match cyan
+    ['floor', ['get', 'averageRating']]    // Otherwise use the rating
+  ],
+  -1, '#00FFFF',   // Cyan for unrated (no votes)
+  0, '#84CC16',    // lime-500 for 0 rating
+  1, '#84CC16',    // lime-500
+  2, '#EAB308',    // yellow-500
+  3, '#F97316',    // orange-500
+  4, '#EF4444',    // red-500
+  5, '#991B1B',    // red-800
+  6, '#450a0a',    // dark red/black
+  '#00FFFF'        // Default to cyan
+],
         'line-width': 3,
         'line-opacity': 1
       }

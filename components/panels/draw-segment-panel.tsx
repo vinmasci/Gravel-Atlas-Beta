@@ -236,6 +236,10 @@ console.log('Creating save payload with elevation data:', {
   samplePoints: segment.elevationProfile?.slice(0, 2)
 });
 
+// Calculate segment length
+const lastPoint = elevationProfile[elevationProfile.length - 1];
+const segmentLength = lastPoint ? Math.round(lastPoint.distance * 1000) : 0;  // Convert km to meters
+
 const payload = {
   title: segmentTitle,
   gpxData,
@@ -243,13 +247,13 @@ const payload = {
     type: 'Feature' as const,
     geometry: {
       type: 'LineString' as const,
-      coordinates: segment.geometry.coordinates // This should now be [lon, lat, elevation] arrays
+      coordinates: segment.geometry.coordinates
     },
     properties: {}
   },
   metadata: {
     title: segmentTitle,
-    length,
+    length: segmentLength,
     elevationGain,
     elevationLoss,
     surfaceTypes: []
