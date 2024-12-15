@@ -467,10 +467,21 @@ if (lineSource && markerSource) {
         });
   
         setElevationProfile(prev => {
-          const newProfile = [...prev, ...newElevationPoints];
+          // Get the last distance from previous profile
+          const lastDistance = prev.length > 0 ? prev[prev.length - 1].distance : 0;
+          
+          // Adjust new points to continue from last distance
+          const adjustedNewPoints = newElevationPoints.map(point => ({
+            distance: lastDistance + point.distance,
+            elevation: point.elevation
+          }));
+
+          const newProfile = [...prev, ...adjustedNewPoints];
           logStateChange('Elevation profile updated', {
             previousCount: prev.length,
-            newCount: newProfile.length
+            newCount: newProfile.length,
+            lastDistance,
+            firstNewDistance: adjustedNewPoints[0]?.distance
           });
           return newProfile;
         });

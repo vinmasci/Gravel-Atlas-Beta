@@ -1,8 +1,9 @@
 # Gravel Atlas Essential Documentation
 
 SOME RULES
-1. Dont try to edit my files yourself
-2. Be specific when adding code suggestions.. always show precisely where and how to add code into existing files.. Before and after is a good technique.
+IMPORTANT!! Dont try to edit my files yourself
+IMPORTANT!! Be specific when adding code suggestions.. always show precisely where and how to add code into existing files.. 
+IMPORTANT!! When providing code changes, show me precisely where to put it by showing me code that comes before and after where you want the change.. dont simply say, near or above the handlers..
 
 ## 🎯 Project Overview
 A web application for mapping and exploring gravel roads across Australia, built with Next.js, Mapbox, and modern web technologies.
@@ -334,4 +335,32 @@ This will provide a good reference for:
 3. Discussing potential improvements with Claude or other developers
 4. Documenting the technical decisions made
 
-Would you like me to add or modify any section of this summary?
+## 🔄 Recent Updates (December 15, 2024) - Drawing Mode Enhancements
+
+### Implemented Changes
+- Improved line styling with black stroke and cyan fill
+- Fixed elevation profile distance calculations for multi-segment routes
+- Implemented 100m interval sampling for elevation data to improve performance
+- Adjusted grade calculations to provide more accurate terrain information
+- Fixed marker persistence issues when adding multiple points
+
+### Styling Updates
+- Line style: Cyan with black stroke
+- Markers: Cyan with black border
+- No opacity on all elements for clear visibility
+
+### Technical Improvements
+- Modified elevation data collection to sample at 100m intervals
+- Fixed cumulative distance calculations in elevation profile
+- Improved state management for drawn coordinates
+
+### Next Steps
+- Implement interactive hover functionality between elevation profile and map
+  - Add hover marker on map corresponding to elevation profile position
+  - Show elevation data when hovering over map points
+  - Add visual feedback for hover interactions
+
+### Performance Optimizations
+- Reduced API calls through intelligent sampling
+- Improved handling of long-distance routes
+- Better memory management for multi-segment paths

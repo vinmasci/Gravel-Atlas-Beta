@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  AreaChart,  // Change this
+  AreaChart,
   Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceDot
 } from 'recharts';
 import { X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -46,6 +47,7 @@ interface ElevationPoint {
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
   const renderCount = useRef(0);
+  const [hoverPoint, setHoverPoint] = useState<{distance: number; elevation: number} | null>(null);
   
   useEffect(() => {
     console.log('FloatingElevationProfile mounted:', {
@@ -72,6 +74,45 @@ export function FloatingElevationProfile() {
       timestamp: new Date().toISOString()
     });
   }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+
+  // Add hover interaction effect
+  useEffect(() => {
+    if (!hoverPoint || !drawMode?.map) return;
+
+    // Remove existing marker
+    const existingMarker = document.getElementById('elevation-hover-marker');
+    if (existingMarker) existingMarker.remove();
+
+    // Find the corresponding map coordinates
+    const index = drawMode.elevationProfile.findIndex(
+      point => Math.abs(point.distance - hoverPoint.distance) < 0.01 &&
+      Math.abs(point.elevation - hoverPoint.elevation) < 0.1
+    );
+    
+    if (index === -1) return;
+
+    const coordinates = drawMode.line?.geometry.coordinates[index];
+    if (!coordinates) return;
+
+    // Create marker
+    const marker = document.createElement('div');
+    marker.id = 'elevation-hover-marker';
+    marker.className = 'w-4 h-4 bg-red-500 rounded-full border-2 border-white';
+    marker.style.position = 'absolute';
+    marker.style.transform = 'translate(-50%, -50%)';
+    marker.style.pointerEvents = 'none';
+    marker.style.zIndex = '1000';
+    
+    const point = drawMode.map.project(coordinates);
+    marker.style.left = `${point.x}px`;
+    marker.style.top = `${point.y}px`;
+    
+    drawMode.map.getCanvasContainer().appendChild(marker);
+
+    return () => {
+      marker.remove();
+    };
+  }, [hoverPoint, drawMode?.map, drawMode?.elevationProfile, drawMode?.line]);
 
   renderCount.current += 1;
 
@@ -118,7 +159,7 @@ export function FloatingElevationProfile() {
       style={{
         height: '200px',
         zIndex: 9999,
-        left: '360px', // Account for sidebar
+        left: '360px',
         right: '16px',
       }}
     >
@@ -155,7 +196,20 @@ export function FloatingElevationProfile() {
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={displayData}>
+            <AreaChart 
+              data={displayData}
+              onMouseMove={(props) => {
+                if (!props?.activePayload?.[0]) {
+                  setHoverPoint(null);
+                  return;
+                }
+                setHoverPoint({
+                  distance: props.activePayload[0].payload.distance,
+                  elevation: props.activePayload[0].payload.elevation
+                });
+              }}
+              onMouseLeave={() => setHoverPoint(null)}
+            >
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
@@ -218,15 +272,25 @@ export function FloatingElevationProfile() {
                 fill="url(#elevationGradient)"
                 dot={false}
               />
-<Area
-  yAxisId="right"
-  type="monotone"
-  dataKey="grade"
-  stroke="#3b82f6"
-  strokeWidth={1}
-  fill="url(#gradeGradient)"
-  dot={false}
-/>
+              <Area
+                yAxisId="right"
+                type="monotone"
+                dataKey="grade"
+                stroke="#3b82f6"
+                strokeWidth={1}
+                fill="url(#gradeGradient)"
+                dot={false}
+              />
+              {hoverPoint && (
+                <ReferenceDot
+                  x={hoverPoint.distance}
+                  y={hoverPoint.elevation}
+                  r={4}
+                  fill="white"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
