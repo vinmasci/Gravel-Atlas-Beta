@@ -14,11 +14,19 @@ interface IDrawnSegment extends Document {
   gpxData: string;
   geojson: {
     type: string;
-    properties: Record<string, any>;
-    geometry: {
+    properties?: Record<string, any>;
+    geometry?: {
       type: string;
       coordinates: number[][];
     };
+    features?: Array<{
+      type: string;
+      properties: Record<string, any>;
+      geometry: {
+        type: string;
+        coordinates: number[][];
+      };
+    }>;
   };
   metadata: {
     title: string;
@@ -49,22 +57,56 @@ const drawnSegmentSchema = new Schema<IDrawnSegment>({
     type: {
       type: String,
       required: true,
-      enum: ['Feature']
+      enum: ['Feature', 'FeatureCollection']
     },
     properties: {
       type: Map,
       of: Schema.Types.Mixed,
-      default: {}
+      required: function() {
+        return this.geojson.type === 'Feature';
+      }
     },
     geometry: {
       type: {
         type: String,
-        required: true,
-        enum: ['LineString']
+        enum: ['LineString'],
+        required: function() {
+          return this.geojson.type === 'Feature';
+        }
       },
       coordinates: {
         type: [[Number]],
-        required: true
+        required: function() {
+          return this.geojson.type === 'Feature';
+        }
+      }
+    },
+    features: {
+      type: [{
+        type: {
+          type: String,
+          required: true,
+          enum: ['Feature']
+        },
+        properties: {
+          type: Map,
+          of: Schema.Types.Mixed,
+          required: true
+        },
+        geometry: {
+          type: {
+            type: String,
+            required: true,
+            enum: ['LineString']
+          },
+          coordinates: {
+            type: [[Number]],
+            required: true
+          }
+        }
+      }],
+      required: function() {
+        return this.geojson.type === 'FeatureCollection';
       }
     }
   },
@@ -80,7 +122,7 @@ const drawnSegmentSchema = new Schema<IDrawnSegment>({
     elevationProfile: [{
       distance: Number,
       elevation: Number,
-      _id: false  // Prevents MongoDB from creating IDs for each point
+      _id: false
     }]
   },
   votes: [{
@@ -118,7 +160,7 @@ const drawnSegmentSchema = new Schema<IDrawnSegment>({
     required: true
   }
 }, {
-  timestamps: true  // This adds createdAt and updatedAt automatically
+  timestamps: true
 });
 
 // Add indexes for better query performance

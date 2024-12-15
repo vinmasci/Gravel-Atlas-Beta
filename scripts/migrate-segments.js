@@ -7,7 +7,6 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 if (!process.env.MONGODB_URI) {
@@ -16,7 +15,6 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 
-// Color to rating mapping
 const colorToRating = {
   '#01bf11': '1', // Green -> Well maintained
   '#ffa801': '2', // Yellow -> Occasionally rough
@@ -34,36 +32,24 @@ async function migrateSegments() {
     await client.connect();
     console.log('Connected to MongoDB');
 
-    // Get both collections
     const oldCollection = client.db('roadApp').collection('drawnRoutes');
     const newCollection = client.db('photoApp').collection('drawnsegments');
 
-    // First, delete existing migrated data
     console.log('Clearing existing migrated data...');
     await newCollection.deleteMany({});
     console.log('Existing data cleared.');
 
-    // Get all segments from old collection
     const oldSegments = await oldCollection.find({}).toArray();
     console.log(`Found ${oldSegments.length} segments to migrate`);
 
     for (const segment of oldSegments) {
       try {
         totalProcessed++;
-        
-        // Handle different geojson structures
-        let properties, coordinates;
-        
-        if (segment.geojson.type === 'FeatureCollection') {
-          // Combine all coordinates from multiple features
-          coordinates = segment.geojson.features.reduce((allCoords, feature) => {
-            return allCoords.concat(feature.geometry.coordinates);
-          }, []);
-          properties = segment.geojson.features[0].properties;
-        } else {
-          coordinates = segment.geojson.geometry.coordinates;
-          properties = segment.geojson.properties;
-        }
+        console.log(`\nProcessing segment ${totalProcessed}/${oldSegments.length}`);
+
+        const properties = segment.geojson.type === 'FeatureCollection' 
+          ? segment.geojson.features[0].properties 
+          : segment.geojson.properties;
 
         const color = properties?.color?.toLowerCase();
         const rating = colorToRating[color];
@@ -74,27 +60,12 @@ async function migrateSegments() {
           continue;
         }
 
-        // Create new segment document
         const newSegment = {
           gpxData: segment.gpxData,
-          geojson: {
-            type: 'Feature',
-            properties: {
-              ...properties,
-              // Ensure these properties exist
-              title: properties.title || 'Untitled Segment',
-              auth0Id: properties.auth0Id,
-              gravelType: properties.gravelType || []
-            },
-            geometry: {
-              type: 'LineString',
-              coordinates: coordinates
-            }
-          },
+          geojson: segment.geojson, // Keep original geojson structure
           metadata: {
             title: properties.title || 'Untitled Segment',
             surfaceTypes: [],
-            // Optional metadata fields
             length: segment.metadata?.length,
             elevationGain: segment.metadata?.elevationGain,
             elevationLoss: segment.metadata?.elevationLoss,
@@ -116,17 +87,12 @@ async function migrateSegments() {
           updatedAt: segment.updatedAt || new Date()
         };
 
-        // Insert the new segment
         await newCollection.insertOne(newSegment);
         successfulMigrations++;
-
-        if (successfulMigrations % 10 === 0) {
-          console.log(`Progress: ${successfulMigrations}/${oldSegments.length} segments migrated`);
-        }
+        console.log(`Successfully migrated: ${properties.title}`);
 
       } catch (error) {
         console.error(`Error migrating segment ${segment._id}:`, error);
-        console.error('Segment data:', JSON.stringify(segment, null, 2));
         failures++;
       }
     }
@@ -144,5 +110,4 @@ async function migrateSegments() {
   }
 }
 
-// Run the migration
 migrateSegments().catch(console.error);
