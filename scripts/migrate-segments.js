@@ -22,20 +22,6 @@ const colorToRating = {
   '#751203': '6'  // Maroon -> Hike-A-Bike
 };
 
-function convertCoordinates(features) {
-  // Concatenate all coordinates from all features
-  let allCoordinates = [];
-  features.forEach(feature => {
-    const coords = feature.geometry.coordinates.map(coord => [
-      Number(coord[0].$numberDouble || coord[0]),  // longitude
-      Number(coord[1].$numberDouble || coord[1]),  // latitude
-      Number(coord[2].$numberInt || coord[2])      // elevation
-    ]);
-    allCoordinates = allCoordinates.concat(coords);
-  });
-  return allCoordinates;
-}
-
 async function migrateSegments() {
   const client = new MongoClient(uri);
   let totalProcessed = 0;
@@ -61,9 +47,36 @@ async function migrateSegments() {
         totalProcessed++;
         console.log(`\nProcessing segment ${totalProcessed}/${oldSegments.length}`);
 
-        // Convert coordinates and create new geojson structure
-        const coordinates = convertCoordinates(segment.geojson.features);
-        
+        // Get the color from the first feature's properties
+        const color = segment.geojson.features[0].properties.color;
+        const rating = colorToRating[color] || '4';
+
+        // Get coordinates with triple duplicates at joins
+        let allCoordinates = [];
+        segment.geojson.features.forEach((feature, index) => {
+          const coords = feature.geometry.coordinates;
+          
+          // Add coordinates
+          if (index === 0) {
+            // First feature: add all coordinates
+            allCoordinates = allCoordinates.concat(coords);
+            // Triple the last point
+            allCoordinates.push(coords[coords.length - 1]);
+            allCoordinates.push(coords[coords.length - 1]);
+          } else {
+            // All other features: triple the first point then add rest
+            allCoordinates.push(coords[0]);
+            allCoordinates.push(coords[0]);
+            allCoordinates = allCoordinates.concat(coords);
+            
+            // Triple the last point (except for final feature)
+            if (index < segment.geojson.features.length - 1) {
+              allCoordinates.push(coords[coords.length - 1]);
+              allCoordinates.push(coords[coords.length - 1]);
+            }
+          }
+        });
+
         const newSegment = {
           gpxData: segment.gpxData,
           geojson: {
@@ -71,37 +84,37 @@ async function migrateSegments() {
             properties: {},
             geometry: {
               type: "LineString",
-              coordinates: coordinates
+              coordinates: allCoordinates
             },
             features: []
           },
           metadata: {
             title: segment.metadata.title,
-            surfaceTypes: segment.metadata.gravelType || [],
-            length: segment.metadata.length,
-            elevationGain: segment.metadata.elevationGain,
-            elevationLoss: segment.metadata.elevationLoss,
-            elevationProfile: segment.metadata.elevationProfile || []
+            surfaceTypes: ["2"],
+            length: null,
+            elevationGain: null,
+            elevationLoss: null,
+            elevationProfile: []
           },
           votes: [{
             user_id: segment.auth0Id,
-            userName: segment.userName || 'Unknown User',
-            condition: colorToRating[segment.metadata.color] || '4',
+            userName: "Unknown User",
+            condition: rating,
             timestamp: segment.createdAt
           }],
           stats: {
-            averageRating: parseInt(colorToRating[segment.metadata.color] || '4'),
-            totalVotes: 1
+            averageRating: { $numberInt: rating },
+            totalVotes: { $numberInt: "1" }
           },
           auth0Id: segment.auth0Id,
-          userName: segment.userName || 'Unknown User',
+          userName: "Unknown User",
           createdAt: segment.createdAt,
           updatedAt: segment.createdAt
         };
 
         await newCollection.insertOne(newSegment);
         successfulMigrations++;
-        console.log(`Successfully migrated: ${segment.metadata.title}`);
+        console.log(`Successfully migrated: ${segment.metadata.title} (Color: ${color} -> Rating: ${rating})`);
 
       } catch (error) {
         console.error(`Error migrating segment ${segment._id}:`, error);
