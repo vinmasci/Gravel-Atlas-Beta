@@ -258,3 +258,41 @@ Implement proper error handling for tile loading
 Add visibility debugging tools
 
 ** WHEN WE SET  UP OUR PAVED LAYER, WE NEED TO MAKE SURE THE SOURCE NAME IS DIFFERENT THAN THE UNPAVED LAYER
+
+
+In map-styles.ts:
+
+
+Using 'mapbox://styles/mapbox/outdoors-v12' which might be conflicting with custom layers
+
+
+In layer-control.tsx:
+
+
+The Switch component isn't properly connected to the layer visibility state
+
+
+In map-sidebar.tsx:
+
+
+Layer toggle uses overlayStates but the state might not be properly propagating
+
+
+In map-view.tsx:
+
+
+Layer initialization timing might be off with style loading
+The layer might be getting added before the style is fully loaded
+
+
+In gravel-roads-layer.ts:
+
+
+Source and layer are set up correctly but might be getting overwritten by style changes
+
+
+Additional key findings:
+
+
+No error handling for tile loading failures
+No console logs showing actual tile data being received
