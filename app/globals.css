@@ -140,3 +140,21 @@
 .photo-detail-popup .mapboxgl-popup-tip {
   border-top-color: rgba(0, 0, 0, 0.8) !important;
 }
+
+/* Road popup */
+
+.mapboxgl-popup-content {
+  @apply bg-white dark:bg-gray-800 shadow-lg;
+}
+
+.mapboxgl-popup-tip {
+  @apply border-b-white dark:border-b-gray-800;
+}
+
+.road-popup {
+  @apply max-w-[300px];
+}
+
+.road-popup .mapboxgl-popup-content {
+  @apply p-0 rounded-lg;
+}
