@@ -158,3 +158,16 @@
 .road-popup .mapboxgl-popup-content {
   @apply p-0 rounded-lg;
 }
+
+/* Segment popup */
+
+.segment-hover-popup .mapboxgl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.segment-hover-popup .mapboxgl-popup-tip {
+  display: none;
+}

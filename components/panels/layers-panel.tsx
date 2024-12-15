@@ -1,3 +1,5 @@
+//IGNORE THIS FILE ITS NOT SET UP
+
 import { LayerControl } from './layer-control';
 
 export function LayersPanel() {

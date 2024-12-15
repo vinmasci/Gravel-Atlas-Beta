@@ -460,7 +460,7 @@ const handleLayerToggle = useCallback((layerId: string) => {
       const newState = { ...prev, segments: !prev.segments };
       const map = mapRef.current?.getMap();
       if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        updateSegmentLayer(map, newState.segments)
+        updateSegmentLayer(map, newState.segments, setSelectedSegment)
           .catch(error => console.error('Error updating segments layer:', error));
       }
       return newState;

@@ -50,7 +50,7 @@ export const conditionColors = {
   '3': 'text-orange-500',     // Changed to match #F97316
   '4': 'text-red-500',        // Changed to match #EF4444
   '5': 'text-red-800',        // Changed to match #991B1B
-  '6': 'text-red-900'         // Changed to match #4C0519
+'6': 'text-red-950'         // Darkest red for hike-a-bike
 } as const;
 
 export const segmentLineColors = {
@@ -60,7 +60,7 @@ export const segmentLineColors = {
   '3': '#F97316', // orange-500
   '4': '#EF4444', // red-500
   '5': '#991B1B', // red-800
-  '6': '#4C0519'  // dark red/black
+  '6': '#450a0a' // dark red/black
 } as const;
 
 interface Comment {
