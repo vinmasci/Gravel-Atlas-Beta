@@ -100,7 +100,7 @@ export function FloatingElevationProfile() {
     marker.style.width = '12px';
     marker.style.height = '12px';
     marker.style.backgroundColor = '#009999'; // Darker cyan
-    marker.style.border = '2px solid black';
+    marker.style.border = '1px solid black';
     marker.style.borderRadius = '50%';
     marker.style.position = 'absolute';
     marker.style.transform = 'translate(-50%, -50%)';

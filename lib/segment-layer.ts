@@ -50,7 +50,7 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
           '#00FFFF'        // Default to cyan
         ],
         'line-width': 3,
-        'line-opacity': 0.8
+        'line-opacity': 1
       }
     });
 
@@ -66,7 +66,7 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       paint: {
         'line-color': '#000000',
         'line-width': 5,
-        'line-opacity': 0.3
+        'line-opacity': 1
       }
     }, layerId); // This ensures the stroke is rendered beneath the main line
 
