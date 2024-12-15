@@ -378,12 +378,20 @@ const response = await fetch(`/api/segments/${segment._id}/vote`, {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
                     <XAxis 
-                      dataKey="distance" 
-                      type="number"
-                      tickFormatter={(value) => `${value.toFixed(1)}km`}
-                      stroke="#666"
-                      fontSize={12}
-                    />
+  dataKey="distance" 
+  type="number"
+  domain={[0, elevationProfile[elevationProfile.length - 1]?.distance || 0]}
+  tickFormatter={(value) => `${value.toFixed(1)}km`}
+  stroke="#666"
+  fontSize={12}
+  ticks={[
+    0,
+    ...Array.from(
+      { length: 4 },
+      (_, i) => ((elevationProfile[elevationProfile.length - 1]?.distance || 0) * (i + 1)) / 5
+    )
+  ]}
+/>
                     <YAxis 
                       domain={[minElevation - 10, maxElevation + 10]}
                       tickFormatter={(value) => `${Math.round(value)}m`}

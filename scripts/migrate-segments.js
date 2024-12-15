@@ -23,6 +23,30 @@ const validColors = {
   '#751203': '6'  // Maroon -> Hike-A-Bike
 };
 
+// Add this function back in after the validColors object and before calculateElevationMetrics
+function calculateDistance(coord1, coord2) {
+  // Convert coordinates to radians
+  const lat1 = coord1[1] * Math.PI / 180;
+  const lon1 = coord1[0] * Math.PI / 180;
+  const lat2 = coord2[1] * Math.PI / 180;
+  const lon2 = coord2[0] * Math.PI / 180;
+
+  // Earth's radius in meters
+  const R = 6371008.8;
+  
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+           Math.cos(lat1) * Math.cos(lat2) * 
+           Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+
+  return distance; // Returns distance in meters
+}
+
 // Helper function to calculate distance between two points
 function calculateElevationMetrics(coordinates) {
   let gain = 0;
