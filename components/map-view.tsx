@@ -8,6 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { updatePhotoLayer } from '../lib/photo-layer';
 import { updateSegmentLayer } from '../lib/segment-layer';
 import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } from '../lib/gravel-roads-layer';
+import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '../lib/bike-infrastructure-layer'; 
 import { MapSidebar } from './map-sidebar';
 import { MAP_STYLES } from '../app/constants/map-styles';
 import type { MapStyle } from '../app/types/map';
@@ -133,6 +134,7 @@ const MobileControls = ({
                   { id: 'segments', label: 'Segments' },
                   { id: 'photos', label: 'Photos' },
                   { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
+                  { id: 'bike-infrastructure', label: 'Bike Infrastructure' },  // Add this line
                   { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
                   { id: 'speed-limits', label: 'Speed Limits' },
                   { id: 'private-roads', label: 'Private Access Roads' },
@@ -229,7 +231,8 @@ export function MapView() {
     'asphalt-roads': false,
     'speed-limits': false,
     'private-roads': false,
-    mapillary: false
+    mapillary: false,
+    'bike-infrastructure': false  // Add this line
   });
 
   const [layers] = useState([
@@ -465,7 +468,20 @@ const handleLayerToggle = useCallback((layerId: string) => {
       }
       return newState;
     });
-  } else if (layerId === 'mapillary') {
+} 
+
+else if (layerId === 'bike-infrastructure') {
+  setOverlayStates(prev => {
+    const newState = { ...prev, 'bike-infrastructure': !prev['bike-infrastructure'] };
+    const map = mapRef.current?.getMap();
+    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+      updateBikeInfraLayer(map, newState['bike-infrastructure']);
+    }
+    return newState;
+  });
+}
+
+else if (layerId === 'mapillary') {
     // ... rest of existing mapillary code ...
   } else {
     setOverlayStates(prev => ({
@@ -676,6 +692,29 @@ return (
                   currentLayout: map.getLayoutProperty('gravel-roads', 'visibility')
                 });
             
+                console.log('Initializing bike infrastructure layer');
+    
+                // Add source
+                addBikeInfraSource(map);
+                console.log('After adding bike infra source:', {
+                  sourceExists: !!map.getSource('bike-infrastructure'),
+                  sourceType: map.getSource('bike-infrastructure') ? map.getSource('bike-infrastructure').type : null
+                });
+            
+                // Add layer
+                addBikeInfraLayer(map);
+                console.log('After adding bike infra layer:', {
+                  layerExists: !!map.getLayer('bike-infrastructure'),
+                  layerType: map.getLayer('bike-infrastructure') ? map.getLayer('bike-infrastructure').type : null
+                });
+            
+                // Update visibility
+                updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+                console.log('Bike infra layer visibility updated:', {
+                  visibility: overlayStates['bike-infrastructure'],
+                  currentLayout: map.getLayoutProperty('bike-infrastructure', 'visibility')
+                });
+
                 debugMapLayers();
               }
             }}

@@ -150,6 +150,7 @@ export function MapSidebar({
                   { id: 'segments', label: 'Segments' },
                   { id: 'photos', label: 'Photos' },
                   { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
+                  { id: 'bike-infrastructure', label: 'Bike Infrastructure' },  // Add this line
                   { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
                   { id: 'speed-limits', label: 'Speed Limits' },
                   { id: 'private-roads', label: 'Private Access Roads' },
