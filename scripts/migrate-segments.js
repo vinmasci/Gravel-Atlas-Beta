@@ -22,6 +22,20 @@ const colorToRating = {
   '#751203': '6'  // Maroon -> Hike-A-Bike
 };
 
+function convertCoordinates(features) {
+  // Concatenate all coordinates from all features
+  let allCoordinates = [];
+  features.forEach(feature => {
+    const coords = feature.geometry.coordinates.map(coord => [
+      Number(coord[0].$numberDouble || coord[0]),  // longitude
+      Number(coord[1].$numberDouble || coord[1]),  // latitude
+      Number(coord[2].$numberInt || coord[2])      // elevation
+    ]);
+    allCoordinates = allCoordinates.concat(coords);
+  });
+  return allCoordinates;
+}
+
 async function migrateSegments() {
   const client = new MongoClient(uri);
   let totalProcessed = 0;
@@ -47,49 +61,47 @@ async function migrateSegments() {
         totalProcessed++;
         console.log(`\nProcessing segment ${totalProcessed}/${oldSegments.length}`);
 
-        const properties = segment.geojson.type === 'FeatureCollection' 
-          ? segment.geojson.features[0].properties 
-          : segment.geojson.properties;
-
-        const color = properties?.color?.toLowerCase();
-        const rating = colorToRating[color];
-
-        if (!rating) {
-          console.log(`Skipping segment ${segment._id} - Unknown color: ${color}`);
-          failures++;
-          continue;
-        }
-
+        // Convert coordinates and create new geojson structure
+        const coordinates = convertCoordinates(segment.geojson.features);
+        
         const newSegment = {
           gpxData: segment.gpxData,
-          geojson: segment.geojson, // Keep original geojson structure
+          geojson: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: coordinates
+            },
+            features: []
+          },
           metadata: {
-            title: properties.title || 'Untitled Segment',
-            surfaceTypes: [],
-            length: segment.metadata?.length,
-            elevationGain: segment.metadata?.elevationGain,
-            elevationLoss: segment.metadata?.elevationLoss,
-            elevationProfile: segment.metadata?.elevationProfile || []
+            title: segment.metadata.title,
+            surfaceTypes: segment.metadata.gravelType || [],
+            length: segment.metadata.length,
+            elevationGain: segment.metadata.elevationGain,
+            elevationLoss: segment.metadata.elevationLoss,
+            elevationProfile: segment.metadata.elevationProfile || []
           },
           votes: [{
-            user_id: properties.auth0Id,
+            user_id: segment.auth0Id,
             userName: segment.userName || 'Unknown User',
-            condition: rating,
-            timestamp: segment.createdAt || new Date()
+            condition: colorToRating[segment.metadata.color] || '4',
+            timestamp: segment.createdAt
           }],
           stats: {
-            averageRating: parseInt(rating),
+            averageRating: parseInt(colorToRating[segment.metadata.color] || '4'),
             totalVotes: 1
           },
-          auth0Id: properties.auth0Id,
+          auth0Id: segment.auth0Id,
           userName: segment.userName || 'Unknown User',
-          createdAt: segment.createdAt || new Date(),
-          updatedAt: segment.updatedAt || new Date()
+          createdAt: segment.createdAt,
+          updatedAt: segment.createdAt
         };
 
         await newCollection.insertOne(newSegment);
         successfulMigrations++;
-        console.log(`Successfully migrated: ${properties.title}`);
+        console.log(`Successfully migrated: ${segment.metadata.title}`);
 
       } catch (error) {
         console.error(`Error migrating segment ${segment._id}:`, error);
