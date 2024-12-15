@@ -53,36 +53,42 @@ export function SegmentDialog({ open, onOpenChange, segment }: SegmentDialogProp
       window.location.href = '/api/auth/login';
       return;
     }
-
+  
     if (!rating || !segment) return;
-
+  
     setIsVoting(true);
     try {
-      const response = await fetch(`/api/segments/${segment.id}/vote`, {
+      const response = await fetch(`/api/segments/${segment._id}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ condition: rating }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to submit vote');
       }
-
+  
       const data = await response.json();
       
+      // Update local state with full segment data
+      if (onUpdate && data.segment) {
+        onUpdate(data.segment);
+      }
+  
+      // Force a refresh of the segments layer
+      const map = (window as any).map;
+      if (map) {
+        await updateSegmentLayer(map, true, onUpdate);
+      }
+  
       toast({
         title: "Vote Submitted",
         description: "Thank you for your contribution!",
       });
-
-      // Update the segment's rating in the UI
-      if (segment && data.stats) {
-        segment.averageRating = data.stats.averageRating;
-        segment.totalVotes = data.stats.totalVotes;
-      }
     } catch (error) {
+      console.error('Error submitting vote:', error);
       toast({
         title: "Error",
         description: "Failed to submit vote. Please try again.",

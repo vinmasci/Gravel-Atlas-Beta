@@ -39,11 +39,16 @@ export async function POST(
       condition
     );
 
+    // Fetch the updated segment to ensure we have the latest data
+    const updatedSegment = await DrawnSegment.findById(params.id);
+
+    // Return the full segment data along with stats
     return NextResponse.json({
       success: true,
+      segment: updatedSegment,
       stats: {
-        totalVotes: segment.stats.totalVotes,
-        averageRating: segment.stats.averageRating
+        totalVotes: updatedSegment.stats.totalVotes,
+        averageRating: updatedSegment.stats.averageRating
       }
     });
   } catch (error) {

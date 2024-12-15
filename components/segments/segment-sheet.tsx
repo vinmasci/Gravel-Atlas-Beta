@@ -170,92 +170,98 @@ export function SegmentSheet({ open, onOpenChange, segment, onUpdate }: SegmentS
     }
   };
 
-  const handleVote = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to vote on segments",
-        variant: "destructive",
-      });
-      window.location.href = '/api/auth/login';
-      return;
+// In segment-sheet.tsx, find the handleVote function and update it:
+const handleVote = async () => {
+  if (!user) {
+    toast({
+      title: "Authentication Required",
+      description: "Please sign in to vote on segments",
+      variant: "destructive",
+    });
+    window.location.href = '/api/auth/login';
+    return;
+  }
+
+  if (!rating || !segment) return;
+
+  setIsVoting(true);
+  try {
+    const response = await fetch(`/api/segments/${segment._id}/vote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ condition: rating }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to submit vote');
     }
-  
-    if (!rating || !segment) return;
-  
-    setIsVoting(true);
-    try {
-const response = await fetch(`/api/segments/${segment._id}/vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ condition: rating }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Failed to submit vote');
-      }
-  
-      const data = await response.json();
-      
-      // Update the segment's stats with the new rating data
-      if (segment && data.stats) {
-        segment.averageRating = data.stats.averageRating;
-        segment.totalVotes = data.stats.totalVotes;
-      }
-  
-      // Force a refresh of the segments layer to update colors
-      const map = (window as any).map;  // Assuming you've stored the map instance globally
-      if (map) {
-        updateSegmentLayer(map, true);  // Refresh the segment layer
-      }
-  
-      toast({
-        title: "Vote Submitted",
-        description: "Thank you for your contribution!",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit vote. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsVoting(false);
-    }
-  };
 
-  const handleSubmitComment = async () => {
-    if (!user || !newComment.trim()) return;
-
-    try {
-      const response = await fetch(`/api/segments/${segment?.id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: newComment }),
-      });
-
-      if (!response.ok) throw new Error('Failed to post comment');
-
-      const data = await response.json();
-      setComments(prev => [...prev, data.comment]);
-      setNewComment('');
-      
-      toast({
-        title: "Comment Posted",
-        description: "Your comment has been added successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to post comment. Please try again.",
-        variant: "destructive",
+    const data = await response.json();
+    
+    // Update the local state
+    if (onUpdate) {
+      onUpdate({
+        ...segment,
+        stats: data.stats,
       });
     }
-  };
+
+    // Force a refresh of the segments layer
+    const map = (window as any).map;
+    if (map) {
+      // Pass true to make visible and include the onSegmentClick handler
+      updateSegmentLayer(map, true, onUpdate);
+    }
+
+    toast({
+      title: "Vote Submitted",
+      description: "Thank you for your contribution!",
+    });
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to submit vote. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsVoting(false);
+  }
+};
+
+// In segment-sheet.tsx, update the handleSubmitComment function:
+const handleSubmitComment = async () => {
+  if (!user || !newComment.trim() || !segment?._id) return;
+
+  try {
+    const response = await fetch(`/api/segments/${segment._id}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content: newComment }),
+    });
+
+    if (!response.ok) throw new Error('Failed to post comment');
+
+    const data = await response.json();
+    setComments(prev => [...prev, data.comment]);
+    setNewComment('');
+    
+    toast({
+      title: "Comment Posted",
+      description: "Your comment has been added successfully.",
+    });
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    toast({
+      title: "Error",
+      description: "Failed to post comment. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
 
   if (!segment) return null;
 
@@ -280,15 +286,15 @@ const response = await fetch(`/api/segments/${segment._id}/vote`, {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right"
-        className={cn(
-          "w-full sm:w-[400px] p-6",
-          "sm:h-full",
-          "h-[80vh] rounded-t-[10px] sm:rounded-none",
-          "bottom-0 sm:bottom-auto"
-        )}
-      >
+<SheetContent 
+  side="right"
+  className={cn(
+    "w-full sm:w-[400px] p-6",
+    "sm:h-full overflow-y-auto",
+    "h-[80vh] rounded-t-[10px] sm:rounded-none",
+    "bottom-0 sm:bottom-auto"
+  )}
+>
         <SheetHeader>
           <SheetTitle className="text-xl font-bold">{segment.metadata?.title || "NaNm"}</SheetTitle>
         </SheetHeader>
@@ -342,7 +348,7 @@ const response = await fetch(`/api/segments/${segment._id}/vote`, {
 
 {/* Segment Stats */}
 <div className="space-y-1">
-<p className="text-sm text-muted-foreground">Distance: {segment.metadata?.length ? `${Math.round(segment.metadata.length)}m` : 'NaNm'}</p>
+<p className="text-sm text-muted-foreground">Distance: {segment.metadata?.length ? `${Math.round(segment.metadata.length).toLocaleString()}m` : 'NaNm'}</p>
   {segment.stats?.averageRating !== undefined && (
     <div className="flex items-center space-x-2">
       <p className="text-sm text-muted-foreground">
