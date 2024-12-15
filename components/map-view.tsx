@@ -751,49 +751,33 @@ return (
                 drawModeActive: drawMode.isDrawing
               });
               
-              // First, fetch and inspect the tileset metadata
-              fetch('https://api.maptiler.com/tiles/2378fd50-8c13-4408-babf-e7b2d62c857c/metadata.json?key=DFSAZFJXzvprKbxHrHXv')
-                .then(response => response.json())
-                .then(metadata => {
-                  console.log('Tileset metadata:', metadata);
-                  // This will show us the correct source-layer name
-                })
-                .catch(error => {
-                  console.error('Error fetching tileset metadata:', error);
-                });
-            
+              // Initialize gravel roads layer
               const map = evt.target;
               if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-                map.once('idle', () => {
-                  console.log('Map idle, adding gravel roads');
-                  try {
-                    addGravelRoadsSource(map);
-                    
-                    // Wait for source to be loaded before adding layer
-                    map.once('sourcedata', (e) => {
-                      if (e.sourceId === 'gravel-roads' && e.isSourceLoaded) {
-                        console.log('Gravel roads source loaded successfully');
-                        addGravelRoadsLayer(map);
-                        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-                        
-                        // Debug info
-                        const source = map.getSource('gravel-roads');
-                        const layer = map.getLayer('gravel-roads');
-                        console.log('Source details:', {
-                          exists: !!source,
-                          type: source ? (source as any).type : null
-                        });
-                        console.log('Layer details:', {
-                          exists: !!layer,
-                          type: layer ? layer.type : null,
-                          layout: layer ? (layer as any).layout : null
-                        });
-                      }
-                    });
-                  } catch (error) {
-                    console.error('Error in gravel roads setup:', error);
-                  }
+                console.log('Initializing gravel roads layer');
+                
+                // Add source
+                addGravelRoadsSource(map);
+                console.log('After adding source:', {
+                  sourceExists: !!map.getSource('gravel-roads'),
+                  sourceType: map.getSource('gravel-roads') ? map.getSource('gravel-roads').type : null
                 });
+            
+                // Add layer
+                addGravelRoadsLayer(map);
+                console.log('After adding layer:', {
+                  layerExists: !!map.getLayer('gravel-roads'),
+                  layerType: map.getLayer('gravel-roads') ? map.getLayer('gravel-roads').type : null
+                });
+            
+                // Update visibility
+                updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+                console.log('Layer visibility updated:', {
+                  visibility: overlayStates['gravel-roads'],
+                  currentLayout: map.getLayoutProperty('gravel-roads', 'visibility')
+                });
+            
+                debugMapLayers();
               }
             }}
           />

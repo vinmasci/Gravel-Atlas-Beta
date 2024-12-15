@@ -27,7 +27,7 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
         'source': 'gravel-roads',
         'source-layer': 'roads',
         'layout': {
-          'visibility': 'none',
+          'visibility': 'visible',
           'line-join': 'round',
           'line-cap': 'round'
         },
@@ -41,7 +41,31 @@ export const addGravelRoadsLayer = (map: mapboxgl.Map) => {
             16, 3
           ],
           'line-opacity': 0.8
-        }
+        },
+        'filter': [
+          'any',
+          ['in', ['get', 'surface'], ['literal', [
+            'unpaved',
+            'compacted',
+            'fine_gravel',
+            'gravel',
+            'dirt',
+            'earth',
+            'ground',
+            'grass',
+            'mud',
+            'sand',
+            'wood',
+            'unknown'
+          ]]],
+          ['all',
+            ['==', ['get', 'highway'], 'track'],
+            ['any',
+              ['==', ['get', 'surface'], ''],
+              ['==', ['get', 'surface'], 'unknown']
+            ]
+          ]
+        ]
       });
       console.log('Gravel roads layer added successfully');
     } catch (error) {
