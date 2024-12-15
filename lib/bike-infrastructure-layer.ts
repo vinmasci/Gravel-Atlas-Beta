@@ -24,17 +24,72 @@ export const addBikeInfraLayer = (map: mapboxgl.Map) => {
   console.log('Adding bike infrastructure layer');
   if (!map.getLayer('bike-infrastructure')) {
     try {
-      const firstSymbolId = map.getStyle().layers.find(layer => layer.type === 'symbol')?.id;
+      // First add the background stroke layer
+      map.addLayer({
+        'id': 'bike-infrastructure-stroke',
+        'type': 'line',
+        'source': 'bike-infrastructure',
+        'source-layer': 'bike_infrastructure',
+        'filter': [                           // Replace the existing filter here
+          'any',
+          ['==', ['get', 'highway'], 'cycleway'],
+          [
+            'all',
+            ['!=', ['get', 'bicycle'], 'no'],
+            [
+              'any',
+              ['==', ['get', 'bicycle'], 'yes'],
+              ['has', 'designation']
+            ]
+          ]
+        ],
+        'layout': {
+          'visibility': 'visible',
+          'line-join': 'round',
+          'line-cap': 'round',
+          'line-sort-key': 2  // Makes sure this layer stays above terrain
+        },
+        'paint': {
+          'line-color': '#000000',  // Black stroke
+          'line-width': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            8, 2,    // Thicker at base zoom
+            12, 3,
+            14, 3.5,
+            16, 4,
+            18, 5,
+            20, 6
+          ],
+          'line-opacity': 0.5
+        }
+      });
 
+      // Then add the main colored line layer on top
       map.addLayer({
         'id': 'bike-infrastructure',
         'type': 'line',
         'source': 'bike-infrastructure',
-        'source-layer': 'bike_infrastructure',  // matches the layer name from tippecanoe
+        'source-layer': 'bike_infrastructure',
+        'filter': [                           // Replace the existing filter here
+          'any',
+          ['==', ['get', 'highway'], 'cycleway'],
+          [
+            'all',
+            ['!=', ['get', 'bicycle'], 'no'],
+            [
+              'any',
+              ['==', ['get', 'bicycle'], 'yes'],
+              ['has', 'designation']
+            ]
+          ]
+        ],
         'layout': {
           'visibility': 'visible',
           'line-join': 'round',
-          'line-cap': 'round'
+          'line-cap': 'round',
+          'line-sort-key': 3  // Makes sure this layer stays above the stroke
         },
         'paint': {
           'line-color': [
@@ -50,16 +105,16 @@ export const addBikeInfraLayer = (map: mapboxgl.Map) => {
             'interpolate',
             ['linear'],
             ['zoom'],
-            8, 1,    // Thinnest at zoom 8
-            12, 2,   // Medium thickness at zoom 12
-            14, 2.5, // Slightly thicker at zoom 14
-            16, 3,   // Base thickness at zoom 16
-            18, 4,   // Will scale up even though using zoom 16 tiles
-            20, 5    // Maximum thickness at zoom 20
+            8, 1,
+            12, 2,
+            14, 2.5,
+            16, 3,
+            18, 4,
+            20, 5
           ],
-          'line-opacity': 0.8
+          'line-opacity': 1
         }
-      }, firstSymbolId);
+      });
 
       // Add hover effect
       map.on('mouseenter', 'bike-infrastructure', (e) => {
@@ -95,17 +150,22 @@ export const addBikeInfraLayer = (map: mapboxgl.Map) => {
         if (popups[0]) popups[0].remove();
       });
 
-      console.log('Layer order:', {
-        beforeLayer: firstSymbolId,
-        allLayers: map.getStyle().layers.map(l => l.id)
-      });
+      console.log('Bike infrastructure layers added successfully');
     } catch (error) {
-      console.error('Error adding bike infrastructure layer:', error);
+      console.error('Error adding bike infrastructure layers:', error);
     }
   }
 };
 
 export const updateBikeInfraLayer = (map: mapboxgl.Map, visible: boolean) => {
+  // Update both stroke and main layer visibility
+  if (map.getLayer('bike-infrastructure-stroke')) {
+    map.setLayoutProperty(
+      'bike-infrastructure-stroke',
+      'visibility',
+      visible ? 'visible' : 'none'
+    );
+  }
   if (map.getLayer('bike-infrastructure')) {
     map.setLayoutProperty(
       'bike-infrastructure',
@@ -116,10 +176,14 @@ export const updateBikeInfraLayer = (map: mapboxgl.Map, visible: boolean) => {
 };
 
 export const cleanupBikeInfraLayer = (map: mapboxgl.Map) => {
+  // Clean up both layers and associated events
   if (map.getLayer('bike-infrastructure')) {
     map.off('mouseenter', 'bike-infrastructure');
     map.off('mouseleave', 'bike-infrastructure');
     map.removeLayer('bike-infrastructure');
+  }
+  if (map.getLayer('bike-infrastructure-stroke')) {
+    map.removeLayer('bike-infrastructure-stroke');
   }
   if (map.getSource('bike-infrastructure')) {
     map.removeSource('bike-infrastructure');
