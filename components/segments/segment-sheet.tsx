@@ -202,13 +202,16 @@ const handleVote = async () => {
     
     // Update local state
     if (onUpdate) {
-      onUpdate(data.segment);
+      onUpdate({
+        ...segment,
+        stats: data.stats,
+      });
     }
 
-    // Update the map layer with just this segment
+    // Force a simple refresh of the segment layer
     const map = (window as any).map;
     if (map) {
-      await updateSegmentLayer(map, true, onUpdate, data.segment);
+      updateSegmentLayer(map, true);
     }
 
     toast({
