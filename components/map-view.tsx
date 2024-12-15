@@ -11,6 +11,7 @@ import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } fro
 import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '../lib/bike-infrastructure-layer'; 
 import { addPrivateRoadsLayer, updatePrivateRoadsLayer } from '../lib/private-roads-layer'; 
 import { addUnknownSurfaceSource, addUnknownSurfaceLayer, updateUnknownSurfaceLayer } from '../lib/unknown-surface-layer';
+import { addWaterPointsSource, addWaterPointsLayer, updateWaterPointsLayer } from '../lib/water-points-layer';
 import { MapSidebar } from './map-sidebar';
 import { MAP_STYLES } from '../app/constants/map-styles';
 import type { MapStyle } from '../app/types/map';
@@ -233,6 +234,7 @@ export function MapView() {
     'asphalt-roads': false,
     'speed-limits': false,
     'private-roads': false,
+    'water-points': false,
     mapillary: false,
     'bike-infrastructure': false,
     'unknown-surface': false 
@@ -495,6 +497,17 @@ else if (layerId === 'private-roads') {
   });
 }
 
+else if (layerId === 'water-points') {
+  setOverlayStates(prev => {
+    const newState = { ...prev, 'water-points': !prev['water-points'] };
+    const map = mapRef.current?.getMap();
+    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+      updateWaterPointsLayer(map, newState['water-points']);
+    }
+    return newState;
+  });
+}
+
 else if (layerId === 'unknown-surface') {
   setOverlayStates(prev => {
     const newState = { ...prev, 'unknown-surface': !prev['unknown-surface'] };
@@ -695,6 +708,14 @@ return (
               const map = evt.target;
               if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
                 console.log('Initializing gravel roads layer');
+
+    // Water icon
+                map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+                  if (error) throw error;
+                  if (!map.hasImage('water-icon')) {
+                    map.addImage('water-icon', image);
+                  }
+                });
                 
                 // Add source
                 addGravelRoadsSource(map);
@@ -732,6 +753,11 @@ return (
                   layerExists: !!map.getLayer('bike-infrastructure'),
                   layerType: map.getLayer('bike-infrastructure') ? map.getLayer('bike-infrastructure').type : null
                 });
+
+                // Initialize water points layer
+addWaterPointsSource(map);
+addWaterPointsLayer(map);
+updateWaterPointsLayer(map, overlayStates['water-points']);
 
                   // Initialize unknown surface layer
   addUnknownSurfaceSource(map);

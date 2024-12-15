@@ -28,12 +28,12 @@ export const addPrivateRoadsLayer = (map: mapboxgl.Map) => {
             'interpolate',
             ['linear'],
             ['zoom'],
-            8, 1,
-            12, 2,
-            14, 2.5,
-            16, 3,
-            18, 4,
-            20, 5
+            8, 0.5,    // Thinner at low zoom
+            12, 1,     // Still thin at medium zoom
+            14, 1.5,   // Slightly thicker
+            16, 2,     // Medium thickness
+            18, 2.5,   // Slightly thicker at high zoom
+            20, 3      // Maximum thickness
           ],
           'line-opacity': 0.8
         }
