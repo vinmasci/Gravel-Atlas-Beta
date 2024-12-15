@@ -97,7 +97,11 @@ export function FloatingElevationProfile() {
     // Create marker
     const marker = document.createElement('div');
     marker.id = 'elevation-hover-marker';
-    marker.className = 'w-4 h-4 bg-red-500 rounded-full border-2 border-white';
+    marker.style.width = '12px';
+    marker.style.height = '12px';
+    marker.style.backgroundColor = '#009999'; // Darker cyan
+    marker.style.border = '2px solid black';
+    marker.style.borderRadius = '50%';
     marker.style.position = 'absolute';
     marker.style.transform = 'translate(-50%, -50%)';
     marker.style.pointerEvents = 'none';
