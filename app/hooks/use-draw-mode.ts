@@ -18,6 +18,14 @@ interface Segment {
   roadPoints: [number, number][];
 }
 
+// Add this new interface right after them:
+interface HoverPoint {
+  coordinates: [number, number];
+  distance: number;
+  elevation: number;
+  index: number;
+}
+
 // Debugging function
 const logStateChange = (action: string, data: any) => {
   console.log(`DrawMode - ${action}:`, {
@@ -153,7 +161,7 @@ export const useDrawMode = (map: Map | null) => {
   const [snapToRoad, setSnapToRoad] = useState(true);
   const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
-  
+  const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
   const isProcessingClick = useRef(false);
@@ -655,6 +663,34 @@ properties: {
     });
   }, [isDrawing, drawnCoordinates, elevationProfile, clickPoints, segments]);
 
+  // Add this new function right after that useEffect and before the return:
+  const handleHover = useCallback((point: HoverPoint | null) => {
+    setHoveredPoint(point);
+    
+    if (!map || !point) {
+      const existingMarker = document.getElementById('hover-point-marker');
+      if (existingMarker) existingMarker.remove();
+      return;
+    }
+
+    // Create or update hover marker
+    let marker = document.getElementById('hover-point-marker');
+    if (!marker) {
+      marker = document.createElement('div');
+      marker.id = 'hover-point-marker';
+      marker.className = 'w-4 h-4 bg-red-500 rounded-full border-2 border-white';
+      marker.style.position = 'absolute';
+      marker.style.transform = 'translate(-50%, -50%)';
+      marker.style.pointerEvents = 'none';
+      marker.style.zIndex = '1000';
+      map.getCanvasContainer().appendChild(marker);
+    }
+
+    const projectedPoint = map.project(point.coordinates);
+    marker.style.left = `${projectedPoint.x}px`;
+    marker.style.top = `${projectedPoint.y}px`;
+  }, [map]);
+
   return {
     isDrawing,
     drawnCoordinates,
@@ -668,6 +704,15 @@ properties: {
     toggleSnapToRoad: (enabled: boolean) => {
       logStateChange('Toggling snap to road', { newState: enabled });
       setSnapToRoad(enabled);
-    }
+    },
+    hoveredPoint,
+    handleHover,
+    map,
+    line: drawnCoordinates.length > 0 ? {
+      geometry: {
+        type: 'LineString',
+        coordinates: drawnCoordinates
+      }
+    } : null
   };
 };
