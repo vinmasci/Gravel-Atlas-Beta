@@ -330,28 +330,28 @@ export function NavSidebar({
               </AccordionItem>
             </Accordion>
           ) : (
-            /* Icon Mode - Updated with hover states */
-            <div className="flex flex-col gap-3 items-center">
-              {[
-                { icon: <Map className="h-4 w-4" />, title: "Map Layers" },
-                { icon: <Layers className="h-4 w-4" />, title: "Map Overlays" },
-                { icon: <Map className="h-4 w-4" />, title: "Points of Interest" },
-                { icon: <Camera className="h-4 w-4" />, title: "Upload Photo" },
-                { icon: <Route className="h-4 w-4" />, title: "Draw Segment" },
-                { icon: <FileUp className="h-4 w-4" />, title: "Overlay GPX" }
-              ].map((item, index) => (
-                <Button 
-                  key={index}
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setIsCollapsed(false)} 
-                  title={item.title}
-                  className="hover:bg-accent hover:text-accent-foreground w-full"
-                >
-                  {item.icon}
-                </Button>
-              ))}
-            </div>
+/* Icon Mode - Updated with hover states */
+<div className="flex flex-col gap-3 items-center">
+  {[
+    { icon: <Map className="h-4 w-4" />, title: "Map Layers" },
+    { icon: <Layers className="h-4 w-4" />, title: "Map Overlays" },
+    { icon: <Map className="h-4 w-4" />, title: "Points of Interest" },
+    { icon: <Camera className="h-4 w-4" />, title: "Upload Photo" },
+    { icon: <Route className="h-4 w-4" />, title: "Draw Segment" },
+    { icon: <FileUp className="h-4 w-4" />, title: "Overlay GPX" }
+  ].map((item, index) => (
+    <Button 
+      key={index}
+      variant="secondary" 
+      size="icon" 
+      onClick={() => setIsCollapsed(false)} 
+      title={item.title}
+      className="w-full transition-colors data-[state=open]:bg-accent"
+    >
+      {item.icon}
+    </Button>
+  ))}
+</div>
           )}
         </div>
       </div>
