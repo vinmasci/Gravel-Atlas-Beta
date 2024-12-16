@@ -1,312 +1,106 @@
-// components/map-view.tsx
-'use client';
+'use client'
 
-import React, { useCallback, useState, useEffect, useRef } from 'react';
-import Map from 'react-map-gl';
-import { Loader } from '@googlemaps/js-api-loader';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { updatePhotoLayer } from '../lib/photo-layer';
-import { updateSegmentLayer } from '../lib/segment-layer';
-import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } from '../lib/gravel-roads-layer';
-import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '../lib/bike-infrastructure-layer'; 
-import { addPrivateRoadsLayer, updatePrivateRoadsLayer } from '../lib/private-roads-layer'; 
-import { addUnknownSurfaceSource, addUnknownSurfaceLayer, updateUnknownSurfaceLayer } from '../lib/unknown-surface-layer';
-import { addWaterPointsSource, addWaterPointsLayer, updateWaterPointsLayer } from '../lib/water-points-layer';
-import { MapSidebar } from './map-sidebar';
-import { MAP_STYLES } from '../app/constants/map-styles';
-import type { MapStyle } from '../app/types/map';
-import { addMapillaryLayers } from '../lib/mapillary';
-import { CustomAlert } from './ui/custom-alert';
-import { Button } from '../components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
-import { Search, Layers, Navigation } from 'lucide-react';
-import { Input } from '../components/ui/input';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { MapContext } from '../app/contexts/map-context';
-import { DrawModeProvider } from '../app/contexts/draw-mode-context';
-import { SegmentSheet } from '../components/segments/segment-sheet';
-import { FloatingElevationProfile } from './segments/floating-elevation-profile';
-import { useDrawMode } from '../app/hooks/use-draw-mode';
-import { cn } from "@/lib/utils";
-import { useDrawModeContext } from '../app/contexts/draw-mode-context';
+import React, { useCallback, useRef, useEffect, useState } from 'react'
+import Map from 'react-map-gl'
+import { Loader } from '@googlemaps/js-api-loader'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import { updatePhotoLayer } from '@/lib/photo-layer'
+import { updateSegmentLayer } from '@/lib/segment-layer'
+import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } from '@/lib/gravel-roads-layer'
+import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '@/lib/bike-infrastructure-layer'
+import { addPrivateRoadsLayer, updatePrivateRoadsLayer } from '@/lib/private-roads-layer'
+import { addUnknownSurfaceSource, addUnknownSurfaceLayer, updateUnknownSurfaceLayer } from '@/lib/unknown-surface-layer'
+import { addWaterPointsSource, addWaterPointsLayer, updateWaterPointsLayer } from '@/lib/water-points-layer'
+import { MAP_STYLES } from '@/app/constants/map-styles'
+import type { MapStyle } from '@/app/types/map'
+import { addMapillaryLayers } from '@/lib/mapillary'
+import { CustomAlert } from './ui/custom-alert'
+import { MapContext } from '@/app/contexts/map-context'
+import { DrawModeProvider } from '@/app/contexts/draw-mode-context'
+import { SegmentSheet } from './segments/segment-sheet'
+import { FloatingElevationProfile } from './segments/floating-elevation-profile'
+import { useDrawMode } from '@/app/hooks/use-draw-mode'
+
+interface ViewState {
+  longitude: number
+  latitude: number
+  zoom: number
+}
+
+interface MapViewProps {
+  viewState: ViewState
+  setViewState: (viewState: ViewState) => void
+  selectedStyle: MapStyle
+  overlayStates: {
+    segments: boolean
+    photos: boolean
+    'gravel-roads': boolean
+    'asphalt-roads': boolean
+    'speed-limits': boolean
+    'private-roads': boolean
+    mapillary: boolean
+    'water-points': boolean
+    'bike-infrastructure': boolean
+    'unknown-surface': boolean
+  }
+  mapillaryVisible: boolean
+  isSidebarOpen: boolean
+  isMobile: boolean
+}
 
 // Initialize Google Maps loader
 const googleLoader = new Loader({
   apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
   version: 'weekly',
   libraries: ['maps', 'places']
-});
+})
 
 const LoadingSpinner = () => (
   <div className="absolute top-4 right-4 z-50">
     <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
   </div>
-);
+)
 
-interface MobileControlsProps {
-  onSearch: (query: string) => void;
-  onLocationClick: () => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onLayerToggle: (layerId: string) => void;
-  selectedStyle: MapStyle;
-  onStyleChange: (style: MapStyle) => void;
-  overlayStates: Record<string, boolean>;
-  mapillaryVisible: boolean;
-}
-
-const MobileControls = ({
-  onSearch,
-  onLocationClick,
-  onZoomIn,
-  onZoomOut,
-  onLayerToggle,
+export function MapView({
+  viewState,
+  setViewState,
   selectedStyle,
-  onStyleChange,
   overlayStates,
-  mapillaryVisible
-}: MobileControlsProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchQuery);
-  };
-
-  return (
-    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-      {/* Search control */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="bg-background/80 backdrop-blur-sm shadow-lg"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[40vh]">
-          <form onSubmit={handleSearch} className="flex gap-2 p-4">
-            <Input
-              type="text"
-              placeholder="Search location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" size="icon">
-              <Search className="h-4 w-4" />
-            </Button>
-          </form>
-        </SheetContent>
-      </Sheet>
-
-      {/* Layers control */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button 
-            size="icon" 
-            variant="secondary" 
-            className="bg-background/80 backdrop-blur-sm shadow-lg"
-          >
-            <Layers className="h-4 w-4" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[60vh] pt-8">
-          <div className="space-y-6 p-4">
-            <div>
-              <h3 className="font-medium mb-4">Map Style</h3>
-              <RadioGroup
-                value={selectedStyle}
-                onValueChange={(value) => onStyleChange(value as MapStyle)}
-                className="space-y-2"
-              >
-                {Object.values(MAP_STYLES).map((style) => (
-                  <div key={style.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={style.id} id={`mobile-${style.id}`} />
-                    <label htmlFor={`mobile-${style.id}`}>{style.title}</label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-4">Map Overlays</h3>
-              <div className="space-y-3">
-                {[
-                  { id: 'segments', label: 'Segments' },
-                  { id: 'photos', label: 'Photos' },
-                  { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
-                  { id: 'bike-infrastructure', label: 'Bike Infrastructure' },  // Add this line
-                  { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
-                  { id: 'speed-limits', label: 'Speed Limits' },
-                  { id: 'private-roads', label: 'Private Access Roads' },
-                  { id: 'mapillary', label: 'Mapillary' }
-                ].map((overlay) => (
-                  <div key={overlay.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`mobile-${overlay.id}`}
-                      className="h-4 w-4"
-                      checked={overlay.id === 'mapillary' ? mapillaryVisible : overlayStates[overlay.id]}
-                      onChange={() => onLayerToggle(overlay.id)}
-                      disabled={overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google'}
-                    />
-                    <label 
-                      htmlFor={`mobile-${overlay.id}`}
-                      className={
-                        overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google'
-                          ? 'text-muted-foreground'
-                          : ''
-                      }
-                    >
-                      {overlay.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Zoom and navigation controls */}
-      <Button
-        size="icon"
-        variant="secondary"
-        onClick={onZoomIn}
-        className="bg-background/80 backdrop-blur-sm shadow-lg"
-      >
-        <span className="text-lg font-bold">+</span>
-      </Button>
-      
-      <Button
-        size="icon"
-        variant="secondary"
-        onClick={onZoomOut}
-        className="bg-background/80 backdrop-blur-sm shadow-lg"
-      >
-        <span className="text-lg font-bold">−</span>
-      </Button>
-
-      <Button
-        size="icon"
-        variant="secondary"
-        onClick={onLocationClick}
-        className="bg-background/80 backdrop-blur-sm shadow-lg"
-      >
-        <Navigation className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-};
-
-export function MapView() {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const googleMap = useRef<google.maps.Map | null>(null);
-  const mapRef = useRef<any>(null);
-  const styleTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-  const drawMode = useDrawMode(mapInstance);
-  console.log('MapView drawMode state:', {
-    isDrawing: drawMode.isDrawing,
-    coordinates: drawMode.drawnCoordinates.length,
-    elevationProfile: drawMode.elevationProfile.length
-  });
-  const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
-
-  const [viewState, setViewState] = useState({
-    longitude: 144.9631,
-    latitude: -37.8136,
-    zoom: 10
-  });
-
-  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
-  const [mapillaryVisible, setMapillaryVisible] = useState(false);
-  const [overlayStates, setOverlayStates] = useState({
-    segments: false,
-    photos: false,
-    'gravel-roads': false,
-    'asphalt-roads': false,
-    'speed-limits': false,
-    'private-roads': false,
-    'water-points': false,
-    mapillary: false,
-    'bike-infrastructure': false,
-    'unknown-surface': false 
-  });
-
-  const [layers] = useState([
-    { id: 'gravel-roads', name: 'Gravel Roads', visible: true },
-    { id: 'water-points', name: 'Water Points', visible: true },
-    { id: 'campsites', name: 'Campsites', visible: false },
-  ]);
+  mapillaryVisible,
+  isSidebarOpen,
+  isMobile
+}: MapViewProps) {
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const googleMap = useRef<google.maps.Map | null>(null)
+  const mapRef = useRef<any>(null)
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [showAlert, setShowAlert] = useState(false)
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
+  const drawMode = useDrawMode(mapInstance)
   
   const [selectedSegment, setSelectedSegment] = useState<{
-    id: string;
-    title: string;
-    userName: string;
-    auth0Id: string;
-    length: number;
-    averageRating?: number;
-    totalVotes?: number;
+    id: string
+    title: string
+    userName: string
+    auth0Id: string
+    length: number
+    averageRating?: number
+    totalVotes?: number
     metadata?: {
-      elevationProfile?: ElevationPoint[];
-      elevationGain?: number;
-      elevationLoss?: number;
-    };
-  } | null>(null);
-  
+      elevationProfile?: ElevationPoint[]
+      elevationGain?: number
+      elevationLoss?: number
+    }
+  } | null>(null)
+
   interface ElevationPoint {
-    distance: number;
-    elevation: number;
+    distance: number
+    elevation: number
   }
 
-  // Initialize Google Maps
-  useEffect(() => {
-    googleLoader.load().then(() => {
-      setIsGoogleLoaded(true);
-    }).catch((error) => {
-      console.error('Error loading Google Maps:', error);
-    });
-  }, []);
-
-  // Load sidebar state from localStorage
-  useEffect(() => {
-    const savedSidebarState = localStorage.getItem('sidebarOpen');
-    if (savedSidebarState !== null) {
-      setIsOpen(savedSidebarState === 'true');
-    }
-  }, []);
-
-  // Handle sidebar toggle with localStorage
-  const handleSidebarToggle = (newState: boolean) => {
-    setIsOpen(newState);
-    localStorage.setItem('sidebarOpen', String(newState));
-  };
-
-  // Check for mobile view
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobileView = window.innerWidth < 768;
-      setIsMobile(isMobileView);
-      if (isMobileView) {
-        handleSidebarToggle(false);
-      }
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Map container styles
-  const mapContainerStyle = isOpen && !isMobile ? {
+  // Map container styles based on sidebar state
+  const mapContainerStyle = isSidebarOpen && !isMobile ? {
     width: 'calc(100% - 320px)',
     height: '100%',
     marginLeft: '320px',
@@ -316,377 +110,79 @@ export function MapView() {
     height: '100%',
     marginLeft: '0',
     transition: 'all 0.3s ease-in-out'
-  };
-
-  // Initialize overlays
-  const initializeOverlays = useCallback((map: mapboxgl.Map) => {
-    if (overlayStates.mapillary && !MAP_STYLES[selectedStyle].type.includes('google')) {
-      try {
-        addMapillaryLayers(map);
-        map.setLayoutProperty('mapillary-sequences', 'visibility', 'visible');
-        map.setLayoutProperty('mapillary-images', 'visibility', 'visible');
-        setMapillaryVisible(true);
-      } catch (error) {
-        console.error('Error initializing Mapillary layer:', error);
-      }
-    }
-  }, [overlayStates, selectedStyle]);
-
-  // Handle search
-  const handleSearch = useCallback((query: string) => {
-    if (!query.trim() || !isGoogleLoaded) return;
-
-    const geocoder = new google.maps.Geocoder();
-    
-    geocoder.geocode({ address: query }, (results, status) => {
-      if (status === 'OK' && results && results[0]) {
-        const location = results[0].geometry.location;
-        const newPosition = {
-          latitude: location.lat(),
-          longitude: location.lng(),
-          zoom: 14
-        };
-        
-        setViewState(newPosition);
-
-        if (googleMap.current) {
-          googleMap.current.setCenter(location);
-          googleMap.current.setZoom(14);
-        }
-
-        if (mapRef.current) {
-          mapRef.current.getMap().flyTo({
-            center: [location.lng(), location.lat()],
-            zoom: 14
-          });
-        }
-      } else {
-        console.error('Geocode was not successful:', status);
-      }
-    });
-  }, [isGoogleLoaded]);
-
-  // Handle location
-  const handleLocationClick = useCallback(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newPosition = {
-            longitude: position.coords.longitude,
-            latitude: position.coords.latitude,
-            zoom: 14
-          };
-          setViewState(newPosition);
-
-          if (googleMap.current) {
-            googleMap.current.setCenter({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-            googleMap.current.setZoom(14);
-          }
-
-          if (mapRef.current) {
-            mapRef.current.getMap().flyTo({
-              center: [position.coords.longitude, position.coords.latitude],
-              zoom: 14
-            });
-          }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-        }
-      );
-    }
-  }, []);
-
-  // Handle zoom
-  const handleZoomIn = useCallback(() => {
-    const newZoom = Math.min((viewState.zoom || 0) + 1, 20);
-    setViewState(prev => ({
-      ...prev,
-      zoom: newZoom
-    }));
-
-    if (googleMap.current) {
-      googleMap.current.setZoom(newZoom);
-    }
-
-    if (mapRef.current) {
-      mapRef.current.getMap().zoomTo(newZoom);
-    }
-  }, [viewState.zoom]);
-
-  const handleZoomOut = useCallback(() => {
-    const newZoom = Math.max((viewState.zoom || 0) - 1, 1);
-    setViewState(prev => ({
-      ...prev,
-      zoom: newZoom
-    }));
-
-    if (googleMap.current) {
-      googleMap.current.setZoom(newZoom);
-    }
-
-    if (mapRef.current) {
-      mapRef.current.getMap().zoomTo(newZoom);
-    }
-  }, [viewState.zoom]);
-
-// Handle layer toggle
-const handleLayerToggle = useCallback((layerId: string) => {
-  if (layerId === 'gravel-roads') {
-    setOverlayStates(prev => {
-      const newState = { ...prev, 'gravel-roads': !prev['gravel-roads'] };
-      console.log('Toggling gravel roads:', {
-        oldState: prev['gravel-roads'],
-        newState: newState['gravel-roads']
-      });
-      const map = mapRef.current?.getMap();
-      if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        console.log('Updating gravel roads visibility to:', newState['gravel-roads']);
-        updateGravelRoadsLayer(map, newState['gravel-roads']);
-        console.log('Layer state after toggle:', {
-          layerExists: !!map.getLayer('gravel-roads'),
-          sourceExists: !!map.getSource('gravel-roads'),
-          currentVisibility: map.getLayoutProperty('gravel-roads', 'visibility')
-        });
-      }
-      return newState;
-    });
-  } else if (layerId === 'photos') {
-    setOverlayStates(prev => {
-      const newState = { ...prev, photos: !prev.photos };
-      const map = mapRef.current?.getMap();
-      if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        updatePhotoLayer(map, newState.photos)
-          .catch(error => console.error('Error updating photo layer:', error));
-      }
-      return newState;
-    });
-  } else if (layerId === 'segments') {
-    setOverlayStates(prev => {
-      const newState = { ...prev, segments: !prev.segments };
-      const map = mapRef.current?.getMap();
-      if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-        updateSegmentLayer(map, newState.segments, setSelectedSegment)
-          .catch(error => console.error('Error updating segments layer:', error));
-      }
-      return newState;
-    });
-} 
-
-else if (layerId === 'bike-infrastructure') {
-  setOverlayStates(prev => {
-    const newState = { ...prev, 'bike-infrastructure': !prev['bike-infrastructure'] };
-    const map = mapRef.current?.getMap();
-    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-      updateBikeInfraLayer(map, newState['bike-infrastructure']);
-    }
-    return newState;
-  });
-}
-
-else if (layerId === 'private-roads') {
-  setOverlayStates(prev => {
-    const newState = { ...prev, 'private-roads': !prev['private-roads'] };
-    const map = mapRef.current?.getMap();
-    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-      updatePrivateRoadsLayer(map, newState['private-roads']);
-    }
-    return newState;
-  });
-}
-
-else if (layerId === 'water-points') {
-  setOverlayStates(prev => {
-    const newState = { ...prev, 'water-points': !prev['water-points'] };
-    const map = mapRef.current?.getMap();
-    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-      updateWaterPointsLayer(map, newState['water-points']);
-    }
-    return newState;
-  });
-}
-
-else if (layerId === 'unknown-surface') {
-  setOverlayStates(prev => {
-    const newState = { ...prev, 'unknown-surface': !prev['unknown-surface'] };
-    const map = mapRef.current?.getMap();
-    if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-      updateUnknownSurfaceLayer(map, newState['unknown-surface']);
-    }
-    return newState;
-  });
-}
-
-else if (layerId === 'mapillary') {
-    // ... rest of existing mapillary code ...
-  } else {
-    setOverlayStates(prev => ({
-      ...prev,
-      [layerId]: !prev[layerId]
-    }));
   }
-}, [selectedStyle]);
-
-// Debug function
-const debugMapLayers = () => {
-  const map = mapRef.current?.getMap();
-  if (map) {
-    console.log('Current map sources:', map.getStyle().sources);
-    console.log('Current map layers:', map.getStyle().layers);
-    
-    const gravelSource = map.getSource('gravel-roads');
-    console.log('Gravel roads source:', gravelSource);
-    
-    const gravelLayer = map.getLayer('gravel-roads');
-    console.log('Gravel roads layer:', gravelLayer);
-  }
-};
-
-  // Handle style change
-  const handleStyleChange = useCallback((newStyle: MapStyle) => {
-    if (styleTimeout.current) {
-      clearTimeout(styleTimeout.current);
-    }
-
-    setIsLoading(true);
-
-    styleTimeout.current = setTimeout(() => {
-      if (googleMap.current && MAP_STYLES[selectedStyle].type === 'google') {
-        googleMap.current = null;
-        if (mapContainer.current) {
-          mapContainer.current.innerHTML = '';
-        }
-      }
-
-      setSelectedStyle(newStyle);
-      
-      if (MAP_STYLES[newStyle].type === 'google') {
-        setMapillaryVisible(false);
-        setOverlayStates(prev => ({
-          ...prev,
-          mapillary: false
-        }));
-      } else {
-        const map = mapRef.current?.getMap();
-        if (map) {
-          map.once('style.load', () => {
-            initializeOverlays(map);
-          });
-        }
-      }
-
-      setTimeout(() => setIsLoading(false), 500);
-    }, 300);
-  }, [selectedStyle, initializeOverlays]);
 
   // Initialize Google Maps
+  useEffect(() => {
+    googleLoader.load().then(() => {
+      setIsGoogleLoaded(true)
+    }).catch((error) => {
+      console.error('Error loading Google Maps:', error)
+    })
+  }, [])
+
+  // Initialize Google Maps instance
   useEffect(() => {
     if (MAP_STYLES[selectedStyle].type === 'google' && isGoogleLoaded && mapContainer.current) {
       googleMap.current = new google.maps.Map(mapContainer.current, {
         center: { lat: viewState.latitude, lng: viewState.longitude },
         zoom: viewState.zoom,
         mapTypeId: MAP_STYLES[selectedStyle].style
-      });
+      })
     }
-  }, [selectedStyle, isGoogleLoaded, viewState, mapContainer]);
+  }, [selectedStyle, isGoogleLoaded, viewState])
 
-// Add terrain source and configuration
-useEffect(() => {
-  if (!mapInstance || selectedStyle !== 'mapbox') return;
+  // Add terrain configuration
+  useEffect(() => {
+    if (!mapInstance || selectedStyle !== 'mapbox') return
 
-  // Wait for style to load
-  mapInstance.once('style.load', () => {
-    try {
-      // Add DEM source if it doesn't exist
-      if (!mapInstance.getSource('mapbox-dem')) {
-        mapInstance.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14
-        });
-
-        // Set terrain after adding source
-        mapInstance.setTerrain({
-          source: 'mapbox-dem',
-          exaggeration: 1
-        });
-      }
-    } catch (error) {
-      console.error('Error adding terrain:', error);
-    }
-  });
-
-  return () => {
-    if (mapInstance && mapInstance.getSource('mapbox-dem')) {
+    mapInstance.once('style.load', () => {
       try {
-        mapInstance.setTerrain(null);
-        mapInstance.removeSource('mapbox-dem');
-      } catch (e) {
-        console.error('Error cleaning up terrain:', e);
+        if (!mapInstance.getSource('mapbox-dem')) {
+          mapInstance.addSource('mapbox-dem', {
+            type: 'raster-dem',
+            url: 'mapbox://mapbox.terrain-dem-v1',
+            tileSize: 512,
+            maxzoom: 14
+          })
+
+          mapInstance.setTerrain({
+            source: 'mapbox-dem',
+            exaggeration: 1
+          })
+        }
+      } catch (error) {
+        console.error('Error adding terrain:', error)
+      }
+    })
+
+    return () => {
+      if (mapInstance && mapInstance.getSource('mapbox-dem')) {
+        try {
+          mapInstance.setTerrain(null)
+          mapInstance.removeSource('mapbox-dem')
+        } catch (e) {
+          console.error('Error cleaning up terrain:', e)
+        }
       }
     }
-  };
-}, [mapInstance, selectedStyle]);
+  }, [mapInstance, selectedStyle])
 
-// Render Google Maps
-if (MAP_STYLES[selectedStyle].type === 'google') {
+  // Render Google Maps
+  if (MAP_STYLES[selectedStyle].type === 'google') {
+    return (
+      <div className="relative h-full isolate">
+        <div ref={mapContainer} style={mapContainerStyle} className="h-full w-full" />
+        {isLoading && <LoadingSpinner />}
+        {showAlert && (
+          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+        )}
+      </div>
+    )
+  }
+
+  // Render Mapbox
   return (
-    <div className="relative h-full isolate">
-      <div ref={mapContainer} style={mapContainerStyle} className="h-full w-full" />
-      {isLoading && <LoadingSpinner />}
-      {showAlert && (
-        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-      )}
-      {isMobile && (
-        <MobileControls
-        onSearch={handleSearch}
-        onLocationClick={handleLocationClick}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onLayerToggle={handleLayerToggle}
-        selectedStyle={selectedStyle}
-        onStyleChange={handleStyleChange}
-        overlayStates={overlayStates}
-        mapillaryVisible={mapillaryVisible}
-        />
-      )}
-      {!isMobile && (
-        <div className={cn(
-          "fixed left-0 top-14 z-[60]",
-          "transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <MapSidebar
-    isOpen={isOpen}
-    setIsOpen={handleSidebarToggle}
-    onSearch={handleSearch}
-    onLocationClick={handleLocationClick}
-    onZoomIn={handleZoomIn}
-    onZoomOut={handleZoomOut}
-    availableLayers={layers}
-    onLayerToggle={handleLayerToggle}
-    selectedStyle={selectedStyle}
-    onStyleChange={handleStyleChange}
-    mapillaryVisible={mapillaryVisible}
-    overlayStates={overlayStates}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Render Mapbox
-console.log('Rendering Mapbox view with drawMode:', {
-  isDrawing: drawMode.isDrawing,
-  hasElevationProfile: drawMode.elevationProfile.length > 0
-});
-return (
-  <>
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
       <DrawModeProvider map={mapInstance}>
         <div className="w-full h-full relative">
@@ -706,87 +202,44 @@ return (
             reuseMaps
             ref={mapRef}
             onLoad={(evt) => {
-              setMapInstance(evt.target);
-              console.log('Map instance set:', {
-                mapExists: !!evt.target,
-                drawModeActive: drawMode.isDrawing
-              });
+              setMapInstance(evt.target)
               
-              // Initialize gravel roads layer
-              const map = evt.target;
+              // Initialize map layers
+              const map = evt.target
               if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-                console.log('Initializing gravel roads layer');
-
-                // Water icon
+                // Load water icon
                 map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-                  if (error) throw error;
+                  if (error) throw error
                   if (!map.hasImage('water-icon')) {
-                    map.addImage('water-icon', image);
+                    map.addImage('water-icon', image)
                   }
-                });
+                })
                 
-                // Add sources and layers
-                addGravelRoadsSource(map);
-                addGravelRoadsLayer(map);
-                updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+                // Add and update all layers
+                addGravelRoadsSource(map)
+                addGravelRoadsLayer(map)
+                updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
                 
-                addBikeInfraSource(map);
-                addBikeInfraLayer(map);
-                updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+                addBikeInfraSource(map)
+                addBikeInfraLayer(map)
+                updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
                 
-                addWaterPointsSource(map);
-                addWaterPointsLayer(map);
-                updateWaterPointsLayer(map, overlayStates['water-points']);
+                addWaterPointsSource(map)
+                addWaterPointsLayer(map)
+                updateWaterPointsLayer(map, overlayStates['water-points'])
 
-                addUnknownSurfaceSource(map);
-                addUnknownSurfaceLayer(map);
-                updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+                addUnknownSurfaceSource(map)
+                addUnknownSurfaceLayer(map)
+                updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
 
-                addPrivateRoadsLayer(map);
-                updatePrivateRoadsLayer(map, overlayStates['private-roads']);
-
-                debugMapLayers();
+                addPrivateRoadsLayer(map)
+                updatePrivateRoadsLayer(map, overlayStates['private-roads'])
               }
             }}
           />
           {isLoading && <LoadingSpinner />}
           {showAlert && (
             <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-          )}
-          {isMobile && (
-            <MobileControls
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
-            />
-          )}
-          {!isMobile && (
-            <div className={cn(
-              "fixed left-0 top-14 z-[60]",
-              "transition-transform duration-300 ease-in-out",
-              isOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
-              <MapSidebar
-    isOpen={isOpen}
-    setIsOpen={handleSidebarToggle}
-    onSearch={handleSearch}
-    onLocationClick={handleLocationClick}
-    onZoomIn={handleZoomIn}
-    onZoomOut={handleZoomOut}
-    availableLayers={layers}
-    onLayerToggle={handleLayerToggle}
-    selectedStyle={selectedStyle}
-    onStyleChange={handleStyleChange}
-    mapillaryVisible={mapillaryVisible}
-    overlayStates={overlayStates}
-              />
-            </div>
           )}
 
           {mapInstance && <FloatingElevationProfile />}
@@ -796,12 +249,11 @@ return (
             onOpenChange={(open) => !open && setSelectedSegment(null)}
             segment={selectedSegment}
             onUpdate={(updatedSegment) => {
-              setSelectedSegment(updatedSegment);
+              setSelectedSegment(updatedSegment)
             }}
           />
         </div>
       </DrawModeProvider>
     </MapContext.Provider>
-  </>
-);
+  )
 }

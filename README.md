@@ -602,7 +602,3 @@ Consider:
 - Replacing Sheet with a custom sidebar component using basic divs and transitions
 - Using different components for different sliding panels (e.g., Dialog for some, Sheet for others)
 - Investigating Radix UI's portal management system
-
-Let me try a different approach. Since we can see the phantom sidebar goes away when you trigger the mobile view, let's look at the actual portal behavior.
-I see you also have a Sheet in ProfileSheet.tsx. Now I understand why resizing helps - it's clearing all sheet portals.
-Let's try something different. Instead of trying to fix the Sheet components, let's create a new provider to manage all sheets in one place:

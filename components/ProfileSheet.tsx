@@ -36,7 +36,7 @@ export default function ProfileSheet() {
             setProfileData({
               bioName: data.bioName || '',
               website: data.website || '',
-              picture: data.picture || user?.picture || '', // Added picture field
+              picture: data.picture || user?.picture || '',
               socialLinks: {
                 instagram: data.socialLinks?.instagram || '',
                 strava: data.socialLinks?.strava || '',
@@ -53,7 +53,13 @@ export default function ProfileSheet() {
             })
           })
       }
-    }, [user])
+    
+      // Add this cleanup function
+      return () => {
+        setActiveSheet(null);
+      };
+    }, [user, setActiveSheet]);
+    
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,10 +157,16 @@ export default function ProfileSheet() {
   if (isLoading) return null
 
   return (
-    <Sheet 
-      open={activeSheet === 'profile'} 
-      onOpenChange={(open) => setActiveSheet(open ? 'profile' : null)}
-    >
+<Sheet 
+  open={activeSheet === 'profile'} 
+  onOpenChange={(open) => {
+    if (!open) {
+      setActiveSheet(null);
+    } else {
+      setActiveSheet('profile');
+    }
+  }}
+>
       <SheetTrigger asChild>
         <button className="rounded-full overflow-hidden hover:opacity-80 transition-opacity">
           <img 
