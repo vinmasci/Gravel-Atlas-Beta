@@ -282,5 +282,5 @@ export function MapSidebar({
           onLayerToggle('photos');
         }}
       />
-    </div></div>
-}
+    </div>
+};
