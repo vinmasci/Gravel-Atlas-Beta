@@ -301,16 +301,16 @@ function MapViewInner({
   )
 }
 
-// Export the wrapped component
 export default function MapView(props: MapViewProps) {
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
   return (
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
       <DrawModeProvider map={mapInstance}>
         <MapViewInner 
           {...props} 
-          onMapInit={(map) => setMapInstance(map)}
+          map={mapInstance}
+          onMapInit={(map: mapboxgl.Map) => setMapInstance(map)}
         />
       </DrawModeProvider>
     </MapContext.Provider>
