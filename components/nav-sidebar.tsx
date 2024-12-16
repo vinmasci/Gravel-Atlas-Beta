@@ -124,45 +124,61 @@ export function NavSidebar({
             </form>
           ) : (
             <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setIsCollapsed(false)}
-              className="w-full hover:bg-accent hover:text-accent-foreground" // Added hover state
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          )}
-
-          {/* Map Controls - Updated styling */}
-          <div className={cn(
-            "flex gap-2",
-            isCollapsed ? "flex-col items-center" : "md:flex"
-          )}>
-            <Button 
-              variant="secondary" // Changed to secondary
-              size="icon" 
-              onClick={onZoomIn}
-              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
-            >
-              <span className="text-lg font-bold">+</span>
-            </Button>
-            <Button 
-              variant="secondary" // Changed to secondary
-              size="icon" 
-              onClick={onZoomOut}
-              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
-            >
-              <span className="text-lg font-bold">−</span>
-            </Button>
-            <Button 
-              variant="secondary" // Changed to secondary
-              size="icon" 
-              onClick={onLocationClick}
-              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
-            >
-              <Navigation className="h-4 w-4" />
-            </Button>
-          </div>
+            variant="secondary"
+            size="icon"
+            onClick={() => setIsCollapsed(false)}
+            className={cn(
+              "bg-background/80 backdrop-blur-sm",
+              "hover:bg-accent hover:text-accent-foreground",
+              "transition-colors duration-300 ease-in-out"
+            )}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
+        
+        {/* Map Controls */}
+        <div className={cn(
+          "flex gap-2",
+          isCollapsed ? "flex-col items-center" : "md:flex"
+        )}>
+          <Button 
+            variant="secondary"
+            size="icon" 
+            onClick={onZoomIn}
+            className={cn(
+              "bg-background/80 backdrop-blur-sm",
+              "hover:bg-accent hover:text-accent-foreground",
+              "transition-colors duration-300 ease-in-out"
+            )}
+          >
+            <span className="text-lg font-bold">+</span>
+          </Button>
+          <Button 
+            variant="secondary"
+            size="icon" 
+            onClick={onZoomOut}
+            className={cn(
+              "bg-background/80 backdrop-blur-sm",
+              "hover:bg-accent hover:text-accent-foreground",
+              "transition-colors duration-300 ease-in-out"
+            )}
+          >
+            <span className="text-lg font-bold">−</span>
+          </Button>
+          <Button 
+            variant="secondary"
+            size="icon" 
+            onClick={onLocationClick}
+            className={cn(
+              "bg-background/80 backdrop-blur-sm",
+              "hover:bg-accent hover:text-accent-foreground",
+              "transition-colors duration-300 ease-in-out"
+            )}
+          >
+            <Navigation className="h-4 w-4" />
+          </Button>
+        </div>
 
           {/* Accordions or Icons */}
           {!isCollapsed ? (
@@ -342,11 +358,15 @@ export function NavSidebar({
   ].map((item, index) => (
     <Button 
       key={index}
-      variant="secondary" 
+      variant="ghost"
       size="icon" 
       onClick={() => setIsCollapsed(false)} 
       title={item.title}
-      className="w-full transition-colors data-[state=open]:bg-accent"
+      className={cn(
+        "bg-background/80 backdrop-blur-sm",
+        "hover:bg-accent hover:text-accent-foreground",
+        "transition-colors duration-300 ease-in-out"
+      )}
     >
       {item.icon}
     </Button>
