@@ -272,7 +272,6 @@ export function MapSidebar({
           </Accordion>
         </div>
       </div>
-</div>
 
       {/* Photo Upload Dialog */}
       <PhotoUploadDialog 
@@ -284,3 +283,4 @@ export function MapSidebar({
       />
     </div>
 };
+}
