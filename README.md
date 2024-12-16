@@ -602,3 +602,30 @@ Consider:
 - Replacing Sheet with a custom sidebar component using basic divs and transitions
 - Using different components for different sliding panels (e.g., Dialog for some, Sheet for others)
 - Investigating Radix UI's portal management system
+
+## 🔄 Recent Updates (December 16, 2024) - Map Layer and Context Refactor
+
+### Fixed Map Layer Issues
+- Reorganized map layer initialization to ensure proper loading order
+- Fixed issues with overlay toggles for all map layers:
+  - Gravel / Unpaved Roads
+  - Bike Infrastructure
+  - Unknown Surface Roads
+  - Private Access Roads
+  - Water Points
+
+### Context Management Improvements
+- Refactored DrawMode context implementation
+- Centralized map instance management
+- Improved context hierarchy between components
+- Fixed issues with context providers in page layout
+
+### Search Functionality
+- Reimplemented location search using Mapbox Geocoding API
+- Added smooth transitions to search results
+- Improved search error handling
+
+### Code Structure
+- Simplified layer initialization
+- Added proper cleanup for map layers and sources
+- Improved error handling for map operations

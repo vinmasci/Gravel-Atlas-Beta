@@ -42,10 +42,36 @@ export default function Home() {
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
-    // TODO: Implement search functionality
-    console.log("Search query:", query);
-    // We'll need to implement the actual search functionality here
-  }, [mapInstance])
+    if (!query || !mapInstance) return;
+    
+    const geocodingUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+    
+    fetch(geocodingUrl)
+      .then(response => response.json())
+      .then(data => {
+        if (data.features && data.features.length > 0) {
+          const [lng, lat] = data.features[0].center;
+          
+          // Update view state to center on search result
+          setViewState(prev => ({
+            ...prev,
+            longitude: lng,
+            latitude: lat,
+            zoom: 14
+          }));
+  
+          // Fly to location
+          mapInstance.flyTo({
+            center: [lng, lat],
+            zoom: 14,
+            duration: 2000
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Search error:', error);
+      });
+  }, [mapInstance, setViewState]);
 
   // Handle location click
   const handleLocationClick = useCallback(() => {
