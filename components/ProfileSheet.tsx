@@ -7,6 +7,7 @@ import { useUser } from '@auth0/nextjs-auth0/client'
 import { LogOut, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from "../app/hooks/use-toast"
+import { useSheet } from '@/app/contexts/sheet-context';
 
 export default function ProfileSheet() {
     const [open, setOpen] = React.useState(false)
@@ -25,6 +26,7 @@ export default function ProfileSheet() {
     })
     const [isSaving, setIsSaving] = React.useState(false)
     const [isUploading, setIsUploading] = React.useState(false)
+    const { activeSheet, setActiveSheet } = useSheet();
   
     React.useEffect(() => {
       if (user?.sub) {
@@ -149,7 +151,10 @@ export default function ProfileSheet() {
   if (isLoading) return null
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet 
+      open={activeSheet === 'profile'} 
+      onOpenChange={(open) => setActiveSheet(open ? 'profile' : null)}
+    >
       <SheetTrigger asChild>
         <button className="rounded-full overflow-hidden hover:opacity-80 transition-opacity">
           <img 

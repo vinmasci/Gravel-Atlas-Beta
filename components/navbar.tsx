@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Menu } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog'
 import { useUser } from '@auth0/nextjs-auth0/client'
 import ProfileSheet from '../components/ProfileSheet'
 
@@ -12,9 +12,9 @@ export function Navbar() {
   const { user, error, isLoading } = useUser()
 
   return (
-<header className="navbar fixed top-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="navbar fixed top-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        {/* Logo/Title on the left */}
+        {/* Logo/Title stays same */}
         <div className="flex-1">
           <Link href="/" className="flex items-center space-x-2">
             <h1 className="text-xl font-bold">Gravel Atlas</h1>
@@ -31,18 +31,18 @@ export function Navbar() {
             </Button>
           )}
           
-          {/* Mobile menu button */}
-          <Sheet>
-            <SheetTrigger asChild>
+          {/* Mobile menu button using Dialog instead of Sheet */}
+          <Dialog>
+            <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Menu</DialogTitle>
+              </DialogHeader>
               <nav className="flex flex-col gap-4 mt-4">
                 {!user && (
                   <div className="mt-2">
@@ -52,8 +52,8 @@ export function Navbar() {
                   </div>
                 )}
               </nav>
-            </SheetContent>
-          </Sheet>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </header>
