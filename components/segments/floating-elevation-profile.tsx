@@ -17,26 +17,50 @@ import { useDrawModeContext } from '../../app/contexts/draw-mode-context';
 
 function calculateGrades(elevationProfile: ElevationPoint[]): number[] {
   const grades: number[] = [];
-  
-  for (let i = 0; i < elevationProfile.length - 1; i++) {
-    const current = elevationProfile[i];
-    let nextIndex = i + 1;
+  let currentIndex = 0;
+
+  while (currentIndex < elevationProfile.length - 1) {
+    const startPoint = elevationProfile[currentIndex];
+    let endIndex = currentIndex + 1;
+
+    // Find the point that's closest to 100m away
     while (
-      nextIndex < elevationProfile.length - 1 && 
-      (elevationProfile[nextIndex].distance - current.distance) * 1000 < 100
+      endIndex < elevationProfile.length - 1 && 
+      (elevationProfile[endIndex].distance - startPoint.distance) < 0.1 // 0.1km = 100m
     ) {
-      nextIndex++;
+      endIndex++;
     }
-    const next = elevationProfile[nextIndex];
-    
-    const rise = next.elevation - current.elevation;
-    const run = (next.distance - current.distance) * 1000;
+
+    const endPoint = elevationProfile[endIndex];
+    const rise = endPoint.elevation - startPoint.elevation;
+    const run = (endPoint.distance - startPoint.distance) * 1000; // Convert to meters
     const grade = (rise / run) * 100;
     
-    grades.push(Math.round(grade * 10) / 10);
+    // Apply this grade to all points in the 100m segment
+    for (let i = currentIndex; i <= endIndex; i++) {
+      grades.push(Math.round(grade * 10) / 10);
+    }
+    
+    currentIndex = endIndex;
+  }
+
+  // If we have remaining points, use the last calculated grade
+  while (grades.length < elevationProfile.length) {
+    grades.push(grades[grades.length - 1] || 0);
   }
   
   return grades;
+}
+
+function getGradeColor(grade: number): string {
+  const absGrade = Math.abs(grade);
+  if (absGrade < 2) return '#84CC16';    // lime-500
+  if (absGrade < 4) return '#84CC16';    // lime-500
+  if (absGrade < 6) return '#EAB308';    // yellow-500
+  if (absGrade < 8) return '#F97316';    // orange-500
+  if (absGrade < 10) return '#EF4444';   // red-500
+  if (absGrade < 14) return '#991B1B';   // red-800
+  return '#450a0a';                      // red-950
 }
 
 interface ElevationPoint {
@@ -46,30 +70,14 @@ interface ElevationPoint {
 
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
-  const renderCount = useRef(0);
   const [hoverPoint, setHoverPoint] = useState<{distance: number; elevation: number} | null>(null);
-  
-  useEffect(() => {
-    console.log('FloatingElevationProfile mounted:', {
-      timestamp: new Date().toISOString(),
-      drawModeAvailable: !!drawMode,
-    });
-
-    return () => {
-      console.log('FloatingElevationProfile unmounted:', {
-        timestamp: new Date().toISOString(),
-      });
-    };
-  }, []);
 
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
 
-    // Remove existing marker
     const existingMarker = document.getElementById('elevation-hover-marker');
     if (existingMarker) existingMarker.remove();
 
-    // Find the corresponding map coordinates
     const index = drawMode.elevationProfile.findIndex(
       point => Math.abs(point.distance - hoverPoint.distance) < 0.01 &&
       Math.abs(point.elevation - hoverPoint.elevation) < 0.1
@@ -80,12 +88,11 @@ export function FloatingElevationProfile() {
     const coordinates = drawMode.line?.geometry.coordinates[index];
     if (!coordinates) return;
 
-    // Create marker
     const marker = document.createElement('div');
     marker.id = 'elevation-hover-marker';
     marker.style.width = '12px';
     marker.style.height = '12px';
-    marker.style.backgroundColor = '#009999'; // Darker cyan
+    marker.style.backgroundColor = '#009999';
     marker.style.border = '1px solid black';
     marker.style.borderRadius = '50%';
     marker.style.position = 'absolute';
@@ -108,25 +115,23 @@ export function FloatingElevationProfile() {
     return null;
   }
 
-  // Get actual elevation range for dynamic Y-axis domain
   const elevations = drawMode.elevationProfile.map(point => point.elevation);
   const minElevation = Math.min(...elevations, 0);
   const maxElevation = Math.max(...elevations, 100);
-  const elevationPadding = (maxElevation - minElevation) * 0.1; // 10% padding
+  const elevationPadding = (maxElevation - minElevation) * 0.1;
 
-  // Empty state data for the chart
   const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
   const displayData = drawMode.elevationProfile.length >= 2 
     ? drawMode.elevationProfile.map((point, index, array) => {
         const grades = calculateGrades(array);
         return {
           ...point,
-          grade: grades[index] || 0
+          grade: grades[index] || 0,
+          gradeColor: getGradeColor(grades[index] || 0)
         };
       })
     : emptyData;
 
-  // Calculate the maximum distance for X-axis domain
   const maxDistance = Math.max(
     ...drawMode.elevationProfile.map(point => point.distance),
     1
@@ -165,10 +170,7 @@ export function FloatingElevationProfile() {
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
-              onClick={() => {
-                console.log('Clear drawing clicked');
-                drawMode.clearDrawing();
-              }}
+              onClick={() => drawMode.clearDrawing()}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -212,31 +214,44 @@ export function FloatingElevationProfile() {
                 stroke="#666"
                 fontSize={12}
               />
-<Tooltip 
-  content={({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="p-2" style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          borderRadius: '8px',
-          color: 'white'
-        }}>
-          <p className="mb-1">{label.toFixed(1)} km</p>
-          <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
-          {payload[1] && (
-            <p style={{ color: '#3b82f6' }}>Grade : {payload[1].value}%</p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  }}
-/>
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                domain={[-20, 20]}
+                hide={true}
+              />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="p-2 text-xs" style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontWeight: '400'
+                      }}>
+                        <p className="mb-1">{label.toFixed(1)} km</p>
+                        <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
+                        <p style={{ color: '#3b82f6' }}>Grade : {payload[1]?.value.toFixed(1)}%</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Area
                 type="monotone"
                 dataKey="elevation"
-                stroke="#ef4444"
+                stroke={(data) => data.gradeColor || '#00ffff'}
                 strokeWidth={2}
+                fill="none"
+                dot={false}
+              />
+              <Area
+                yAxisId="right"
+                type="monotone"
+                dataKey="grade"
+                stroke="none"
                 fill="none"
                 dot={false}
               />
