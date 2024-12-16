@@ -171,3 +171,17 @@
 .segment-hover-popup .mapboxgl-popup-tip {
   display: none;
 }
+
+/* Add these to your globals.css */
+.accordion-item {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.accordion-content {
+  background: transparent !important;
+}
+
+.accordion-trigger {
+  background: transparent !important;
+}

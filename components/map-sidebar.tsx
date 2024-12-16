@@ -68,7 +68,7 @@ export function MapSidebar({
 
   return (
 <div 
-  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform transition-transform duration-300 ease-in-out z-40 ${
+  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform transition-all duration-300 ease-in-out z-40 ${
     isOpen ? 'translate-x-0' : '-translate-x-full'
   }`}
 >
@@ -90,37 +90,37 @@ export function MapSidebar({
         placeholder="Search location..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="flex-1 bg-background/60"
+        className="flex-1 bg-transparent"
       />
-      <Button type="submit" size="icon" className="bg-background/60">
+      <Button type="submit" size="icon" className="bg-transparent">
         <Search className="h-4 w-4" />
       </Button>
     </form>
 
     {/* Map Controls */}
     <div className="hidden md:flex gap-2 mb-4">
-      <Button variant="outline" size="icon" className="bg-background/60" onClick={onZoomIn}>
+      <Button variant="outline" size="icon" className="bg-transparent" onClick={onZoomIn}>
         <span className="text-lg font-bold">+</span>
       </Button>
-      <Button variant="outline" size="icon" className="bg-background/60" onClick={onZoomOut}>
+      <Button variant="outline" size="icon" className="bg-transparent" onClick={onZoomOut}>
         <span className="text-lg font-bold">−</span>
       </Button>
-      <Button variant="outline" size="icon" className="bg-background/60" onClick={onLocationClick}>
+      <Button variant="outline" size="icon" className="bg-transparent" onClick={onLocationClick}>
         <Navigation className="h-4 w-4" />
       </Button>
     </div>
 
-    {/* Accordion Sections */}
-    <Accordion type="multiple" className="w-full space-y-2 [&>*]:bg-transparent">
-          {/* Map Layers */}
-          <AccordionItem value="map-layers">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Map className="h-4 w-4" />
-                Map Layers
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
+    {/* Accordion Sections with transparent background */}
+    <Accordion type="multiple" className="w-full space-y-2">
+      {/* Your existing accordion items, but add bg-transparent to the content */}
+      <AccordionItem value="map-layers" className="bg-transparent border-transparent">
+        <AccordionTrigger className="hover:no-underline bg-transparent">
+          <div className="flex items-center gap-2">
+            <Map className="h-4 w-4" />
+            Map Layers
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="bg-transparent">
               <RadioGroup
                 value={selectedStyle}
                 onValueChange={(value) => onStyleChange(value as MapStyle)}
