@@ -46,6 +46,11 @@ interface MapViewProps {
   mapillaryVisible: boolean
 }
 
+// Add the new interface right after MapViewProps
+interface MapViewInnerProps extends MapViewProps {
+  onMapInit: (map: mapboxgl.Map) => void
+}
+
 // Initialize Google Maps loader
 const googleLoader = new Loader({
   apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -73,7 +78,6 @@ function MapViewInner({
   const [isLoading, setIsLoading] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
-  const drawMode = useDrawMode(mapInstance)
   
   const [selectedSegment, setSelectedSegment] = useState<{
     id: string
@@ -239,6 +243,7 @@ function MapViewInner({
         ref={mapRef}
         onLoad={(evt) => {
           setMapInstance(evt.target)
+          onMapInit(map)  // Add this line
           
           // Initialize map layers
           const map = evt.target
@@ -298,10 +303,15 @@ function MapViewInner({
 
 // Export the wrapped component
 export default function MapView(props: MapViewProps) {
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
+
   return (
-    <MapContext.Provider value={{ map: null, setMap: () => {} }}>
-      <DrawModeProvider>
-        <MapViewInner {...props} />
+    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+      <DrawModeProvider map={mapInstance}>
+        <MapViewInner 
+          {...props} 
+          onMapInit={(map) => setMapInstance(map)}
+        />
       </DrawModeProvider>
     </MapContext.Provider>
   )
