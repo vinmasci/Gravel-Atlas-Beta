@@ -330,6 +330,11 @@ return (
         addBikeInfraLayer(map);
         addUnknownSurfaceSource(map);
         addUnknownSurfaceLayer(map);
+
+  // Add these two lines:
+  addPavedRoadsSource(map);
+  addPavedRoadsLayer(map);
+
         // Private roads layer depends on gravel-roads source, so it should come after
         addPrivateRoadsLayer(map);
       

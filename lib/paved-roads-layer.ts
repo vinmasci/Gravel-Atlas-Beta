@@ -30,7 +30,7 @@ export const addPavedRoadsLayer = (map: mapboxgl.Map) => {
         'id': 'paved-roads',
         'type': 'line',
         'source': 'paved-roads',
-        'source-layer': 'gravel_roads',
+        'source-layer': 'roads',
         'filter': [
           'any',
           ['==', ['get', 'surface'], 'paved'],
