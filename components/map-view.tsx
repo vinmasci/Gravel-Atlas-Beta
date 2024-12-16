@@ -59,14 +59,12 @@ const LoadingSpinner = () => (
   </div>
 )
 
-export function MapView({
+function MapViewInner({
   viewState,
   setViewState,
   selectedStyle,
   overlayStates,
   mapillaryVisible,
-  isSidebarOpen,
-  isMobile
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const googleMap = useRef<google.maps.Map | null>(null)
@@ -97,11 +95,10 @@ export function MapView({
     elevation: number
   }
 
-// With this:
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%'
-}
+  const mapContainerStyle = {
+    width: '100%',
+    height: '100%'
+  }
 
   // Initialize Google Maps
   useEffect(() => {
@@ -159,7 +156,7 @@ const mapContainerStyle = {
     }
   }, [mapInstance, selectedStyle])
 
-  // Add the new effects right here, after the terrain effect and before the Google Maps rendering check
+  // Layer visibility effects
   useEffect(() => {
     if (!mapInstance) return
     updatePhotoLayer(mapInstance, overlayStates.photos)
@@ -172,7 +169,9 @@ const mapContainerStyle = {
 
   useEffect(() => {
     if (!mapInstance) return
-    addMapillaryLayers(mapInstance)
+    if (!mapInstance.getSource('mapillary')) {
+      addMapillaryLayers(mapInstance)
+    }
     if (mapillaryVisible) {
       mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible')
       mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible')
@@ -222,80 +221,87 @@ const mapContainerStyle = {
 
   // Render Mapbox
   return (
-    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <DrawModeProvider map={mapInstance}>
-        <div className="w-full h-full relative">
-          <Map
-            {...viewState}
-            onMove={evt => setViewState(evt.viewState)}
-            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-            style={mapContainerStyle}
-            mapStyle={
-              selectedStyle === 'osm-cycle'
-                ? MAP_STYLES[selectedStyle].style
-                : selectedStyle === 'mapbox'
-                ? MAP_STYLES[selectedStyle].style
-                : 'mapbox://styles/mapbox/empty-v9'
-            }
-            projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-            reuseMaps
-            ref={mapRef}
-            onLoad={(evt) => {
-              setMapInstance(evt.target)
-              
-              // Initialize map layers
-              const map = evt.target
-              if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-                // Load water icon
-                map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-                  if (error) throw error
-                  if (!map.hasImage('water-icon')) {
-                    map.addImage('water-icon', image)
-                  }
-                })
-                
-    // Add and update all layers
-    addGravelRoadsSource(map)
-    addGravelRoadsLayer(map)
-    updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
-    
-    addBikeInfraSource(map)
-    addBikeInfraLayer(map)
-    updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
-    
-    addWaterPointsSource(map)
-    addWaterPointsLayer(map)
-    updateWaterPointsLayer(map, overlayStates['water-points'])
+    <div className="w-full h-full relative">
+      <Map
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+        style={mapContainerStyle}
+        mapStyle={
+          selectedStyle === 'osm-cycle'
+            ? MAP_STYLES[selectedStyle].style
+            : selectedStyle === 'mapbox'
+            ? MAP_STYLES[selectedStyle].style
+            : 'mapbox://styles/mapbox/empty-v9'
+        }
+        projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+        reuseMaps
+        ref={mapRef}
+        onLoad={(evt) => {
+          setMapInstance(evt.target)
+          
+          // Initialize map layers
+          const map = evt.target
+          if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
+            // Load water icon
+            map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+              if (error) throw error
+              if (!map.hasImage('water-icon')) {
+                map.addImage('water-icon', image)
+              }
+            })
+            
+            // Add and update all layers
+            addGravelRoadsSource(map)
+            addGravelRoadsLayer(map)
+            updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
+            
+            addBikeInfraSource(map)
+            addBikeInfraLayer(map)
+            updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
+            
+            addWaterPointsSource(map)
+            addWaterPointsLayer(map)
+            updateWaterPointsLayer(map, overlayStates['water-points'])
 
-    addUnknownSurfaceSource(map)
-    addUnknownSurfaceLayer(map)
-    updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
+            addUnknownSurfaceSource(map)
+            addUnknownSurfaceLayer(map)
+            updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
 
-    addPrivateRoadsLayer(map)
-    updatePrivateRoadsLayer(map, overlayStates['private-roads'])
+            addPrivateRoadsLayer(map)
+            updatePrivateRoadsLayer(map, overlayStates['private-roads'])
 
-    // Add these lines for photos and segments
-    updatePhotoLayer(map, overlayStates.photos)
-    updateSegmentLayer(map, overlayStates.segments)
-  }
-}}
-          />
-          {isLoading && <LoadingSpinner />}
-          {showAlert && (
-            <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-          )}
+            // Initialize photos and segments
+            updatePhotoLayer(map, overlayStates.photos)
+            updateSegmentLayer(map, overlayStates.segments)
+          }
+        }}
+      />
+      {isLoading && <LoadingSpinner />}
+      {showAlert && (
+        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+      )}
 
-          {mapInstance && <FloatingElevationProfile />}
+      {mapInstance && <FloatingElevationProfile />}
 
-          <SegmentSheet
-            open={!!selectedSegment}
-            onOpenChange={(open) => !open && setSelectedSegment(null)}
-            segment={selectedSegment}
-            onUpdate={(updatedSegment) => {
-              setSelectedSegment(updatedSegment)
-            }}
-          />
-        </div>
+      <SegmentSheet
+        open={!!selectedSegment}
+        onOpenChange={(open) => !open && setSelectedSegment(null)}
+        segment={selectedSegment}
+        onUpdate={(updatedSegment) => {
+          setSelectedSegment(updatedSegment)
+        }}
+      />
+    </div>
+  )
+}
+
+// Export the wrapped component
+export default function MapView(props: MapViewProps) {
+  return (
+    <MapContext.Provider value={{ map: null, setMap: () => {} }}>
+      <DrawModeProvider>
+        <MapViewInner {...props} />
       </DrawModeProvider>
     </MapContext.Provider>
   )

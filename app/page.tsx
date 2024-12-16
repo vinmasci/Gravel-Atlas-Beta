@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { MapView } from '@/components/map-view'
+import MapView from '@/components/map-view'
 import { NavSidebar } from '@/components/nav-sidebar'
 import { MAP_STYLES } from '@/app/constants/map-styles'
 import type { MapStyle } from '@/app/types/map'
