@@ -7,7 +7,7 @@ import { Navbar } from '../components/navbar'
 import { ThemeProvider } from "../components/theme-provider"
 import { UserProvider } from '@auth0/nextjs-auth0/client'
 import { Toaster } from "../components/ui/toaster"
-import { useSheet } from '@/app/contexts/sheet-context';
+import { SheetProvider } from '@/app/contexts/sheet-context';
 
 const inter = Inter({ subsets: ['latin'] })
 

@@ -579,3 +579,30 @@ Attempting to match the segment sheet's transparent background effect on the lef
 - Looking into potential conflicts between the map container transition and sidebar animation
 
 The segment sheet achieves the desired effect but has a different component structure - working to understand why the same approach isn't working for the sidebar component.
+
+## 🔄 Recent Updates (December 16, 2024) - Sheet Component Conflict Investigation
+
+Attempted to resolve phantom sidebar issue where a ghost panel appears from the right side when closing the main sidebar. The issue disappears when resizing to mobile view and back, suggesting a portal/mounting conflict between multiple Sheet components.
+
+### Attempted Solution
+- Created a Sheet context provider to manage all Sheet instances
+- Implemented state management for Sheet components using React Context
+- Added sheet-context.tsx to handle Sheet state centralization
+- Modified layout.tsx to wrap the app with SheetProvider
+- Attempted to coordinate Sheet instances across navbar, profile, and sidebar
+
+### Why It Failed
+The solution did not work, likely because:
+1. The shadcn/ui Sheet component might be creating multiple portal instances that persist
+2. The underlying Radix UI Dialog component (which Sheet is built on) might need a different approach to portal management
+3. Sheet animations and state management might need to be handled at a lower level
+
+### Potential Next Steps
+Consider:
+- Replacing Sheet with a custom sidebar component using basic divs and transitions
+- Using different components for different sliding panels (e.g., Dialog for some, Sheet for others)
+- Investigating Radix UI's portal management system
+
+Let me try a different approach. Since we can see the phantom sidebar goes away when you trigger the mobile view, let's look at the actual portal behavior.
+I see you also have a Sheet in ProfileSheet.tsx. Now I understand why resizing helps - it's clearing all sheet portals.
+Let's try something different. Instead of trying to fix the Sheet components, let's create a new provider to manage all sheets in one place:
