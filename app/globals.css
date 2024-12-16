@@ -198,3 +198,40 @@
 .sidebar-accordion [data-state="open"] {
   background: transparent !important;
 }
+
+/* Add to globals.css */
+.sidebar-container {
+  @apply fixed left-0 top-14 h-[calc(100vh-3.5rem)] z-40;
+  clip-path: inset(0 0 0 0);  /* This prevents the backdrop-filter from leaking */
+}
+
+.sidebar-content {
+  @apply w-80 h-full flex flex-col p-4 overflow-y-auto;
+  @apply bg-background/40 backdrop-blur-sm;
+  @apply transition-transform duration-300 ease-in-out;
+}
+
+/* Add to your globals.css */
+.mapboxgl-map {
+  z-index: 0;
+}
+
+.mapboxgl-popup {
+  z-index: 45;
+}
+
+.mapboxgl-ctrl-top-right {
+  z-index: 35;
+}
+
+.mobile-controls {
+  z-index: 45;
+}
+
+.navbar {
+  z-index: 50;
+}
+
+.sidebar-container {
+  z-index: 40;
+}

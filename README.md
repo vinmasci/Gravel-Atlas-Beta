@@ -561,3 +561,21 @@ Would you like me to help you tackle any of these next steps?
 - Added hover effects with location details
 
 These updates improve the map's usability with better organized layers, smoother interactions, and more consistent styling across features.
+
+## Sidebar Transparency Issue Investigation (Dec 16, 2024)
+
+Attempting to match the segment sheet's transparent background effect on the left navigation panel. The issue shows as two separate layers when closing the sidebar - the transparent layer closes before the content.
+
+### Attempted Solutions (Unsuccessful):
+1. Moving transition and transform styles to match segment sheet structure
+2. Using margin-based transitions instead of transforms
+3. Changing background opacity approach from `bg-background/40` to explicit colors
+4. Modifying backdrop-blur and background opacity layering
+5. Adjusting z-index and stacking contexts
+
+### Current Investigation:
+- Still investigating the root cause of the layering split during sidebar close animation
+- Focus on how the transparency effect interacts with the transform animation
+- Looking into potential conflicts between the map container transition and sidebar animation
+
+The segment sheet achieves the desired effect but has a different component structure - working to understand why the same approach isn't working for the sidebar component.

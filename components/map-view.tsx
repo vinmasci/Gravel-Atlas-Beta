@@ -634,8 +634,8 @@ useEffect(() => {
 // Render Google Maps
 if (MAP_STYLES[selectedStyle].type === 'google') {
     return (
-      <div className="w-full h-full relative">
-        <div ref={mapContainer} style={mapContainerStyle} />
+<div className="relative h-full isolate">
+<div ref={mapContainer} style={mapContainerStyle} className="h-full w-full" />
         {isLoading && <LoadingSpinner />}
         {showAlert && (
           <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />

@@ -68,12 +68,13 @@ export function MapSidebar({
   };
 
   return (
-<div 
-  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] z-40 ${
-    isOpen ? 'translate-x-0' : '-translate-x-full'
-  }`}
->
-  {/* Toggle Button */}
+    <div className="relative h-full isolate">
+      <div 
+        className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform duration-300 z-[60] ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ isolation: 'isolate' }}
+      >
   <Button
     variant="outline"
     size="icon"
@@ -83,209 +84,205 @@ export function MapSidebar({
     {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
   </Button>
 
-  <div className={cn(
-    "w-80 h-full flex flex-col p-4 overflow-y-auto",
-    "bg-background/40 backdrop-blur-sm",
-    "transform transition-all duration-300 ease-in-out"
-  )}>
-    {/* Search Section */}
-    <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-      <Input
-        type="text"
-        placeholder="Search location..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="flex-1 bg-transparent"
-      />
-      <Button type="submit" size="icon" className="bg-transparent">
-        <Search className="h-4 w-4" />
-      </Button>
-    </form>
+  <div className="w-80 h-full bg-background/40 backdrop-blur-sm transform">
+    <div className="h-full flex flex-col p-4 overflow-y-auto">
+        <div className="h-full flex flex-col p-4 overflow-y-auto">
+          <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+            <Input
+              type="text"
+              placeholder="Search location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" size="icon">
+              <Search className="h-4 w-4" />
+            </Button>
+          </form>
 
-    {/* Map Controls */}
-    <div className="hidden md:flex gap-2 mb-4">
-      <Button variant="outline" size="icon" className="bg-transparent" onClick={onZoomIn}>
-        <span className="text-lg font-bold">+</span>
-      </Button>
-      <Button variant="outline" size="icon" className="bg-transparent" onClick={onZoomOut}>
-        <span className="text-lg font-bold">−</span>
-      </Button>
-      <Button variant="outline" size="icon" className="bg-transparent" onClick={onLocationClick}>
-        <Navigation className="h-4 w-4" />
-      </Button>
-    </div>
-
-    {/* Accordion Sections with transparent background */}
-    <Accordion type="multiple" className="w-full space-y-2 sidebar-accordion">
-      {/* Your existing accordion items, but add bg-transparent to the content */}
-      <AccordionItem value="map-layers" className="bg-transparent border-transparent">
-        <AccordionTrigger className="hover:no-underline bg-transparent">
-          <div className="flex items-center gap-2">
-            <Map className="h-4 w-4" />
-            Map Layers
+          <div className="hidden md:flex gap-2 mb-4">
+            <Button variant="outline" size="icon" onClick={onZoomIn}>
+              <span className="text-lg font-bold">+</span>
+            </Button>
+            <Button variant="outline" size="icon" onClick={onZoomOut}>
+              <span className="text-lg font-bold">−</span>
+            </Button>
+            <Button variant="outline" size="icon" onClick={onLocationClick}>
+              <Navigation className="h-4 w-4" />
+            </Button>
           </div>
-        </AccordionTrigger>
-        <AccordionContent className="bg-transparent">
-              <RadioGroup
-                value={selectedStyle}
-                onValueChange={(value) => onStyleChange(value as MapStyle)}
-                className="space-y-2"
-              >
-                {Object.values(MAP_STYLES).map((style) => (
-                  <div key={style.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={style.id} id={style.id} />
-                    <label htmlFor={style.id}>{style.title}</label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </AccordionContent>
-          </AccordionItem>
 
-          {/* Map Overlays */}
-          <AccordionItem value="map-overlays">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Map Overlays
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                {[
-                  { id: 'segments', label: 'Segments' },
-                  { id: 'photos', label: 'Photos' },
-                  { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
-                  { id: 'bike-infrastructure', label: 'Bike Infrastructure' },  // Add this line
-                  { id: 'unknown-surface', label: 'Unknown Surface Roads' },
-                  { id: 'private-roads', label: 'Private Access Roads' },
-                  { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
-                  { id: 'speed-limits', label: 'Speed Limits' },
-                  { id: 'mapillary', label: 'Mapillary' }
-                ].map((overlay) => (
-                  <div key={overlay.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={overlay.id}
-                      className="h-4 w-4"
-                      checked={overlay.id === 'mapillary' ? mapillaryVisible : overlayStates[overlay.id]}
-                      onChange={() => onLayerToggle(overlay.id)}
-                      disabled={overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google'}
-                    />
-                    <label 
-                      htmlFor={overlay.id}
-                      className={
-                        overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google' 
-                          ? 'text-muted-foreground' 
-                          : ''
-                      }
-                    >
-                      {overlay.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          <Accordion type="multiple" className="w-full space-y-2">
+            {/* Map Layers */}
+            <AccordionItem value="map-layers">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Map className="h-4 w-4" />
+                  Map Layers
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <RadioGroup
+                  value={selectedStyle}
+                  onValueChange={(value) => onStyleChange(value as MapStyle)}
+                  className="space-y-2"
+                >
+                  {Object.values(MAP_STYLES).map((style) => (
+                    <div key={style.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={style.id} id={style.id} />
+                      <label htmlFor={style.id}>{style.title}</label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Points of Interest */}
-          <AccordionItem value="pois">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Map className="h-4 w-4" />
-                Points of Interest
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                {[
-                  { id: 'water-points', label: 'Water Points' },
-                  { id: 'campsites', label: 'Campsites' },
-                  { id: 'supermarkets', label: 'Supermarkets' },
-                  { id: 'cafes', label: 'Cafes' }
-                ].map((poi) => (
-                  <div key={poi.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={poi.id}
-                      className="h-4 w-4"
-                      checked={overlayStates[poi.id] || false}
-                      onChange={() => onLayerToggle(poi.id)}
-                    />
-                    <label htmlFor={poi.id}>{poi.label}</label>
-                  </div>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+            {/* Map Overlays */}
+            <AccordionItem value="map-overlays">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Map Overlays
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2">
+                  {[
+                    { id: 'segments', label: 'Segments' },
+                    { id: 'photos', label: 'Photos' },
+                    { id: 'gravel-roads', label: 'Gravel / Unpaved Roads' },
+                    { id: 'bike-infrastructure', label: 'Bike Infrastructure' },
+                    { id: 'unknown-surface', label: 'Unknown Surface Roads' },
+                    { id: 'private-roads', label: 'Private Access Roads' },
+                    { id: 'asphalt-roads', label: 'Asphalt / Paved Roads' },
+                    { id: 'speed-limits', label: 'Speed Limits' },
+                    { id: 'mapillary', label: 'Mapillary' }
+                  ].map((overlay) => (
+                    <div key={overlay.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={overlay.id}
+                        className="h-4 w-4"
+                        checked={overlay.id === 'mapillary' ? mapillaryVisible : overlayStates[overlay.id]}
+                        onChange={() => onLayerToggle(overlay.id)}
+                        disabled={overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google'}
+                      />
+                      <label 
+                        htmlFor={overlay.id}
+                        className={
+                          overlay.id === 'mapillary' && MAP_STYLES[selectedStyle].type === 'google' 
+                            ? 'text-muted-foreground' 
+                            : ''
+                        }
+                      >
+                        {overlay.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Upload Photo */}
-          <AccordionItem value="upload-photo">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Upload Photo
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <Button 
-                className="w-full" 
-                onClick={() => {
-                  if (!user) {
-                    toast({
-                      title: "Authentication Required",
-                      description: "Please sign in to upload photos",
-                      variant: "destructive",
-                    });
-                    window.location.href = '/api/auth/login';
-                    return;
-                  }
-                  setIsPhotoDialogOpen(true);
-                }}
-              >
-                Choose Photo
-              </Button>
-            </AccordionContent>
-          </AccordionItem>
+            {/* Points of Interest */}
+            <AccordionItem value="pois">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Map className="h-4 w-4" />
+                  Points of Interest
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2">
+                  {[
+                    { id: 'water-points', label: 'Water Points' },
+                    { id: 'campsites', label: 'Campsites' },
+                    { id: 'supermarkets', label: 'Supermarkets' },
+                    { id: 'cafes', label: 'Cafes' }
+                  ].map((poi) => (
+                    <div key={poi.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={poi.id}
+                        className="h-4 w-4"
+                        checked={overlayStates[poi.id] || false}
+                        onChange={() => onLayerToggle(poi.id)}
+                      />
+                      <label htmlFor={poi.id}>{poi.label}</label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Draw Segment */}
-          <AccordionItem value="draw-segment">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Route className="h-4 w-4" />
-                Draw Segment
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-  <DrawSegmentPanel />
-</AccordionContent>
-          </AccordionItem>
+            {/* Upload Photo */}
+            <AccordionItem value="upload-photo">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Upload Photo
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Button 
+                  className="w-full" 
+                  onClick={() => {
+                    if (!user) {
+                      toast({
+                        title: "Authentication Required",
+                        description: "Please sign in to upload photos",
+                        variant: "destructive",
+                      });
+                      window.location.href = '/api/auth/login';
+                      return;
+                    }
+                    setIsPhotoDialogOpen(true);
+                  }}
+                >
+                  Choose Photo
+                </Button>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Overlay GPX */}
-          <AccordionItem value="overlay-gpx">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <FileUp className="h-4 w-4" />
-                Overlay GPX
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <Button className="w-full">
-                Upload GPX File
-              </Button>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+            {/* Draw Segment */}
+            <AccordionItem value="draw-segment">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Route className="h-4 w-4" />
+                  Draw Segment
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <DrawSegmentPanel />
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Overlay GPX */}
+            <AccordionItem value="overlay-gpx">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <FileUp className="h-4 w-4" />
+                  Overlay GPX
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Button className="w-full">
+                  Upload GPX File
+                </Button>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       </div>
+</div>
 
       {/* Photo Upload Dialog */}
       <PhotoUploadDialog 
         open={isPhotoDialogOpen} 
         onOpenChange={setIsPhotoDialogOpen}
         onUploadComplete={() => {
-          // Refresh the photos layer or markers if needed
           onLayerToggle('photos');
         }}
       />
-    </div>
+    </div>    </div>
   );
 }
