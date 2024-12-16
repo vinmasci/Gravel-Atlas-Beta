@@ -198,25 +198,23 @@ function MapViewInner({
   // Layer visibility effects
   useEffect(() => {
     if (!mapInstance) return;
-    updatePhotoLayer(mapInstance, overlayStates.photos);
-  }, [mapInstance, overlayStates.photos]);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    updateSegmentLayer(mapInstance, overlayStates.segments);
-  }, [mapInstance, overlayStates.segments]);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    if (!mapInstance.getSource('mapillary')) {
-      addMapillaryLayers(mapInstance);
-    }
-    if (mapillaryVisible) {
-      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible');
-      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible');
-    } else {
-      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'none');
-      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'none');
+    try {
+      if (mapillaryVisible) {
+        if (!mapInstance.getSource('mapillary')) {
+          addMapillaryLayers(mapInstance);
+        }
+        if (mapInstance.getLayer('mapillary-location')) {
+          mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible');
+          mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible');
+        }
+      } else {
+        if (mapInstance.getLayer('mapillary-location')) {
+          mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'none');
+          mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'none');
+        }
+      }
+    } catch (error) {
+      console.log('Mapillary layer error:', error);
     }
   }, [mapInstance, mapillaryVisible]);
 
