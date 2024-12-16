@@ -10,6 +10,7 @@ import type { MapStyle } from '@/app/types/map'
 import { useToast } from "@/app/hooks/use-toast"
 
 export default function Home() {
+  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
   const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox')
   const [mapillaryVisible, setMapillaryVisible] = useState(false)
   const { toast } = useToast()
@@ -41,16 +42,17 @@ export default function Home() {
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
-    // Pass to MapView
-    if (query) {
-      setMapView?.handleSearch(query)
+    if (query && mapInstance) {
+      // Implement search functionality
     }
-  }, [])
+  }, [mapInstance])
 
   // Handle location click
   const handleLocationClick = useCallback(() => {
-    setMapView?.handleLocationClick()
-  }, [])
+    if (mapInstance) {
+      // Implement location functionality
+    }
+  }, [mapInstance])
 
   // Handle zoom
   const handleZoomIn = useCallback(() => {
@@ -89,8 +91,8 @@ export default function Home() {
 
   return (
     <div className="h-full w-full relative">
-      <MapContext.Provider value={{ map: null, setMap: () => {} }}>
-        <DrawModeProvider map={null}>
+      <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+        <DrawModeProvider map={mapInstance}>
           <NavSidebar 
             onSearch={handleSearch}
             onLocationClick={handleLocationClick}
@@ -110,6 +112,7 @@ export default function Home() {
             selectedStyle={selectedStyle}
             overlayStates={overlayStates}
             mapillaryVisible={mapillaryVisible}
+            onMapInit={(map) => setMapInstance(map)}
           />
         </DrawModeProvider>
       </MapContext.Provider>

@@ -15,8 +15,7 @@ import { MAP_STYLES } from '@/app/constants/map-styles'
 import type { MapStyle } from '@/app/types/map'
 import { addMapillaryLayers } from '@/lib/mapillary'
 import { CustomAlert } from './ui/custom-alert'
-import { MapContext } from '@/app/contexts/map-context'
-import { DrawModeProvider } from '@/app/contexts/draw-mode-context'
+import { useMapContext } from '@/app/contexts/map-context'
 import { SegmentSheet } from './segments/segment-sheet'
 import { FloatingElevationProfile } from './segments/floating-elevation-profile'
 
@@ -43,10 +42,6 @@ interface MapViewProps {
     'unknown-surface': boolean
   }
   mapillaryVisible: boolean
-}
-
-interface MapViewInnerProps extends MapViewProps {
-  map: mapboxgl.Map | null
   onMapInit: (map: mapboxgl.Map) => void
 }
 
@@ -69,11 +64,11 @@ function MapViewInner({
   overlayStates,
   mapillaryVisible,
   onMapInit
-}: MapViewInnerProps) {
+}: MapViewProps) {
+  const { map: mapInstance, setMap: setMapInstance } = useMapContext()
   const mapContainer = useRef<HTMLDivElement>(null)
   const googleMap = useRef<google.maps.Map | null>(null)
   const mapRef = useRef<any>(null)
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
@@ -106,37 +101,56 @@ function MapViewInner({
   const initializeLayers = useCallback((map: mapboxgl.Map) => {
     if (!map || MAP_STYLES[selectedStyle].type.includes('google')) return;
 
-    // Load water icon
-    map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-      if (error) throw error;
-      if (!map.hasImage('water-icon')) {
-        map.addImage('water-icon', image);
-      }
-    });
-    
-    // Add and update all layers
-    addGravelRoadsSource(map);
-    addGravelRoadsLayer(map);
-    updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-    
-    addBikeInfraSource(map);
-    addBikeInfraLayer(map);
-    updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-    
-    addWaterPointsSource(map);
-    addWaterPointsLayer(map);
-    updateWaterPointsLayer(map, overlayStates['water-points']);
+    // First, clean up any existing layers and sources
+    try {
+      ['gravel-roads', 'bike-infrastructure', 'water-points', 'unknown-surface', 'private-roads'].forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.removeLayer(layerId);
+        }
+        if (map.getSource(layerId)) {
+          map.removeSource(layerId);
+        }
+      });
+    } catch (error) {
+      console.log('Error cleaning up layers:', error);
+    }
 
-    addUnknownSurfaceSource(map);
-    addUnknownSurfaceLayer(map);
-    updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+    // Now add all the layers
+    try {
+      // Load water icon
+      map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+        if (error) throw error;
+        if (!map.hasImage('water-icon')) {
+          map.addImage('water-icon', image);
+        }
+      });
+      
+      // Add and update all layers
+      addGravelRoadsSource(map);
+      addGravelRoadsLayer(map);
+      updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+      
+      addBikeInfraSource(map);
+      addBikeInfraLayer(map);
+      updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+      
+      addWaterPointsSource(map);
+      addWaterPointsLayer(map);
+      updateWaterPointsLayer(map, overlayStates['water-points']);
 
-    addPrivateRoadsLayer(map);
-    updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+      addUnknownSurfaceSource(map);
+      addUnknownSurfaceLayer(map);
+      updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
 
-    // Initialize photos and segments
-    updatePhotoLayer(map, overlayStates.photos);
-    updateSegmentLayer(map, overlayStates.segments);
+      addPrivateRoadsLayer(map);
+      updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+
+      // Initialize photos and segments
+      updatePhotoLayer(map, overlayStates.photos);
+      updateSegmentLayer(map, overlayStates.segments);
+    } catch (error) {
+      console.log('Error initializing layers:', error);
+    }
   }, [selectedStyle, overlayStates]);
 
   // Initialize Google Maps
@@ -196,6 +210,16 @@ function MapViewInner({
   }, [mapInstance, selectedStyle])
 
   // Layer visibility effects
+  useEffect(() => {
+    if (!mapInstance) return;
+    updatePhotoLayer(mapInstance, overlayStates.photos);
+  }, [mapInstance, overlayStates.photos]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    updateSegmentLayer(mapInstance, overlayStates.segments);
+  }, [mapInstance, overlayStates.segments]);
+
   useEffect(() => {
     if (!mapInstance) return;
     try {
@@ -265,65 +289,53 @@ function MapViewInner({
     )
   }
 
-  // Render Mapbox
-  return (
-    <div className="w-full h-full relative">
-      <Map
-        {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        style={mapContainerStyle}
-        mapStyle={
-          selectedStyle === 'osm-cycle'
-            ? MAP_STYLES[selectedStyle].style
-            : selectedStyle === 'mapbox'
-            ? MAP_STYLES[selectedStyle].style
-            : 'mapbox://styles/mapbox/empty-v9'
-        }
-        projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
-        reuseMaps
-        ref={mapRef}
-        onLoad={(evt) => {
-          const map = evt.target;
-          setMapInstance(map);
-          onMapInit(map);
-          
-          map.once('style.load', () => {
-            initializeLayers(map);
-          });
-        }}
-      />
-      {isLoading && <LoadingSpinner />}
-      {showAlert && (
-        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-      )}
+// Render Mapbox
+return (
+  <div className="w-full h-full relative">
+    <Map
+      {...viewState}
+      onMove={evt => setViewState(evt.viewState)}
+      mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+      style={mapContainerStyle}
+      mapStyle={
+        selectedStyle === 'osm-cycle'
+          ? MAP_STYLES[selectedStyle].style
+          : selectedStyle === 'mapbox'
+          ? MAP_STYLES[selectedStyle].style
+          : 'mapbox://styles/mapbox/empty-v9'
+      }
+      projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
+      reuseMaps
+      ref={mapRef}
+      onLoad={(evt) => {
+        const map = evt.target;
+        setMapInstance(map);
+        onMapInit(map);
+        
+        map.once('style.load', () => {
+          initializeLayers(map);
+        });
+      }}
+    />
+    {isLoading && <LoadingSpinner />}
+    {showAlert && (
+      <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+    )}
 
-      {mapInstance && <FloatingElevationProfile />}
+    {mapInstance && <FloatingElevationProfile />}
 
-      <SegmentSheet
-        open={!!selectedSegment}
-        onOpenChange={(open) => !open && setSelectedSegment(null)}
-        segment={selectedSegment}
-        onUpdate={(updatedSegment) => {
-          setSelectedSegment(updatedSegment)
-        }}
-      />
-    </div>
-  )
+    <SegmentSheet
+      open={!!selectedSegment}
+      onOpenChange={(open) => !open && setSelectedSegment(null)}
+      segment={selectedSegment}
+      onUpdate={(updatedSegment) => {
+        setSelectedSegment(updatedSegment)
+      }}
+    />
+  </div>
+)
 }
 
 export default function MapView(props: MapViewProps) {
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-
-  return (
-    <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-      <DrawModeProvider map={mapInstance}>
-        <MapViewInner 
-          {...props} 
-          map={mapInstance}
-          onMapInit={(map: mapboxgl.Map) => setMapInstance(map)}
-        />
-      </DrawModeProvider>
-    </MapContext.Provider>
-  )
+return <MapViewInner {...props} />
 }
