@@ -185,3 +185,16 @@
 .accordion-trigger {
   background: transparent !important;
 }
+
+/* Add to globals.css */
+.sidebar-accordion {
+  background: transparent !important;
+}
+
+.sidebar-accordion [data-radix-accordion-content] {
+  background: transparent !important;
+}
+
+.sidebar-accordion [data-state="open"] {
+  background: transparent !important;
+}

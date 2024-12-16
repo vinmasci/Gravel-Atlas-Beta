@@ -10,6 +10,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useToast } from "../app/hooks/use-toast";
 import { PhotoUploadDialog } from '../components/photo-upload-dialog';
 import { DrawSegmentPanel } from '../components/panels/draw-segment-panel';
+import { cn } from "@/lib/utils";
 import {
   Accordion,
   AccordionContent,
@@ -68,7 +69,7 @@ export function MapSidebar({
 
   return (
 <div 
-  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform transition-all duration-300 ease-in-out z-40 ${
+  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] z-40 ${
     isOpen ? 'translate-x-0' : '-translate-x-full'
   }`}
 >
@@ -82,7 +83,11 @@ export function MapSidebar({
     {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
   </Button>
 
-  <div className="w-80 h-full flex flex-col p-4 overflow-y-auto bg-background/40 backdrop-blur-sm">
+  <div className={cn(
+    "w-80 h-full flex flex-col p-4 overflow-y-auto",
+    "bg-background/40 backdrop-blur-sm",
+    "transform transition-all duration-300 ease-in-out"
+  )}>
     {/* Search Section */}
     <form onSubmit={handleSearch} className="flex gap-2 mb-4">
       <Input
@@ -111,7 +116,7 @@ export function MapSidebar({
     </div>
 
     {/* Accordion Sections with transparent background */}
-    <Accordion type="multiple" className="w-full space-y-2">
+    <Accordion type="multiple" className="w-full space-y-2 sidebar-accordion">
       {/* Your existing accordion items, but add bg-transparent to the content */}
       <AccordionItem value="map-layers" className="bg-transparent border-transparent">
         <AccordionTrigger className="hover:no-underline bg-transparent">
