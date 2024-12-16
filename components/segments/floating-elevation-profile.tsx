@@ -72,49 +72,6 @@ export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
   const [hoverPoint, setHoverPoint] = useState<{distance: number; elevation: number} | null>(null);
 
-  const elevations = drawMode.elevationProfile.map(point => point.elevation);
-  const minElevation = Math.min(...elevations, 0);
-  const maxElevation = Math.max(...elevations, 100);
-  const elevationPadding = (maxElevation - minElevation) * 0.1;
-
-  const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
-  const displayData = drawMode.elevationProfile.length >= 2 
-    ? drawMode.elevationProfile.map((point, index, array) => {
-        const grades = calculateGrades(array);
-        return {
-          ...point,
-          grade: grades[index] || 0,
-          gradeColor: getGradeColor(grades[index] || 0)
-        };
-      })
-    : emptyData;
-
-  const gradeSegments = useMemo(() => {
-    if (!drawMode.elevationProfile.length) return [];
-    
-    const segments: any[] = [];
-    let currentColor = null;
-    let segmentStart = 0;
-    
-    displayData.forEach((point, index) => {
-      const grade = Math.abs(point.grade || 0);
-      const color = getGradeColor(grade);
-      
-      if (color !== currentColor || index === displayData.length - 1) {
-        if (currentColor) {
-          segments.push({
-            data: displayData.slice(segmentStart, index + 1),
-            color: currentColor
-          });
-        }
-        segmentStart = index;
-        currentColor = color;
-      }
-    });
-    
-    return segments;
-  }, [displayData, drawMode.elevationProfile.length]);
-
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
 
@@ -221,101 +178,96 @@ export function FloatingElevationProfile() {
         </div>
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-          <AreaChart 
-  data={displayData}
-  onMouseMove={(props) => {
-    if (!props?.activePayload?.[0]) {
-      setHoverPoint(null);
-      return;
-    }
-    setHoverPoint({
-      distance: props.activePayload[0].payload.distance,
-      elevation: props.activePayload[0].payload.elevation
-    });
-  }}
-  onMouseLeave={() => setHoverPoint(null)}
->
-  <CartesianGrid 
-    strokeDasharray="3 3" 
-    vertical={false} 
-    stroke="rgba(255,255,255,0.1)" 
-  />
-  <XAxis 
-    dataKey="distance" 
-    type="number"
-    domain={[0, Math.max(maxDistance, 1)]}
-    tickFormatter={(value) => `${value.toFixed(1)}km`}
-    stroke="#666"
-    fontSize={12}
-  />
-  <YAxis 
-    domain={[
-      minElevation - elevationPadding,
-      maxElevation + elevationPadding
-    ]}
-    tickFormatter={(value) => `${Math.round(value)}m`}
-    stroke="#666"
-    fontSize={12}
-  />
-  <YAxis 
-    yAxisId="right"
-    orientation="right"
-    domain={[-20, 20]}
-    hide={true}
-  />
-  <Tooltip 
-    content={({ active, payload, label }) => {
-      if (active && payload && payload.length) {
-        return (
-          <div className="p-2 text-xs" style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            borderRadius: '8px',
-            color: 'white',
-            fontWeight: '400'
-          }}>
-            <p className="mb-1">{label.toFixed(1)} km</p>
-            <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
-            <p style={{ color: '#3b82f6' }}>Grade : {payload[1]?.value.toFixed(1)}%</p>
-          </div>
-        );
-      }
-      return null;
-    }}
-  />
-  {/* Replace your Area components with this: */}
-  {gradeSegments.map((segment, index) => (
-    <Area
-      key={index}
-      type="monotone"
-      data={segment.data}
-      dataKey="elevation"
-      stroke={segment.color}
-      strokeWidth={2}
-      fill="none"
-      dot={false}
-      isAnimationActive={false}
-      connectNulls
-    />
-  ))}
-  <Area
-    yAxisId="right"
-    type="monotone"
-    dataKey="grade"
-    stroke="none"
-    fill="none"
-    dot={false}
-  />
-  {hoverPoint && (
-    <ReferenceDot
-      x={hoverPoint.distance}
-      y={hoverPoint.elevation}
-      r={4}
-      fill="white"
-      stroke="#ef4444"
-      strokeWidth={2}
-    />
-  )}
-</AreaChart>
+            <AreaChart 
+              data={displayData}
+              onMouseMove={(props) => {
+                if (!props?.activePayload?.[0]) {
+                  setHoverPoint(null);
+                  return;
+                }
+                setHoverPoint({
+                  distance: props.activePayload[0].payload.distance,
+                  elevation: props.activePayload[0].payload.elevation
+                });
+              }}
+              onMouseLeave={() => setHoverPoint(null)}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false} 
+                stroke="rgba(255,255,255,0.1)" 
+              />
+              <XAxis 
+                dataKey="distance" 
+                type="number"
+                domain={[0, Math.max(maxDistance, 1)]}
+                tickFormatter={(value) => `${value.toFixed(1)}km`}
+                stroke="#666"
+                fontSize={12}
+              />
+              <YAxis 
+                domain={[
+                  minElevation - elevationPadding,
+                  maxElevation + elevationPadding
+                ]}
+                tickFormatter={(value) => `${Math.round(value)}m`}
+                stroke="#666"
+                fontSize={12}
+              />
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                domain={[-20, 20]}
+                hide={true}
+              />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="p-2 text-xs" style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontWeight: '400'
+                      }}>
+                        <p className="mb-1">{label.toFixed(1)} km</p>
+                        <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
+                        <p style={{ color: '#3b82f6' }}>Grade : {payload[1]?.value.toFixed(1)}%</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+<Area 
+  type="monotone"
+  dataKey="elevation"
+  stroke="#ef4444"  // Keep this as string
+  strokeWidth={2}
+  fill="none"
+  dot={false}
+  isAnimationActive={false}
+  connectNulls
+/>
+<Area
+  yAxisId="right"
+  type="monotone"
+  dataKey="grade"
+  stroke="none"
+  fill="none"
+  dot={false}
+/>
+              {hoverPoint && (
+                <ReferenceDot
+                  x={hoverPoint.distance}
+                  y={hoverPoint.elevation}
+                  r={4}
+                  fill="white"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                />
+              )}
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

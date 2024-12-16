@@ -629,3 +629,23 @@ Consider:
 - Simplified layer initialization
 - Added proper cleanup for map layers and sources
 - Improved error handling for map operations
+
+UP TO HERE
+What we're trying to achieve:
+
+We want to color the elevation profile line segments based on grade data
+Each 100m segment should be colored based on its grade (green for flat, red for steep)
+We need to split the line into segments with different colors
+
+
+Current status:
+
+Your code has the elevation profile showing with a single color
+The data is all there (grades, elevation, distance)
+We added the useMemo for gradeSegments to split the line into colored segments
+
+
+The error we hit:
+
+You have duplicate declarations of variables (elevations, displayData, etc.)
+These are declared at the top of the component AND after the if (!drawMode?.isDrawing) check
