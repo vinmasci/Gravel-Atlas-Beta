@@ -84,14 +84,7 @@ export function MapSidebar({
         {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </Button>
   
-      <div 
-        className={cn(
-          "w-80 h-full bg-background/40 backdrop-blur-sm",
-          "overflow-hidden" // Added this
-        )}
-      >
-        <div className="h-full flex flex-col p-4 overflow-y-auto">
-    <div className="h-full flex flex-col p-4 overflow-y-auto">
+      <div className="w-80 h-full bg-background/40 backdrop-blur-sm overflow-hidden">
         <div className="h-full flex flex-col p-4 overflow-y-auto">
           <form onSubmit={handleSearch} className="flex gap-2 mb-4">
             <Input
@@ -289,6 +282,5 @@ export function MapSidebar({
           onLayerToggle('photos');
         }}
       />
-    </div>    </div>
-  );
+    </div></div>
 }

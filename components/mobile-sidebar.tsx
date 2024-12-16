@@ -7,14 +7,22 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 export function MobileSidebar({ onLayerToggle, onLocationClick, onZoomIn, onZoomOut, ...props }) {
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
 
-  return (
-    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-      {/* Search Sheet */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button size="icon" variant="secondary" className="bg-background/80 backdrop-blur-sm shadow-lg">
-            <Search className="h-4 w-4" />
-          </Button>
+  Copyreturn (
+    <div 
+      className={cn(
+        "fixed left-0 top-14 h-[calc(100vh-3.5rem)] z-[60]",
+        "transition-transform duration-300 ease-in-out",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute -right-12 top-4 bg-background/40 backdrop-blur-sm z-50 shadow-md"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
         </SheetTrigger>
         <SheetContent side="bottom" className="h-[40vh]">
           {/* Search content */}
