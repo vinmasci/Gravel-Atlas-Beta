@@ -63,20 +63,6 @@ export function FloatingElevationProfile() {
   }, []);
 
   useEffect(() => {
-    const element = document.querySelector('[data-elevation-profile]');
-    console.log('Elevation Profile Debug:', {
-      isComponentMounted: true,
-      elementExists: !!element,
-      position: element?.getBoundingClientRect(),
-      drawModeExists: !!drawMode,
-      isDrawing: drawMode?.isDrawing,
-      hasElevationData: drawMode?.elevationProfile?.length > 0,
-      timestamp: new Date().toISOString()
-    });
-  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
-
-  // Add hover interaction effect
-  useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
 
     // Remove existing marker
@@ -117,16 +103,6 @@ export function FloatingElevationProfile() {
       marker.remove();
     };
   }, [hoverPoint, drawMode?.map, drawMode?.elevationProfile, drawMode?.line]);
-
-  renderCount.current += 1;
-
-  console.log('FloatingElevationProfile data:', {
-    profileLength: drawMode?.elevationProfile?.length,
-    firstFewPoints: drawMode?.elevationProfile?.slice(0, 3),
-    elevation: drawMode?.elevationProfile?.map(p => p.elevation).slice(0, 3),
-    distances: drawMode?.elevationProfile?.map(p => p.distance).slice(0, 3),
-    timestamp: new Date().toISOString()
-  });
 
   if (!drawMode?.isDrawing) {
     return null;
@@ -214,16 +190,6 @@ export function FloatingElevationProfile() {
               }}
               onMouseLeave={() => setHoverPoint(null)}
             >
-              <defs>
-                <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3}/>
-                </linearGradient>
-                <linearGradient id="gradeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 vertical={false} 
@@ -246,43 +212,32 @@ export function FloatingElevationProfile() {
                 stroke="#666"
                 fontSize={12}
               />
-              <YAxis 
-                yAxisId="right"
-                orientation="right"
-                domain={[-20, 20]}
-                tickFormatter={(value) => `${value}%`}
-                stroke="#3b82f6"
-                fontSize={12}
-              />
-              <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'elevation') return [`${Math.round(value)}m`, 'Elevation'];
-                  if (name === 'grade') return [`${value}%`, 'Grade'];
-                  return [value, name];
-                }}
-                labelFormatter={(value: number) => `${value.toFixed(1)} km`}
-                contentStyle={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white'
-                }}
-              />
+<Tooltip 
+  content={({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-2" style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          borderRadius: '8px',
+          color: 'white'
+        }}>
+          <p className="mb-1">{label.toFixed(1)} km</p>
+          <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
+          {payload[1] && (
+            <p style={{ color: '#3b82f6' }}>Grade : {payload[1].value}%</p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  }}
+/>
               <Area
                 type="monotone"
                 dataKey="elevation"
                 stroke="#ef4444"
                 strokeWidth={2}
-                fill="url(#elevationGradient)"
-                dot={false}
-              />
-              <Area
-                yAxisId="right"
-                type="monotone"
-                dataKey="grade"
-                stroke="#3b82f6"
-                strokeWidth={1}
-                fill="url(#gradeGradient)"
+                fill="none"
                 dot={false}
               />
               {hoverPoint && (
