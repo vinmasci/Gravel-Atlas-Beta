@@ -595,16 +595,6 @@ if (lineSource && markerSource) {
     properties: {},
     geometry: {
       type: 'LineString',
-      coordinates: allCoordinates
-    }
-  });
-
-if (lineSource && markerSource) {
-  lineSource.setData({
-    type: 'Feature',
-    properties: {},
-    geometry: {
-      type: 'LineString',
       coordinates: allCoordinates // This will now include elevation data
     }
   });
@@ -653,6 +643,7 @@ if (lineSource && markerSource) {
           });
           
           return newProfile;
+
         });
       } // Make sure this closing brace is here
       
