@@ -68,23 +68,29 @@ export function MapSidebar({
   };
 
   return (
-    <div className="relative h-full isolate">
-      <div 
-        className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform duration-300 z-[60] ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ isolation: 'isolate' }}
+    <div 
+      className={cn(
+        "fixed left-0 top-14 h-[calc(100vh-3.5rem)] z-[60]",
+        "transition-transform duration-300 ease-in-out",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}
+    >
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute -right-12 top-4 bg-background/40 backdrop-blur-sm z-50 shadow-md"
+        onClick={() => setIsOpen(!isOpen)}
       >
-  <Button
-    variant="outline"
-    size="icon"
-    className="absolute -right-12 top-4 bg-background/40 backdrop-blur-sm z-50 shadow-md"
-    onClick={() => setIsOpen(!isOpen)}
-  >
-    {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-  </Button>
-
-  <div className="w-80 h-full bg-background/40 backdrop-blur-sm transform">
+        {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
+  
+      <div 
+        className={cn(
+          "w-80 h-full bg-background/40 backdrop-blur-sm",
+          "overflow-hidden" // Added this
+        )}
+      >
+        <div className="h-full flex flex-col p-4 overflow-y-auto">
     <div className="h-full flex flex-col p-4 overflow-y-auto">
         <div className="h-full flex flex-col p-4 overflow-y-auto">
           <form onSubmit={handleSearch} className="flex gap-2 mb-4">
