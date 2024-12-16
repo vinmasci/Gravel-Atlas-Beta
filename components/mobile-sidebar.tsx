@@ -2,7 +2,11 @@
 import { useState } from 'react';
 import { Search, Layers, Map, Navigation, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  Sheet as MobileSheet, 
+  SheetContent as MobileSheetContent, 
+  SheetTrigger as MobileSheetTrigger 
+} from '@/components/ui/sheet';
 
 export function MobileSidebar({ onLayerToggle, onLocationClick, onZoomIn, onZoomOut, ...props }) {
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
@@ -10,30 +14,30 @@ export function MobileSidebar({ onLayerToggle, onLocationClick, onZoomIn, onZoom
   return (
     <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
       {/* Search Sheet */}
-      <Sheet>
-        <SheetTrigger asChild>
+      <MobileSheet>
+        <MobileSheetTrigger asChild>
           <Button size="icon" variant="secondary" className="bg-background/80 backdrop-blur-sm shadow-lg">
             <Search className="h-4 w-4" />
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[40vh]">
+        </MobileSheetTrigger>
+        <MobileSheetContent side="bottom" className="h-[40vh]">
           {/* Search content */}
-        </SheetContent>
-      </Sheet>
+        </MobileSheetContent>
+      </MobileSheet>
   
       {/* Layers Sheet */}
-      <Sheet>
-        <SheetTrigger asChild>
+      <MobileSheet>
+        <MobileSheetTrigger asChild>
           <Button size="icon" variant="secondary" className="bg-background/80 backdrop-blur-sm shadow-lg">
             <Layers className="h-4 w-4" />
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[60vh]">
+        </MobileSheetTrigger>
+        <MobileSheetContent side="bottom" className="h-[60vh]">
           {/* Layers content */}
-        </SheetContent>
-      </Sheet>
+        </MobileSheetContent>
+      </MobileSheet>
   
-      {/* Zoom buttons and location */}
+      {/* Zoom buttons and location - these stay the same */}
       <Button
         size="icon"
         variant="secondary"

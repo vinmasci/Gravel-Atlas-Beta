@@ -27,6 +27,7 @@ import { DrawModeProvider } from '../app/contexts/draw-mode-context';
 import { SegmentSheet } from '../components/segments/segment-sheet';
 import { FloatingElevationProfile } from './segments/floating-elevation-profile';
 import { useDrawMode } from '../app/hooks/use-draw-mode';
+import { cn } from "@/lib/utils";
 import { useDrawModeContext } from '../app/contexts/draw-mode-context';
 
 // Initialize Google Maps loader
@@ -633,44 +634,51 @@ useEffect(() => {
 
 // Render Google Maps
 if (MAP_STYLES[selectedStyle].type === 'google') {
-    return (
-<div className="relative h-full isolate">
-<div ref={mapContainer} style={mapContainerStyle} className="h-full w-full" />
-        {isLoading && <LoadingSpinner />}
-        {showAlert && (
-          <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
-        )}
-        {isMobile ? (
-          <MobileControls
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
-          />
-        ) : (
+  return (
+    <div className="relative h-full isolate">
+      <div ref={mapContainer} style={mapContainerStyle} className="h-full w-full" />
+      {isLoading && <LoadingSpinner />}
+      {showAlert && (
+        <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
+      )}
+      {isMobile && (
+        <MobileControls
+        onSearch={handleSearch}
+        onLocationClick={handleLocationClick}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onLayerToggle={handleLayerToggle}
+        selectedStyle={selectedStyle}
+        onStyleChange={handleStyleChange}
+        overlayStates={overlayStates}
+        mapillaryVisible={mapillaryVisible}
+        />
+      )}
+      {!isMobile && (
+        <div className={cn(
+          "fixed left-0 top-14 z-[60]",
+          "transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
           <MapSidebar
-            isOpen={isOpen}
-            setIsOpen={handleSidebarToggle}
-            onSearch={handleSearch}
-            onLocationClick={handleLocationClick}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            availableLayers={layers}
-            onLayerToggle={handleLayerToggle}
-            selectedStyle={selectedStyle}
-            onStyleChange={handleStyleChange}
-            mapillaryVisible={mapillaryVisible}
-            overlayStates={overlayStates}
+    isOpen={isOpen}
+    setIsOpen={handleSidebarToggle}
+    onSearch={handleSearch}
+    onLocationClick={handleLocationClick}
+    onZoomIn={handleZoomIn}
+    onZoomOut={handleZoomOut}
+    availableLayers={layers}
+    onLayerToggle={handleLayerToggle}
+    selectedStyle={selectedStyle}
+    onStyleChange={handleStyleChange}
+    mapillaryVisible={mapillaryVisible}
+    overlayStates={overlayStates}
           />
-        )}
-      </div>
-    );
-  }
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Render Mapbox
 console.log('Rendering Mapbox view with drawMode:', {
@@ -680,7 +688,7 @@ console.log('Rendering Mapbox view with drawMode:', {
 return (
   <>
     <MapContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
-    <DrawModeProvider map={mapInstance}>
+      <DrawModeProvider map={mapInstance}>
         <div className="w-full h-full relative">
           <Map
             {...viewState}
@@ -709,7 +717,7 @@ return (
               if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
                 console.log('Initializing gravel roads layer');
 
-    // Water icon
+                // Water icon
                 map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
                   if (error) throw error;
                   if (!map.hasImage('water-icon')) {
@@ -717,63 +725,25 @@ return (
                   }
                 });
                 
-                // Add source
+                // Add sources and layers
                 addGravelRoadsSource(map);
-                console.log('After adding source:', {
-                  sourceExists: !!map.getSource('gravel-roads'),
-                  sourceType: map.getSource('gravel-roads') ? map.getSource('gravel-roads').type : null
-                });
-            
-                // Add layer
                 addGravelRoadsLayer(map);
-                console.log('After adding layer:', {
-                  layerExists: !!map.getLayer('gravel-roads'),
-                  layerType: map.getLayer('gravel-roads') ? map.getLayer('gravel-roads').type : null
-                });
-            
-                // Update visibility
                 updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-                console.log('Layer visibility updated:', {
-                  visibility: overlayStates['gravel-roads'],
-                  currentLayout: map.getLayoutProperty('gravel-roads', 'visibility')
-                });
-            
-                console.log('Initializing bike infrastructure layer');
-    
-                // Add source
+                
                 addBikeInfraSource(map);
-                console.log('After adding bike infra source:', {
-                  sourceExists: !!map.getSource('bike-infrastructure'),
-                  sourceType: map.getSource('bike-infrastructure') ? map.getSource('bike-infrastructure').type : null
-                });
-            
-                // Add layer
                 addBikeInfraLayer(map);
-                console.log('After adding bike infra layer:', {
-                  layerExists: !!map.getLayer('bike-infrastructure'),
-                  layerType: map.getLayer('bike-infrastructure') ? map.getLayer('bike-infrastructure').type : null
-                });
-
-                // Initialize water points layer
-addWaterPointsSource(map);
-addWaterPointsLayer(map);
-updateWaterPointsLayer(map, overlayStates['water-points']);
-
-                  // Initialize unknown surface layer
-  addUnknownSurfaceSource(map);
-  addUnknownSurfaceLayer(map);
-  updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
-
-                    // Initialize private roads layer
-    addPrivateRoadsLayer(map);
-    updatePrivateRoadsLayer(map, overlayStates['private-roads']);
-            
-                // Update visibility
                 updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-                console.log('Bike infra layer visibility updated:', {
-                  visibility: overlayStates['bike-infrastructure'],
-                  currentLayout: map.getLayoutProperty('bike-infrastructure', 'visibility')
-                });
+                
+                addWaterPointsSource(map);
+                addWaterPointsLayer(map);
+                updateWaterPointsLayer(map, overlayStates['water-points']);
+
+                addUnknownSurfaceSource(map);
+                addUnknownSurfaceLayer(map);
+                updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+
+                addPrivateRoadsLayer(map);
+                updatePrivateRoadsLayer(map, overlayStates['private-roads']);
 
                 debugMapLayers();
               }
@@ -783,33 +753,40 @@ updateWaterPointsLayer(map, overlayStates['water-points']);
           {showAlert && (
             <CustomAlert message="Mapillary overlay is not available with Google Maps layers" />
           )}
-          {isMobile ? (
+          {isMobile && (
             <MobileControls
-              onSearch={handleSearch}
-              onLocationClick={handleLocationClick}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onLayerToggle={handleLayerToggle}
-              selectedStyle={selectedStyle}
-              onStyleChange={handleStyleChange}
-              overlayStates={overlayStates}
-              mapillaryVisible={mapillaryVisible}
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            overlayStates={overlayStates}
+            mapillaryVisible={mapillaryVisible}
             />
-          ) : (
-            <MapSidebar
-              isOpen={isOpen}
-              setIsOpen={handleSidebarToggle}
-              onSearch={handleSearch}
-              onLocationClick={handleLocationClick}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              availableLayers={layers}
-              onLayerToggle={handleLayerToggle}
-              selectedStyle={selectedStyle}
-              onStyleChange={handleStyleChange}
-              mapillaryVisible={mapillaryVisible}
-              overlayStates={overlayStates}
-            />
+          )}
+          {!isMobile && (
+            <div className={cn(
+              "fixed left-0 top-14 z-[60]",
+              "transition-transform duration-300 ease-in-out",
+              isOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+              <MapSidebar
+    isOpen={isOpen}
+    setIsOpen={handleSidebarToggle}
+    onSearch={handleSearch}
+    onLocationClick={handleLocationClick}
+    onZoomIn={handleZoomIn}
+    onZoomOut={handleZoomOut}
+    availableLayers={layers}
+    onLayerToggle={handleLayerToggle}
+    selectedStyle={selectedStyle}
+    onStyleChange={handleStyleChange}
+    mapillaryVisible={mapillaryVisible}
+    overlayStates={overlayStates}
+              />
+            </div>
           )}
 
           {mapInstance && <FloatingElevationProfile />}
@@ -820,7 +797,6 @@ updateWaterPointsLayer(map, overlayStates['water-points']);
             segment={selectedSegment}
             onUpdate={(updatedSegment) => {
               setSelectedSegment(updatedSegment);
-              // This will keep the stats updated in the sheet
             }}
           />
         </div>
