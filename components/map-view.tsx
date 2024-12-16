@@ -312,9 +312,30 @@ return (
         setMapInstance(map);
         onMapInit(map);
         
-        map.once('style.load', () => {
-          initializeLayers(map);
+        // Initialize base layers immediately
+        addGravelRoadsSource(map);
+        addGravelRoadsLayer(map);
+        addBikeInfraSource(map);
+        addBikeInfraLayer(map);
+      
+        // Load water icon first, then add water points layer
+        map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+          if (error) throw error;
+          if (!map.hasImage('water-icon')) {
+            map.addImage('water-icon', image);
+            // Only add water points after icon is loaded
+            addWaterPointsSource(map);
+            addWaterPointsLayer(map);
+            updateWaterPointsLayer(map, overlayStates['water-points']);
+          }
         });
+        
+        // Then update their visibility
+        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+        updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+        updateWaterPointsLayer(map, overlayStates['water-points']);
+        updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+        updatePrivateRoadsLayer(map, overlayStates['private-roads']);
       }}
     />
     {isLoading && <LoadingSpinner />}

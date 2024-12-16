@@ -42,9 +42,9 @@ export default function Home() {
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
-    if (query && mapInstance) {
-      // Implement search functionality
-    }
+    // TODO: Implement search functionality
+    console.log("Search query:", query);
+    // We'll need to implement the actual search functionality here
   }, [mapInstance])
 
   // Handle location click
