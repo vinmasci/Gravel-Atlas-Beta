@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { MapView } from '@/components/map-view'
-import { Sidebar } from '@/components/nav-sidebar'
+import { NavSidebar } from '@/components/nav-sidebar'
 import { MAP_STYLES } from '@/app/constants/map-styles'
 import type { MapStyle } from '@/app/types/map'
 import { useToast } from "@/app/hooks/use-toast"
@@ -89,7 +89,7 @@ export default function Home() {
 
   return (
     <div className="h-full w-full relative">
-      <Sidebar
+      <NavSidebar  // Changed from Sidebar to NavSidebar
         onSearch={handleSearch}
         onLocationClick={handleLocationClick}
         onZoomIn={handleZoomIn}

@@ -7,7 +7,6 @@ import { Navbar } from '../components/navbar'
 import { ThemeProvider } from "../components/theme-provider"
 import { UserProvider } from '@auth0/nextjs-auth0/client'
 import { Toaster } from "../components/ui/toaster"
-import { SheetProvider } from '@/app/contexts/sheet-context';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -43,13 +42,11 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
-            <SheetProvider>
-              <Navbar />
-              <main className="pt-16 h-screen">
-                {children}
-              </main>
-              <Toaster />
-            </SheetProvider>
+            <Navbar />
+            <main className="pt-16 h-screen">
+              {children}
+            </main>
+            <Toaster />
           </ThemeProvider>
         </UserProvider>
       </body>
