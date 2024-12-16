@@ -44,8 +44,6 @@ interface MapViewProps {
     'unknown-surface': boolean
   }
   mapillaryVisible: boolean
-  isSidebarOpen: boolean
-  isMobile: boolean
 }
 
 // Initialize Google Maps loader
@@ -99,18 +97,11 @@ export function MapView({
     elevation: number
   }
 
-  // Map container styles based on sidebar state
-  const mapContainerStyle = isSidebarOpen && !isMobile ? {
-    width: 'calc(100% - 320px)',
-    height: '100%',
-    marginLeft: '320px',
-    transition: 'all 0.3s ease-in-out'
-  } : {
-    width: '100%',
-    height: '100%',
-    marginLeft: '0',
-    transition: 'all 0.3s ease-in-out'
-  }
+// With this:
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%'
+}
 
   // Initialize Google Maps
   useEffect(() => {

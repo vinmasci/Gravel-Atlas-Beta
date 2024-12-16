@@ -9,9 +9,7 @@ import { useToast } from "@/app/hooks/use-toast"
 
 export default function Home() {
   const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox')
-  const [isOpen, setIsOpen] = useState(true)
   const [mapillaryVisible, setMapillaryVisible] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const { toast } = useToast()
 
   const [viewState, setViewState] = useState({
@@ -102,15 +100,13 @@ export default function Home() {
         overlayStates={overlayStates}
         className="z-[60]"
       />
-      <MapView
-        viewState={viewState}
-        setViewState={setViewState}
-        selectedStyle={selectedStyle}
-        overlayStates={overlayStates}
-        mapillaryVisible={mapillaryVisible}
-        isSidebarOpen={isOpen}
-        isMobile={isMobile}
-      />
+<MapView
+  viewState={viewState}
+  setViewState={setViewState}
+  selectedStyle={selectedStyle}
+  overlayStates={overlayStates}
+  mapillaryVisible={mapillaryVisible}
+/>
     </div>
   )
 }

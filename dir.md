@@ -56,9 +56,8 @@
 │   │   └── auth-status.tsx
 │   ├── map
 │   │   └── photo-marker.tsx
-│   ├── map-sidebar.tsx
+│   ├── nav-sidebar.tsx
 │   ├── map-view.tsx
-│   ├── mobile-sidebar.tsx
 │   ├── navbar.tsx
 │   ├── panels
 │   │   ├── draw-segment-panel.tsx
