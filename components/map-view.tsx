@@ -10,6 +10,7 @@ import { addGravelRoadsSource, addGravelRoadsLayer, updateGravelRoadsLayer } fro
 import { addBikeInfraSource, addBikeInfraLayer, updateBikeInfraLayer } from '@/lib/bike-infrastructure-layer'
 import { addPrivateRoadsLayer, updatePrivateRoadsLayer } from '@/lib/private-roads-layer'
 import { addUnknownSurfaceSource, addUnknownSurfaceLayer, updateUnknownSurfaceLayer } from '@/lib/unknown-surface-layer'
+import { addPavedRoadsSource, addPavedRoadsLayer, updatePavedRoadsLayer } from '@/lib/paved-roads-layer';
 import { addWaterPointsSource, addWaterPointsLayer, updateWaterPointsLayer } from '@/lib/water-points-layer'
 import { MAP_STYLES } from '@/app/constants/map-styles'
 import type { MapStyle } from '@/app/types/map'
@@ -130,6 +131,10 @@ function MapViewInner({
       addGravelRoadsSource(map);
       addGravelRoadsLayer(map);
       updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+
+      addPavedRoadsSource(map);  // Add this line
+      addPavedRoadsLayer(map);   // Add this line
+      updatePavedRoadsLayer(map, overlayStates['asphalt-roads']);  // Add this line
       
       addBikeInfraSource(map);
       addBikeInfraLayer(map);
@@ -252,6 +257,11 @@ function MapViewInner({
     if (!mapInstance) return;
     updateBikeInfraLayer(mapInstance, overlayStates['bike-infrastructure']);
   }, [mapInstance, overlayStates['bike-infrastructure']]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    updatePavedRoadsLayer(mapInstance, overlayStates['asphalt-roads']);
+  }, [mapInstance, overlayStates['asphalt-roads']]);
 
   useEffect(() => {
     if (!mapInstance) return;

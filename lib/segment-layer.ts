@@ -20,6 +20,37 @@ const getRatingIconClass = (rating: number | undefined): string => {
   }
 };
 
+// Add this helper function at the top with other constants
+const getExpandedBounds = (map: Map) => {
+  const bounds = map.getBounds();
+  
+  // Get the current bounds
+  const west = bounds.getWest();
+  const south = bounds.getSouth();
+  const east = bounds.getEast();
+  const north = bounds.getNorth();
+  
+  // Calculate the current width and height
+  const width = east - west;
+  const height = north - south;
+  
+  // Expand the bounds by 300% in each direction
+  const expandedWest = west - (width * 3);
+  const expandedEast = east + (width * 3);
+  const expandedSouth = south - (height * 3);
+  const expandedNorth = north + (height * 3);
+  
+  // Clamp longitude values to valid range (-180 to 180)
+  const clampedWest = Math.max(-180, expandedWest);
+  const clampedEast = Math.min(180, expandedEast);
+  
+  // Clamp latitude values to valid range (-90 to 90)
+  const clampedSouth = Math.max(-90, expandedSouth);
+  const clampedNorth = Math.min(90, expandedNorth);
+  
+  return `${clampedWest},${clampedSouth},${clampedEast},${clampedNorth}`;
+};
+
 interface SegmentClickHandler {
   (segment: {
     id: string;
@@ -82,7 +113,7 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
   6, '#450a0a',    // dark red/black
   '#00FFFF'        // Default to cyan
 ],
-        'line-width': 3,
+        'line-width': 1.5,
         'line-opacity': 1
       }
     });
@@ -98,7 +129,7 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       },
       paint: {
         'line-color': '#000000',
-        'line-width': 5,
+        'line-width': 2,
         'line-opacity': 1
       }
     }, layerId); // This ensures the stroke is rendered beneath the main line
@@ -256,7 +287,7 @@ export const updateSegmentLayer = async (
 
     // Fetch all segments if no update or initial load
     const bounds = map.getBounds();
-    const boundsString = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+    const boundsString = getExpandedBounds(map);
     const response = await fetch(`/api/segments?bounds=${boundsString}`);
     const data = await response.json();
 

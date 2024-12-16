@@ -1,6 +1,7 @@
 // app/hooks/use-draw-mode.ts
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Map } from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 import * as turf from '@turf/turf';
 
 interface ElevationPoint {
@@ -201,14 +202,14 @@ export const useDrawMode = (map: Map | null) => {
     });
   }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
-  const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<[number, number][]> => {
+  const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<{coordinates: [number, number][], roadInfo?: any}> => {
     logStateChange('Snapping to road', {
       clickedPoint,
       previousPoint,
       snapEnabled: snapToRoad
     });
 
-    if (!snapToRoad) return [clickedPoint];
+    if (!snapToRoad) return { coordinates: [clickedPoint] };
 
     try {
         if (!previousPoint) {
@@ -219,11 +220,14 @@ export const useDrawMode = (map: Map | null) => {
             
             const data = await response.json();
             if (data.features && data.features.length > 0) {
-                const snappedPoint = data.features[0].geometry.coordinates as [number, number];
-                logStateChange('Single point snapped', { original: clickedPoint, snapped: snappedPoint });
-                return [snappedPoint];
+                const feature = data.features[0];
+                const snappedPoint = feature.geometry.coordinates as [number, number];
+                return {
+                    coordinates: [snappedPoint],
+                    roadInfo: feature.properties
+                };
             }
-            return [clickedPoint];
+            return { coordinates: [clickedPoint] };
         }
 
         logStateChange('Snapping line segment');
@@ -235,19 +239,28 @@ export const useDrawMode = (map: Map | null) => {
         
         if (data.code === 'Ok' && data.routes.length > 0) {
             const snappedPoints = data.routes[0].geometry.coordinates as [number, number][];
-            logStateChange('Line segment snapped', {
-                originalPoints: [previousPoint, clickedPoint],
-                snappedPointCount: snappedPoints.length
-            });
-            return snappedPoints;
+            
+            // Get road info for the middle point of the snapped segment
+            const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
+            const tileQueryResponse = await fetch(
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            );
+            
+            const tileData = await tileQueryResponse.json();
+            const roadInfo = tileData.features?.[0]?.properties || {};
+
+            return {
+                coordinates: snappedPoints,
+                roadInfo
+            };
         }
         
-        return [clickedPoint];
+        return { coordinates: [clickedPoint] };
     } catch (error) {
         console.error('Error snapping to road:', error);
-        return [clickedPoint];
+        return { coordinates: [clickedPoint] };
     }
-  };
+};
 
   const initializeLayers = useCallback(() => {
     logStateChange('Initializing layers', { mapExists: !!map });
@@ -399,8 +412,43 @@ map.addLayer({
       };
   
       // Get snapped points first
-      const newPoints = await snapToNearestRoad(clickedPoint, previousPoint);
+// NEW CODE
+      // Get snapped points and road info
+      const { coordinates: newPoints, roadInfo } = await snapToNearestRoad(clickedPoint, previousPoint);
       logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
+
+      // If we have road info, show the popup
+      if (roadInfo && map) {
+          const popup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false,
+              className: 'road-info-popup'
+          });
+
+          const popupContent = document.createElement('div');
+          popupContent.className = 'px-2 py-1 space-y-1';
+          
+          const content = `
+              <div class="text-sm space-y-1">
+                  ${roadInfo.name ? `<div><strong>Name:</strong> ${roadInfo.name}</div>` : ''}
+                  ${roadInfo.class ? `<div><strong>Type:</strong> ${roadInfo.class}</div>` : ''}
+                  ${roadInfo.surface ? `<div><strong>Surface:</strong> ${roadInfo.surface}</div>` : ''}
+                  ${roadInfo.access ? `<div><strong>Access:</strong> ${roadInfo.access}</div>` : ''}
+              </div>
+          `;
+          
+          popupContent.innerHTML = content;
+
+          // Show popup at the clicked point
+          popup.setLngLat(clickedPoint)
+               .setDOMContent(popupContent)
+               .addTo(map);
+
+          // Remove popup after 3 seconds
+          setTimeout(() => {
+              popup.remove();
+          }, 3000);
+      }
 
       // Resample points to 100m intervals
       const resampledPoints = resampleLineEvery100m(newPoints);

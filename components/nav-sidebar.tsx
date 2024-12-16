@@ -113,29 +113,31 @@ export function NavSidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1"
               />
-              <Button 
-                type="submit" 
-                size="icon"
-                variant="secondary" // Changed to secondary for consistency
-                className="w-10 h-10 flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+<Button 
+  type="submit" 
+  size="icon"
+  variant="secondary"
+  className="min-w-[40px] min-h-[40px] p-0 flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
+>
+  <Search className="h-4 w-4" />
+</Button>
             </form>
 ) : (
     <div className="flex justify-center">
-      <Button 
-        variant="secondary"
-        size="icon"
-        onClick={() => setIsCollapsed(false)}
-        className={cn(
-          "bg-background/80 backdrop-blur-sm",
-          "hover:bg-accent hover:text-accent-foreground",
-          "transition-colors duration-300 ease-in-out"
-        )}
-      >
-        <Search className="h-4 w-4" />
-      </Button>
+<Button 
+  variant="secondary"
+  size="icon"
+  onClick={() => setIsCollapsed(false)}
+  className={cn(
+    "min-w-[40px] min-h-[40px] p-0",
+    "bg-background/80 backdrop-blur-sm",
+    "hover:bg-accent hover:text-accent-foreground",
+    "transition-colors duration-300 ease-in-out",
+    "flex items-center justify-center"
+  )}
+>
+  <Search className="h-4 w-4" />
+</Button>
     </div>
         )}
         
