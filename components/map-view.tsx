@@ -65,6 +65,7 @@ function MapViewInner({
   mapillaryVisible,
   onMapInit
 }: MapViewProps) {
+  
   const { map: mapInstance, setMap: setMapInstance } = useMapContext()
   const mapContainer = useRef<HTMLDivElement>(null)
   const googleMap = useRef<google.maps.Map | null>(null)

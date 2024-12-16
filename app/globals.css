@@ -172,17 +172,25 @@
   display: none;
 }
 
-/* Add to globals.css */
-.map-sidebar-sheet {
-  --sheet-overlay-opacity: 0;
+/* Add these to your globals.css */
+.nav-sidebar {
+  @apply fixed left-0 top-0 z-50 flex h-screen flex-col items-center gap-2 border-r p-2;
+  @apply bg-background/40 backdrop-blur-xl;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  width: 4rem; /* 64px */
 }
 
-.map-sidebar-sheet .sheet-overlay {
-  background: transparent;
+.nav-sidebar.expanded {
+  width: 20rem; /* 320px */
 }
 
-.map-sidebar-sheet .sheet-content {
-  margin-top: 3.5rem;
-  height: calc(100vh - 3.5rem);
-  background: transparent;
+/* Add this for smooth content transition */
+.nav-sidebar-content {
+  @apply w-full overflow-hidden;
+  opacity: 0;
+  transition: opacity 150ms ease-in-out;
+}
+
+.nav-sidebar.expanded .nav-sidebar-content {
+  opacity: 1;
 }

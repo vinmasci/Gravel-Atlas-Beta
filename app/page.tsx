@@ -76,9 +76,35 @@ export default function Home() {
   // Handle location click
   const handleLocationClick = useCallback(() => {
     if (mapInstance) {
-      // Implement location functionality
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            
+            mapInstance.flyTo({
+              center: [longitude, latitude],
+              zoom: 13,
+              duration: 2000
+            });
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            toast({
+              title: "Location Error",
+              description: "Could not get your current location",
+              variant: "destructive"
+            });
+          }
+        );
+      } else {
+        toast({
+          title: "Location Not Supported",
+          description: "Your browser doesn't support geolocation",
+          variant: "destructive"
+        });
+      }
     }
-  }, [mapInstance])
+  }, [mapInstance, toast])
 
   // Handle zoom
   const handleZoomIn = useCallback(() => {

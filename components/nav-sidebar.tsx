@@ -17,6 +17,7 @@ import {
 import { MAP_STYLES } from '@/app/constants/map-styles'
 import type { MapStyle } from '@/app/types/map'
 
+// Your existing interface remains the same
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   onSearch: (query: string) => void
   onLocationClick: () => void
@@ -73,22 +74,24 @@ export function NavSidebar({
       )}
       {...props}
     >
-      <div
-        className={cn(
-          "group/sidebar relative flex flex-col gap-4 p-4",
-          "bg-background/80 dark:bg-background/90",
-          "backdrop-blur-md",
-          "border-r border-border/40",
-          "transition-all duration-300 ease-in-out",
-          isCollapsed ? "w-16" : "w-80"
-        )}
-      >
-        {/* Toggle Button */}
+<div
+  className={cn(
+    "group/sidebar relative flex flex-col gap-4 p-4",
+    "bg-background/80 dark:bg-background/90", // Reverted back to original
+    "backdrop-blur-md",
+    "border-r border-border/40",
+    "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
+    isCollapsed ? "w-16" : "w-80"
+  )}
+>
+        {/* Toggle Button - Updated styling */}
         <Button
-          variant="outline"
+          variant="secondary" // Changed to secondary for better contrast
           size="icon"
           className={cn(
-            "absolute -right-12 top-4 z-50 bg-background/40 backdrop-blur-sm shadow-md",
+            "absolute -right-12 top-4 z-50",
+            "bg-background/80 backdrop-blur-sm shadow-md", // Increased background opacity
+            "hover:bg-accent hover:text-accent-foreground", // Added hover state
             "transition-transform duration-300 ease-in-out"
           )}
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -110,7 +113,12 @@ export function NavSidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1"
               />
-              <Button type="submit" size="icon">
+              <Button 
+                type="submit" 
+                size="icon"
+                variant="secondary" // Changed to secondary for consistency
+                className="hover:bg-accent hover:text-accent-foreground" // Added hover state
+              >
                 <Search className="h-4 w-4" />
               </Button>
             </form>
@@ -119,24 +127,39 @@ export function NavSidebar({
               variant="ghost" 
               size="icon"
               onClick={() => setIsCollapsed(false)}
-              className="w-full"
+              className="w-full hover:bg-accent hover:text-accent-foreground" // Added hover state
             >
               <Search className="h-4 w-4" />
             </Button>
           )}
 
-          {/* Map Controls - Always visible */}
+          {/* Map Controls - Updated styling */}
           <div className={cn(
             "flex gap-2",
             isCollapsed ? "flex-col items-center" : "md:flex"
           )}>
-            <Button variant="outline" size="icon" onClick={onZoomIn}>
+            <Button 
+              variant="secondary" // Changed to secondary
+              size="icon" 
+              onClick={onZoomIn}
+              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
+            >
               <span className="text-lg font-bold">+</span>
             </Button>
-            <Button variant="outline" size="icon" onClick={onZoomOut}>
+            <Button 
+              variant="secondary" // Changed to secondary
+              size="icon" 
+              onClick={onZoomOut}
+              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
+            >
               <span className="text-lg font-bold">−</span>
             </Button>
-            <Button variant="outline" size="icon" onClick={onLocationClick}>
+            <Button 
+              variant="secondary" // Changed to secondary
+              size="icon" 
+              onClick={onLocationClick}
+              className="hover:bg-accent hover:text-accent-foreground" // Added hover state
+            >
               <Navigation className="h-4 w-4" />
             </Button>
           </div>
@@ -145,14 +168,14 @@ export function NavSidebar({
           {!isCollapsed ? (
             <Accordion type="multiple" className="w-full">
               {/* Map Layers */}
-              <AccordionItem value="map-layers">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="map-layers" className="border-none"> {/* Removed border */}
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
                     Map Layers
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <RadioGroup
                     value={selectedStyle}
                     onValueChange={(value) => onStyleChange(value as MapStyle)}
@@ -169,14 +192,14 @@ export function NavSidebar({
               </AccordionItem>
 
               {/* Map Overlays */}
-              <AccordionItem value="map-overlays">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="map-overlays" className="border-none">
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <Layers className="h-4 w-4" />
                     Map Overlays
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <div className="space-y-2">
                     {[
                       { id: 'segments', label: 'Segments' },
@@ -189,7 +212,7 @@ export function NavSidebar({
                       { id: 'speed-limits', label: 'Speed Limits' },
                       { id: 'mapillary', label: 'Mapillary' }
                     ].map((overlay) => (
-                      <div key={overlay.id} className="flex items-center space-x-2">
+                      <div key={overlay.id} className="flex items-center space-x-2 hover:bg-accent/50 rounded px-2 py-1 transition-colors">
                         <input
                           type="checkbox"
                           id={overlay.id}
@@ -215,14 +238,14 @@ export function NavSidebar({
               </AccordionItem>
 
               {/* Points of Interest */}
-              <AccordionItem value="pois">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="pois" className="border-none">
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <Map className="h-4 w-4" />
                     Points of Interest
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <div className="space-y-2">
                     {[
                       { id: 'water-points', label: 'Water Points' },
@@ -230,7 +253,7 @@ export function NavSidebar({
                       { id: 'supermarkets', label: 'Supermarkets' },
                       { id: 'cafes', label: 'Cafes' }
                     ].map((poi) => (
-                      <div key={poi.id} className="flex items-center space-x-2">
+                      <div key={poi.id} className="flex items-center space-x-2 hover:bg-accent/50 rounded px-2 py-1 transition-colors">
                         <input
                           type="checkbox"
                           id={poi.id}
@@ -246,16 +269,17 @@ export function NavSidebar({
               </AccordionItem>
 
               {/* Upload Photo */}
-              <AccordionItem value="upload-photo">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="upload-photo" className="border-none">
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <Camera className="h-4 w-4" />
                     Upload Photo
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <Button 
-                    className="w-full" 
+                    className="w-full hover:bg-accent hover:text-accent-foreground" 
+                    variant="secondary"
                     onClick={() => {
                       if (!user) {
                         toast({
@@ -275,54 +299,58 @@ export function NavSidebar({
               </AccordionItem>
 
               {/* Draw Segment */}
-              <AccordionItem value="draw-segment">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="draw-segment" className="border-none">
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <Route className="h-4 w-4" />
                     Draw Segment
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent className="px-2">
                   <DrawSegmentPanel />
                 </AccordionContent>
               </AccordionItem>
 
               {/* Overlay GPX */}
-              <AccordionItem value="overlay-gpx">
-                <AccordionTrigger className="hover:no-underline">
+              <AccordionItem value="overlay-gpx" className="border-none">
+                <AccordionTrigger className="hover:bg-accent rounded-md px-2 py-3 transition-colors">
                   <div className="flex items-center gap-2">
                     <FileUp className="h-4 w-4" />
                     Overlay GPX
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
-                  <Button className="w-full">
+                <AccordionContent className="px-2">
+                  <Button 
+                    className="w-full hover:bg-accent hover:text-accent-foreground"
+                    variant="secondary"
+                  >
                     Upload GPX File
                   </Button>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           ) : (
-            /* Icon Mode */
+            /* Icon Mode - Updated with hover states */
             <div className="flex flex-col gap-3 items-center">
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Map Layers">
-                <Map className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Map Overlays">
-                <Layers className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Points of Interest">
-                <Map className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Upload Photo">
-                <Camera className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Draw Segment">
-                <Route className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} title="Overlay GPX">
-                <FileUp className="h-4 w-4" />
-              </Button>
+              {[
+                { icon: <Map className="h-4 w-4" />, title: "Map Layers" },
+                { icon: <Layers className="h-4 w-4" />, title: "Map Overlays" },
+                { icon: <Map className="h-4 w-4" />, title: "Points of Interest" },
+                { icon: <Camera className="h-4 w-4" />, title: "Upload Photo" },
+                { icon: <Route className="h-4 w-4" />, title: "Draw Segment" },
+                { icon: <FileUp className="h-4 w-4" />, title: "Overlay GPX" }
+              ].map((item, index) => (
+                <Button 
+                  key={index}
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsCollapsed(false)} 
+                  title={item.title}
+                  className="hover:bg-accent hover:text-accent-foreground w-full"
+                >
+                  {item.icon}
+                </Button>
+              ))}
             </div>
           )}
         </div>
