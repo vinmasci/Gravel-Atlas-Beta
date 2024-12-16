@@ -27,6 +27,8 @@ export const addWaterPointsLayer = (map: mapboxgl.Map) => {
         'type': 'symbol',
         'source': 'water-points',
         'source-layer': 'pois',  // We'll need to confirm this source-layer name
+        'minzoom': 0,      // Add this to force layer visibility at all zooms
+        'maxzoom': 24,     // Add this to force layer visibility at all zooms
         'filter': [
           'all',
           ['==', 'amenity', 'drinking_water']
@@ -34,7 +36,7 @@ export const addWaterPointsLayer = (map: mapboxgl.Map) => {
 'layout': {
   'visibility': 'visible',
   'icon-image': 'water-icon',
-  'icon-size': 0.008,
+  'icon-size': 0.007,
   'icon-rotate': 180,
   'icon-allow-overlap': true,
   'icon-ignore-placement': true,  // Add this to force icons to show
@@ -83,6 +85,28 @@ export const addWaterPointsLayer = (map: mapboxgl.Map) => {
         const popups = document.getElementsByClassName('water-popup');
         if (popups[0]) popups[0].remove();
       });
+
+        // Add this click handler right here
+  map.on('click', 'water-points', (e) => {
+    if (e.features && e.features[0] && e.features[0].geometry) {
+      // Try getting coordinates from the feature's geometry
+      const coords = (e.features[0].geometry as any).coordinates;
+      if (coords) {
+        map.easeTo({
+          center: coords,
+          zoom: 18,
+          duration: 1000
+        });
+      } else {
+        // Fallback to click location
+        map.easeTo({
+          center: [e.lngLat.lng, e.lngLat.lat],
+          zoom: 18,
+          duration: 1000
+        });
+      }
+    }
+  });
 
     } catch (error) {
       console.error('Error adding water points layer:', error);

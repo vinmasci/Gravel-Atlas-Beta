@@ -67,22 +67,23 @@ export function MapSidebar({
   };
 
   return (
-    <div 
-      className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] bg-background/95 backdrop-blur-sm transform transition-transform duration-300 ease-in-out z-40 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      {/* Toggle Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute -right-12 top-4 bg-background/95 backdrop-blur-sm z-50 shadow-md"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </Button>
+<div 
+  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] bg-background/40 backdrop-blur-sm transform transition-transform duration-300 ease-in-out z-40 ${
+    isOpen ? 'translate-x-0' : '-translate-x-full'
+  }`}
+>
 
-      <div className="w-80 h-full flex flex-col p-4 overflow-y-auto">
+  {/* Toggle Button */}
+  <Button
+    variant="outline"
+    size="icon"
+    className="absolute -right-12 top-4 bg-background/40 backdrop-blur-sm z-50 shadow-md"
+    onClick={() => setIsOpen(!isOpen)}
+  >
+    {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+  </Button>
+
+  <div className="w-80 h-full flex flex-col p-4 overflow-y-auto bg-transparent">
         {/* Search Section */}
         <form onSubmit={handleSearch} className="flex gap-2 mb-4">
           <Input

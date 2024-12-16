@@ -3,6 +3,16 @@ import mapboxgl from 'mapbox-gl';
 import type { Map } from 'mapbox-gl';
 import type { PhotoDisplayData } from '@/app/types/photos';
 
+// Add the preloadImage function here
+function preloadImage(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 let photoSourceAdded = false;
 let photoLayerAdded = false;
 
@@ -66,7 +76,8 @@ export function initializePhotoLayer(map: Map) {
         filter: ['has', 'point_count'],
         layout: {
           'icon-image': 'custom-marker',
-          'icon-size': 0.1,
+          'icon-size': 0.009,  // Change from 0.1 to 0.05
+          'icon-rotate': 180,  // Add this line
           'text-field': '{point_count_abbreviated}',
           'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
           'text-size': 0.8,
@@ -84,7 +95,8 @@ export function initializePhotoLayer(map: Map) {
         filter: ['!', ['has', 'point_count']],
         layout: {
           'icon-image': 'single-photo',
-          'icon-size': 0.1,
+          'icon-size': 0.009,  // Change from 0.1 to 0.05
+          'icon-rotate': 180,  // Add this line
           'icon-allow-overlap': true
         }
     });
@@ -215,68 +227,83 @@ export function initializePhotoLayer(map: Map) {
           .addTo(map);
 
     });
-    // Add hover effects for clusters
-    let hoverTimeout: NodeJS.Timeout;
-    map.on('mouseenter', 'clusters', async (e) => {
-      map.getCanvas().style.cursor = 'pointer';
-      
-      if (hoverTimeout) clearTimeout(hoverTimeout);
-      
-      hoverTimeout = setTimeout(async () => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: ['clusters']
-        });
-        const clusterId = features[0].properties.cluster_id;
-        console.log('Cluster hover:', { clusterId });
-        
-        try {
-          const source = map.getSource('photos') as mapboxgl.GeoJSONSource;
-          const leaves = await new Promise((resolve, reject) => {
-            source.getClusterLeaves(
-              clusterId,
-              4,
-              0,
-              (err, features) => {
-                if (err) reject(err);
-                else resolve(features);
-              }
-            );
-          });
-
-          const coordinates = (features[0].geometry as any).coordinates.slice();
-          const totalCount = features[0].properties.point_count;
-          const previewFeatures = leaves as any[];
-
-          const popup = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            className: 'cluster-preview-popup'
-          })
-            .setLngLat(coordinates)
-            .setHTML(`
-              <div class="flex gap-1 p-2 bg-white rounded-lg shadow-lg">
-                ${previewFeatures.slice(0, 3).map((feature, i) => `
-                  <div class="relative">
-                    <img 
-                      src="${feature.properties.url}" 
-                      alt="${feature.properties.title}"
-                      class="w-24 h-24 object-cover rounded-sm"
-                    />
-                    ${i === 2 && totalCount > 3 ? `
-                      <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
-                        <span class="text-white font-semibold">+${totalCount - 3}</span>
-                      </div>
-                    ` : ''}
-                  </div>
-                `).join('')}
-              </div>
-            `)
-            .addTo(map);
-        } catch (error) {
-          console.error('Error showing cluster preview:', error);
-        }
-      }, 300);
+    
+// Add hover effects for clusters
+let hoverTimeout: NodeJS.Timeout;
+map.on('mouseenter', 'clusters', async (e) => {
+  map.getCanvas().style.cursor = 'pointer';
+  
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+  
+  hoverTimeout = setTimeout(async () => {
+    const features = map.queryRenderedFeatures(e.point, {
+      layers: ['clusters']
     });
+    const clusterId = features[0].properties.cluster_id;
+    
+    try {
+      const source = map.getSource('photos') as mapboxgl.GeoJSONSource;
+      const leaves = await new Promise((resolve, reject) => {
+        source.getClusterLeaves(
+          clusterId,
+          4,
+          0,
+          (err, features) => {
+            if (err) reject(err);
+            else resolve(features);
+          }
+        );
+      });
+
+      const coordinates = (features[0].geometry as any).coordinates.slice();
+      const totalCount = features[0].properties.point_count;
+      const previewFeatures = leaves as any[];
+
+      // Show loading state first
+      const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: 'cluster-preview-popup'
+      })
+      .setLngLat(coordinates)
+      .setHTML(`
+        <div class="flex gap-1 p-2 bg-white rounded-lg shadow-lg">
+          ${Array(Math.min(3, previewFeatures.length)).fill(0).map(() => `
+            <div class="w-24 h-24 animate-pulse bg-gray-200 rounded-sm"></div>
+          `).join('')}
+        </div>
+      `)
+      .addTo(map);
+
+      // Preload all images in parallel
+      await Promise.all(previewFeatures.slice(0, 3).map(feature => 
+        preloadImage(feature.properties.url)
+      ));
+
+      // Update popup with loaded images
+      popup.setHTML(`
+        <div class="flex gap-1 p-2 bg-white rounded-lg shadow-lg">
+          ${previewFeatures.slice(0, 3).map((feature, i) => `
+            <div class="relative">
+              <img 
+                src="${feature.properties.url}" 
+                alt="${feature.properties.title}"
+                class="w-24 h-24 object-cover rounded-sm"
+              />
+              ${i === 2 && totalCount > 3 ? `
+                <div class="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
+                  <span class="text-white font-semibold">+${totalCount - 3}</span>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `);
+    } catch (error) {
+      console.error('Error showing cluster preview:', error);
+    }
+  }, 300);
+});
 
     map.on('mouseleave', 'clusters', () => {
       map.getCanvas().style.cursor = '';
@@ -285,28 +312,41 @@ export function initializePhotoLayer(map: Map) {
       if (popup) popup.remove();
     });
 
-    // Add hover effects for single photos
-    let singlePhotoPopup: mapboxgl.Popup | null = null;
-    map.on('mouseenter', 'unclustered-point', (e) => {
-      map.getCanvas().style.cursor = 'pointer';
-      
-      const coordinates = (e.features![0].geometry as any).coordinates.slice();
-      const properties = e.features![0].properties;
-      console.log('Photo hover:', properties);
-      
-      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-      }
+// Add hover effects for single photos
+let singlePhotoPopup: mapboxgl.Popup | null = null;
+map.on('mouseenter', 'unclustered-point', async (e) => {
+  map.getCanvas().style.cursor = 'pointer';
+  
+  const coordinates = (e.features![0].geometry as any).coordinates.slice();
+  const properties = e.features![0].properties;
+  
+  while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+  }
 
-      singlePhotoPopup = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false,
-        className: 'photo-marker-popup',
-        maxWidth: '120px',
-        offset: [0, -10]
-      })
-      .setLngLat(coordinates)
-      .setHTML(`
+  // Show loading popup immediately
+  singlePhotoPopup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    className: 'photo-marker-popup',
+    maxWidth: '120px',
+    offset: [0, -10]
+  })
+  .setLngLat(coordinates)
+  .setHTML(`
+    <div class="photo-preview">
+      <div class="loading-placeholder animate-pulse bg-gray-200 w-full h-full"></div>
+    </div>
+  `)
+  .addTo(map);
+
+  try {
+    // Preload the image
+    await preloadImage(properties.url);
+    
+    // Only update popup if it still exists (mouse hasn't left)
+    if (singlePhotoPopup) {
+      singlePhotoPopup.setHTML(`
         <div class="photo-preview">
           <img 
             src="${properties.url}" 
@@ -314,9 +354,20 @@ export function initializePhotoLayer(map: Map) {
             class="object-cover"
           />
         </div>
-      `)
-      .addTo(map);
-    });
+      `);
+    }
+  } catch (error) {
+    console.error('Error loading image:', error);
+    // Show error state if needed
+    if (singlePhotoPopup) {
+      singlePhotoPopup.setHTML(`
+        <div class="photo-preview">
+          <div class="error-state">Failed to load image</div>
+        </div>
+      `);
+    }
+  }
+});
     
     map.on('mouseleave', 'unclustered-point', () => {
       map.getCanvas().style.cursor = '';
