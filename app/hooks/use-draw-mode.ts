@@ -457,20 +457,55 @@ map.addLayer({
           resampledCount: resampledPoints.length 
       });
 
-      // Get elevation for resampled points only
       const elevationData = await getElevation(resampledPoints);
       logStateChange('Elevation data received', { elevationData });
-  
+      
       // Create new segment
       const newSegment: Segment = {
         clickPoint: newClickPoint,
         roadPoints: newPoints
       };
-  
-// Calculate new elevation profile with proper distances
-// Calculate new elevation profile with proper distances
-let newElevationPoints;
-let grades: number[] = [];
+      
+      // Process elevation data
+      let newElevationPoints;
+      let grades: number[] = [];
+      
+      if (resampledPoints.length >= 2) {
+        // Convert elevation data to points with elevation
+        const pointsWithElevation = elevationData.map(point => ({
+          coordinates: [point[0], point[1]] as [number, number],
+          elevation: point[2]
+        }));
+      
+        // Calculate distances and create elevation points
+        let distance = 0;
+        newElevationPoints = pointsWithElevation.map((point, index, array) => {
+          if (index === 0) return { distance: 0, elevation: point.elevation };
+          
+          const prevPoint = array[index - 1];
+          const segmentDistance = turf.distance(
+            turf.point(prevPoint.coordinates),
+            turf.point(point.coordinates),
+            { units: 'kilometers' }
+          );
+          
+          distance += segmentDistance;
+          return {
+            distance,
+            elevation: point.elevation
+          };
+        });
+      
+        // Smooth the elevation data
+        newElevationPoints = smoothElevationData(newElevationPoints);
+        grades = calculateGrades(newElevationPoints);
+      } else {
+        // Handle single point case
+        newElevationPoints = [{
+          distance: 0,
+          elevation: elevationData[0][2]
+        }];
+      }
       
 if (resampledPoints.length >= 2) {
   // Convert elevation data to [lon, lat, elev] format
@@ -546,14 +581,23 @@ logStateChange('New elevation points calculated', {
         return newClickPoints;
       });
   
-// Update coordinates with elevation data
-// Update coordinates with elevation data
-const allCoordinates = [...drawnCoordinates, ...elevationData]; // Combine existing and new coordinates
+// Update drawn coordinates with elevation data
+const allCoordinates = [...drawnCoordinates, ...elevationData];
 setDrawnCoordinates(allCoordinates);
 
 // Update map sources
 const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
+
+if (lineSource && markerSource) {
+  lineSource.setData({
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: allCoordinates
+    }
+  });
 
 if (lineSource && markerSource) {
   lineSource.setData({
@@ -583,33 +627,46 @@ if (lineSource && markerSource) {
           // Get the last distance from previous profile
           const lastDistance = prev.length > 0 ? prev[prev.length - 1].distance : 0;
           
+          // Add debugging
+          console.log('Updating elevation profile:', {
+            prevLength: prev.length,
+            newPointsLength: newElevationPoints.length,
+            lastDistance,
+            firstNewPoint: newElevationPoints[0],
+            lastPrevPoint: prev[prev.length - 1]
+          });
+          
           // Adjust new points to continue from last distance
           const adjustedNewPoints = newElevationPoints.map(point => ({
             distance: lastDistance + point.distance,
             elevation: point.elevation
           }));
-
+        
           const newProfile = [...prev, ...adjustedNewPoints];
+          
           logStateChange('Elevation profile updated', {
             previousCount: prev.length,
             newCount: newProfile.length,
             lastDistance,
-            firstNewDistance: adjustedNewPoints[0]?.distance
+            firstNewDistance: adjustedNewPoints[0]?.distance,
+            elevationRange: newProfile.map(p => p.elevation)
           });
+          
           return newProfile;
         });
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Error processing click:', error);
-        logStateChange('Click processing error', { error });
-      }
-    } finally {
-      isProcessingClick.current = false;
-      pendingOperation.current = null;
-      logStateChange('Click processing complete');
-    }
-  }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
+      } // Make sure this closing brace is here
+      
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Error processing click:', error);
+              logStateChange('Click processing error', { error });
+            }
+          } finally {
+            isProcessingClick.current = false;
+            pendingOperation.current = null;
+            logStateChange('Click processing complete');
+          }
+        }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
   const startDrawing = useCallback(() => {
     logStateChange('Starting drawing mode', { mapExists: !!map });
