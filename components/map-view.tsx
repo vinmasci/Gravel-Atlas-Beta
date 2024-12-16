@@ -70,7 +70,8 @@ function MapViewInner({
   selectedStyle,
   overlayStates,
   mapillaryVisible,
-}: MapViewProps) {
+  onMapInit
+}: MapViewInnerProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const googleMap = useRef<google.maps.Map | null>(null)
   const mapRef = useRef<any>(null)
@@ -242,11 +243,11 @@ function MapViewInner({
         reuseMaps
         ref={mapRef}
         onLoad={(evt) => {
-          setMapInstance(evt.target)
-          onMapInit(map)  // Add this line
+          const map = evt.target
+          setMapInstance(map)
+          onMapInit(map)  // Now it's correct
           
           // Initialize map layers
-          const map = evt.target
           if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
             // Load water icon
             map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
