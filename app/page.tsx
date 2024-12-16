@@ -1,5 +1,7 @@
 'use client'
 
+import { MapContext } from '@/app/contexts/map-context'
+import { DrawModeProvider } from '@/app/contexts/draw-mode-context'
 import React, { useState, useCallback } from 'react'
 import MapView from '@/components/map-view'
 import { NavSidebar } from '@/components/nav-sidebar'
@@ -87,26 +89,30 @@ export default function Home() {
 
   return (
     <div className="h-full w-full relative">
-      <NavSidebar  // Changed from Sidebar to NavSidebar
-        onSearch={handleSearch}
-        onLocationClick={handleLocationClick}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onLayerToggle={handleLayerToggle}
-        selectedStyle={selectedStyle}
-        onStyleChange={handleStyleChange}
-        availableLayers={layers}
-        mapillaryVisible={mapillaryVisible}
-        overlayStates={overlayStates}
-        className="z-[60]"
-      />
-<MapView
-  viewState={viewState}
-  setViewState={setViewState}
-  selectedStyle={selectedStyle}
-  overlayStates={overlayStates}
-  mapillaryVisible={mapillaryVisible}
-/>
+      <MapContext.Provider value={{ map: null, setMap: () => {} }}>
+        <DrawModeProvider map={null}>
+          <NavSidebar 
+            onSearch={handleSearch}
+            onLocationClick={handleLocationClick}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLayerToggle={handleLayerToggle}
+            selectedStyle={selectedStyle}
+            onStyleChange={handleStyleChange}
+            availableLayers={layers}
+            mapillaryVisible={mapillaryVisible}
+            overlayStates={overlayStates}
+            className="z-[60]"
+          />
+          <MapView
+            viewState={viewState}
+            setViewState={setViewState}
+            selectedStyle={selectedStyle}
+            overlayStates={overlayStates}
+            mapillaryVisible={mapillaryVisible}
+          />
+        </DrawModeProvider>
+      </MapContext.Provider>
     </div>
   )
 }
