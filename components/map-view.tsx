@@ -318,6 +318,10 @@ return (
         addGravelRoadsLayer(map);
         addBikeInfraSource(map);
         addBikeInfraLayer(map);
+        addUnknownSurfaceSource(map);
+        addUnknownSurfaceLayer(map);
+        // Private roads layer depends on gravel-roads source, so it should come after
+        addPrivateRoadsLayer(map);
       
         // Load water icon first, then add water points layer
         map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {

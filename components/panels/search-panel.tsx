@@ -11,9 +11,9 @@ export function SearchPanel() {
             placeholder="Search locations or routes..."
             className="flex-1"
           />
-          <Button size="icon">
-            <Search className="h-4 w-4" />
-          </Button>
+<Button size="icon" className="w-10 h-10 flex items-center justify-center">
+  <Search className="h-4 w-4" />
+</Button>
         </div>
       </div>
     </div>

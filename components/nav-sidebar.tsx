@@ -77,7 +77,7 @@ export function NavSidebar({
 <div
   className={cn(
     "group/sidebar relative flex flex-col gap-4 p-4",
-    "bg-background/80 dark:bg-background/90", // Reverted back to original
+    "bg-background/100 dark:bg-background/100", // Reverted back to original
     "backdrop-blur-md",
     "border-r border-border/40",
     "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
@@ -117,24 +117,26 @@ export function NavSidebar({
                 type="submit" 
                 size="icon"
                 variant="secondary" // Changed to secondary for consistency
-                className="hover:bg-accent hover:text-accent-foreground" // Added hover state
+                className="w-10 h-10 flex items-center justify-center hover:bg-accent hover:text-accent-foreground"
               >
                 <Search className="h-4 w-4" />
               </Button>
             </form>
-          ) : (
-            <Button 
-            variant="secondary"
-            size="icon"
-            onClick={() => setIsCollapsed(false)}
-            className={cn(
-              "bg-background/80 backdrop-blur-sm",
-              "hover:bg-accent hover:text-accent-foreground",
-              "transition-colors duration-300 ease-in-out"
-            )}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
+) : (
+    <div className="flex justify-center">
+      <Button 
+        variant="secondary"
+        size="icon"
+        onClick={() => setIsCollapsed(false)}
+        className={cn(
+          "bg-background/80 backdrop-blur-sm",
+          "hover:bg-accent hover:text-accent-foreground",
+          "transition-colors duration-300 ease-in-out"
+        )}
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+    </div>
         )}
         
         {/* Map Controls */}
@@ -143,7 +145,7 @@ export function NavSidebar({
           isCollapsed ? "flex-col items-center" : "md:flex"
         )}>
           <Button 
-            variant="secondary"
+            variant="ghost"
             size="icon" 
             onClick={onZoomIn}
             className={cn(
