@@ -68,11 +68,10 @@ export function MapSidebar({
 
   return (
 <div 
-  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] bg-background/40 backdrop-blur-sm transform transition-transform duration-300 ease-in-out z-40 ${
+  className={`fixed left-0 top-14 h-[calc(100vh-3.5rem)] transform transition-transform duration-300 ease-in-out z-40 ${
     isOpen ? 'translate-x-0' : '-translate-x-full'
   }`}
 >
-
   {/* Toggle Button */}
   <Button
     variant="outline"
@@ -83,36 +82,36 @@ export function MapSidebar({
     {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
   </Button>
 
-  <div className="w-80 h-full flex flex-col p-4 overflow-y-auto bg-transparent">
-        {/* Search Section */}
-        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-          <Input
-            type="text"
-            placeholder="Search location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" size="icon">
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
+  <div className="w-80 h-full flex flex-col p-4 overflow-y-auto bg-background/40 backdrop-blur-sm">
+    {/* Search Section */}
+    <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <Input
+        type="text"
+        placeholder="Search location..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="flex-1 bg-background/60"
+      />
+      <Button type="submit" size="icon" className="bg-background/60">
+        <Search className="h-4 w-4" />
+      </Button>
+    </form>
 
-        {/* Map Controls */}
-        <div className="hidden md:flex gap-2 mb-4">
-          <Button variant="outline" size="icon" onClick={onZoomIn}>
-            <span className="text-lg font-bold">+</span>
-          </Button>
-          <Button variant="outline" size="icon" onClick={onZoomOut}>
-            <span className="text-lg font-bold">−</span>
-          </Button>
-          <Button variant="outline" size="icon" onClick={onLocationClick}>
-            <Navigation className="h-4 w-4" />
-          </Button>
-        </div>
+    {/* Map Controls */}
+    <div className="hidden md:flex gap-2 mb-4">
+      <Button variant="outline" size="icon" className="bg-background/60" onClick={onZoomIn}>
+        <span className="text-lg font-bold">+</span>
+      </Button>
+      <Button variant="outline" size="icon" className="bg-background/60" onClick={onZoomOut}>
+        <span className="text-lg font-bold">−</span>
+      </Button>
+      <Button variant="outline" size="icon" className="bg-background/60" onClick={onLocationClick}>
+        <Navigation className="h-4 w-4" />
+      </Button>
+    </div>
 
-        {/* Accordion Sections */}
-        <Accordion type="multiple" className="w-full space-y-2">
+    {/* Accordion Sections */}
+    <Accordion type="multiple" className="w-full space-y-2 [&>*]:bg-transparent">
           {/* Map Layers */}
           <AccordionItem value="map-layers">
             <AccordionTrigger className="hover:no-underline">
