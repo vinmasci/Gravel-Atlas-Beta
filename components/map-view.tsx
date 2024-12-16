@@ -159,6 +159,54 @@ const mapContainerStyle = {
     }
   }, [mapInstance, selectedStyle])
 
+  // Add the new effects right here, after the terrain effect and before the Google Maps rendering check
+  useEffect(() => {
+    if (!mapInstance) return
+    updatePhotoLayer(mapInstance, overlayStates.photos)
+  }, [mapInstance, overlayStates.photos])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updateSegmentLayer(mapInstance, overlayStates.segments)
+  }, [mapInstance, overlayStates.segments])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    addMapillaryLayers(mapInstance)
+    if (mapillaryVisible) {
+      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible')
+      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible')
+    } else {
+      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'none')
+      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'none')
+    }
+  }, [mapInstance, mapillaryVisible])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updateGravelRoadsLayer(mapInstance, overlayStates['gravel-roads'])
+  }, [mapInstance, overlayStates['gravel-roads']])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updateBikeInfraLayer(mapInstance, overlayStates['bike-infrastructure'])
+  }, [mapInstance, overlayStates['bike-infrastructure']])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updateUnknownSurfaceLayer(mapInstance, overlayStates['unknown-surface'])
+  }, [mapInstance, overlayStates['unknown-surface']])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updatePrivateRoadsLayer(mapInstance, overlayStates['private-roads'])
+  }, [mapInstance, overlayStates['private-roads']])
+
+  useEffect(() => {
+    if (!mapInstance) return
+    updateWaterPointsLayer(mapInstance, overlayStates['water-points'])
+  }, [mapInstance, overlayStates['water-points']])
+
   // Render Google Maps
   if (MAP_STYLES[selectedStyle].type === 'google') {
     return (
@@ -206,27 +254,31 @@ const mapContainerStyle = {
                   }
                 })
                 
-                // Add and update all layers
-                addGravelRoadsSource(map)
-                addGravelRoadsLayer(map)
-                updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
-                
-                addBikeInfraSource(map)
-                addBikeInfraLayer(map)
-                updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
-                
-                addWaterPointsSource(map)
-                addWaterPointsLayer(map)
-                updateWaterPointsLayer(map, overlayStates['water-points'])
+    // Add and update all layers
+    addGravelRoadsSource(map)
+    addGravelRoadsLayer(map)
+    updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
+    
+    addBikeInfraSource(map)
+    addBikeInfraLayer(map)
+    updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
+    
+    addWaterPointsSource(map)
+    addWaterPointsLayer(map)
+    updateWaterPointsLayer(map, overlayStates['water-points'])
 
-                addUnknownSurfaceSource(map)
-                addUnknownSurfaceLayer(map)
-                updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
+    addUnknownSurfaceSource(map)
+    addUnknownSurfaceLayer(map)
+    updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
 
-                addPrivateRoadsLayer(map)
-                updatePrivateRoadsLayer(map, overlayStates['private-roads'])
-              }
-            }}
+    addPrivateRoadsLayer(map)
+    updatePrivateRoadsLayer(map, overlayStates['private-roads'])
+
+    // Add these lines for photos and segments
+    updatePhotoLayer(map, overlayStates.photos)
+    updateSegmentLayer(map, overlayStates.segments)
+  }
+}}
           />
           {isLoading && <LoadingSpinner />}
           {showAlert && (
