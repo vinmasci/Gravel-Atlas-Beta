@@ -19,7 +19,6 @@ import { MapContext } from '@/app/contexts/map-context'
 import { DrawModeProvider } from '@/app/contexts/draw-mode-context'
 import { SegmentSheet } from './segments/segment-sheet'
 import { FloatingElevationProfile } from './segments/floating-elevation-profile'
-import { useDrawMode } from '@/app/hooks/use-draw-mode'
 
 interface ViewState {
   longitude: number
@@ -46,12 +45,11 @@ interface MapViewProps {
   mapillaryVisible: boolean
 }
 
-// Add the new interface right after MapViewProps
 interface MapViewInnerProps extends MapViewProps {
+  map: mapboxgl.Map | null
   onMapInit: (map: mapboxgl.Map) => void
 }
 
-// Initialize Google Maps loader
 const googleLoader = new Loader({
   apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
   version: 'weekly',
@@ -79,7 +77,7 @@ function MapViewInner({
   const [isLoading, setIsLoading] = useState(false)
   const [showAlert, setShowAlert] = useState(false)
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
-  
+
   const [selectedSegment, setSelectedSegment] = useState<{
     id: string
     title: string
@@ -104,6 +102,42 @@ function MapViewInner({
     width: '100%',
     height: '100%'
   }
+
+  const initializeLayers = useCallback((map: mapboxgl.Map) => {
+    if (!map || MAP_STYLES[selectedStyle].type.includes('google')) return;
+
+    // Load water icon
+    map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+      if (error) throw error;
+      if (!map.hasImage('water-icon')) {
+        map.addImage('water-icon', image);
+      }
+    });
+    
+    // Add and update all layers
+    addGravelRoadsSource(map);
+    addGravelRoadsLayer(map);
+    updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+    
+    addBikeInfraSource(map);
+    addBikeInfraLayer(map);
+    updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+    
+    addWaterPointsSource(map);
+    addWaterPointsLayer(map);
+    updateWaterPointsLayer(map, overlayStates['water-points']);
+
+    addUnknownSurfaceSource(map);
+    addUnknownSurfaceLayer(map);
+    updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+
+    addPrivateRoadsLayer(map);
+    updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+
+    // Initialize photos and segments
+    updatePhotoLayer(map, overlayStates.photos);
+    updateSegmentLayer(map, overlayStates.segments);
+  }, [selectedStyle, overlayStates]);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -163,53 +197,62 @@ function MapViewInner({
 
   // Layer visibility effects
   useEffect(() => {
-    if (!mapInstance) return
-    updatePhotoLayer(mapInstance, overlayStates.photos)
-  }, [mapInstance, overlayStates.photos])
+    if (!mapInstance) return;
+    updatePhotoLayer(mapInstance, overlayStates.photos);
+  }, [mapInstance, overlayStates.photos]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updateSegmentLayer(mapInstance, overlayStates.segments)
-  }, [mapInstance, overlayStates.segments])
+    if (!mapInstance) return;
+    updateSegmentLayer(mapInstance, overlayStates.segments);
+  }, [mapInstance, overlayStates.segments]);
 
   useEffect(() => {
-    if (!mapInstance) return
+    if (!mapInstance) return;
     if (!mapInstance.getSource('mapillary')) {
-      addMapillaryLayers(mapInstance)
+      addMapillaryLayers(mapInstance);
     }
     if (mapillaryVisible) {
-      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible')
-      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible')
+      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'visible');
+      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'visible');
     } else {
-      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'none')
-      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'none')
+      mapInstance.setLayoutProperty('mapillary-location', 'visibility', 'none');
+      mapInstance.setLayoutProperty('mapillary-sequence', 'visibility', 'none');
     }
-  }, [mapInstance, mapillaryVisible])
+  }, [mapInstance, mapillaryVisible]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updateGravelRoadsLayer(mapInstance, overlayStates['gravel-roads'])
-  }, [mapInstance, overlayStates['gravel-roads']])
+    if (!mapInstance) return;
+    updateGravelRoadsLayer(mapInstance, overlayStates['gravel-roads']);
+  }, [mapInstance, overlayStates['gravel-roads']]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updateBikeInfraLayer(mapInstance, overlayStates['bike-infrastructure'])
-  }, [mapInstance, overlayStates['bike-infrastructure']])
+    if (!mapInstance) return;
+    updateBikeInfraLayer(mapInstance, overlayStates['bike-infrastructure']);
+  }, [mapInstance, overlayStates['bike-infrastructure']]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updateUnknownSurfaceLayer(mapInstance, overlayStates['unknown-surface'])
-  }, [mapInstance, overlayStates['unknown-surface']])
+    if (!mapInstance) return;
+    updateUnknownSurfaceLayer(mapInstance, overlayStates['unknown-surface']);
+  }, [mapInstance, overlayStates['unknown-surface']]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updatePrivateRoadsLayer(mapInstance, overlayStates['private-roads'])
-  }, [mapInstance, overlayStates['private-roads']])
+    if (!mapInstance) return;
+    updatePrivateRoadsLayer(mapInstance, overlayStates['private-roads']);
+  }, [mapInstance, overlayStates['private-roads']]);
 
   useEffect(() => {
-    if (!mapInstance) return
-    updateWaterPointsLayer(mapInstance, overlayStates['water-points'])
-  }, [mapInstance, overlayStates['water-points']])
+    if (!mapInstance) return;
+    updateWaterPointsLayer(mapInstance, overlayStates['water-points']);
+  }, [mapInstance, overlayStates['water-points']]);
+
+  // Effect to reinitialize layers when style changes
+  useEffect(() => {
+    if (!mapInstance) return;
+    
+    mapInstance.once('style.load', () => {
+      initializeLayers(mapInstance);
+    });
+  }, [mapInstance, selectedStyle, initializeLayers]);
 
   // Render Google Maps
   if (MAP_STYLES[selectedStyle].type === 'google') {
@@ -243,44 +286,13 @@ function MapViewInner({
         reuseMaps
         ref={mapRef}
         onLoad={(evt) => {
-          const map = evt.target
-          setMapInstance(map)
-          onMapInit(map)  // Now it's correct
+          const map = evt.target;
+          setMapInstance(map);
+          onMapInit(map);
           
-          // Initialize map layers
-          if (map && !MAP_STYLES[selectedStyle].type.includes('google')) {
-            // Load water icon
-            map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-              if (error) throw error
-              if (!map.hasImage('water-icon')) {
-                map.addImage('water-icon', image)
-              }
-            })
-            
-            // Add and update all layers
-            addGravelRoadsSource(map)
-            addGravelRoadsLayer(map)
-            updateGravelRoadsLayer(map, overlayStates['gravel-roads'])
-            
-            addBikeInfraSource(map)
-            addBikeInfraLayer(map)
-            updateBikeInfraLayer(map, overlayStates['bike-infrastructure'])
-            
-            addWaterPointsSource(map)
-            addWaterPointsLayer(map)
-            updateWaterPointsLayer(map, overlayStates['water-points'])
-
-            addUnknownSurfaceSource(map)
-            addUnknownSurfaceLayer(map)
-            updateUnknownSurfaceLayer(map, overlayStates['unknown-surface'])
-
-            addPrivateRoadsLayer(map)
-            updatePrivateRoadsLayer(map, overlayStates['private-roads'])
-
-            // Initialize photos and segments
-            updatePhotoLayer(map, overlayStates.photos)
-            updateSegmentLayer(map, overlayStates.segments)
-          }
+          map.once('style.load', () => {
+            initializeLayers(map);
+          });
         }}
       />
       {isLoading && <LoadingSpinner />}
