@@ -46,13 +46,38 @@ interface ResampledPoint {
   surfaceType: 'paved' | 'unpaved' | 'unknown';
 }
 
+// Add this constant at the top of the file
+const ROAD_LAYER_PATTERNS = [
+  'road-motorway',
+  'road-trunk',
+  'road-primary',
+  'road-secondary',
+  'road-tertiary',
+  'road-street',
+  'road-service',
+  'road-pedestrian',
+  'road-path',
+  'road-track'
+];
+
 const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): 'paved' | 'unpaved' | 'unknown' => {
-  if (!map.isStyleLoaded()) {
+  if (!map || !map.isStyleLoaded()) {
     return 'unknown';
   }
 
   try {
-    // First check gravel roads layer
+    const style = map.getStyle();
+    if (!style || !style.layers) {
+      return 'unknown';
+    }
+
+    // Find actual road layers in the current style
+    const availableLayers = style.layers.map(layer => layer.id);
+    const roadLayers = availableLayers.filter(layerId => 
+      ROAD_LAYER_PATTERNS.some(pattern => layerId.includes(pattern))
+    );
+
+    // Always try gravel roads first
     if (map.getLayer('gravel-roads')) {
       const gravelFeatures = map.queryRenderedFeatures(
         map.project(point as mapboxgl.LngLatLike),
@@ -64,18 +89,20 @@ const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): '
       }
     }
 
-    // Then check for standard roads
-    const standardRoadLayers = ['road', 'road-secondary', 'road-primary'].filter(id => map.getLayer(id));
-    
-    if (standardRoadLayers.length > 0) {
+    // Then check standard road layers
+    if (roadLayers.length > 0) {
       const roadFeatures = map.queryRenderedFeatures(
         map.project(point as mapboxgl.LngLatLike),
-        { layers: standardRoadLayers }
+        { layers: roadLayers }
       );
 
-      const roadWithSurface = roadFeatures.find(f => f.properties?.surface);
-      if (roadWithSurface) {
-        return mapSurfaceType(roadWithSurface.properties.surface);
+      if (roadFeatures.length > 0) {
+        const feature = roadFeatures[0];
+        if (feature.properties?.surface) {
+          return mapSurfaceType(feature.properties.surface);
+        }
+        // If no surface property but it's a road, default to paved
+        return 'paved';
       }
     }
 

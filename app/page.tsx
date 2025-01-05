@@ -11,7 +11,7 @@ import { useToast } from "@/app/hooks/use-toast"
 
 export default function Home() {
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
-  const [selectedStyle, setSelectedStyle] = useState<MapStyle>('frank')
+  const [selectedStyle, setSelectedStyle] = useState<MapStyle>('mapbox')
   const [mapillaryVisible, setMapillaryVisible] = useState(false)
   const { toast } = useToast()
 

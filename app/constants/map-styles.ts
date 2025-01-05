@@ -4,12 +4,6 @@
 import { MapStyle, MapStyleConfig } from '../types/map';
 
 export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
-  frank: {
-    id: 'frank',
-    title: 'Main',  // You can change this title to whatever you want
-    style: 'mapbox://styles/vinmasci/cm5j8d1ds002d01q08tf019dv',
-    type: 'mapbox'
-},
   mapbox: {
     id: 'mapbox',
     title: 'Mapbox Streets',
