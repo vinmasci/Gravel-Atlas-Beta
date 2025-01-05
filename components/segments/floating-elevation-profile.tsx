@@ -78,6 +78,10 @@ interface DisplayDataPoint extends ElevationPoint {
 
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
+  console.log('DrawMode in FloatingElevationProfile:', {
+    roadStats: drawMode.roadStats,
+    isDrawing: drawMode.isDrawing
+  });
   const [hoverPoint, setHoverPoint] = useState<ElevationPoint | null>(null);
 
   // Calculate display data and related values using useMemo

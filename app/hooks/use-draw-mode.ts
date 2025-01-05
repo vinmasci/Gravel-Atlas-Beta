@@ -422,24 +422,37 @@ map.addLayer({
   
       // Get snapped points and road info
       const { coordinates: newPoints, roadInfo } = await snapToNearestRoad(clickedPoint, previousPoint);
+      console.log('Road Info received:', roadInfo); // Add this line
       logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
       
       // Update road stats if we have road info
       if (roadInfo) {
-        const segmentLength = turf.length(turf.lineString(newPoints), {units: 'kilometers'});
+        let segmentLength = 0;
+        
+        // Only calculate length if we have at least 2 points
+        if (newPoints.length >= 2) {
+          try {
+            segmentLength = turf.length(turf.lineString(newPoints), {units: 'kilometers'});
+          } catch (error) {
+            console.error('Error calculating segment length:', error);
+          }
+        }
         
         setRoadStats(prev => {
           const newHighways = { ...prev.highways };
           const newSurfaces = { ...prev.surfaces };
           
-          // Update highway type counts
-          if (roadInfo.class) {
-            newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
-          }
-          
-          // Update surface type counts
-          if (roadInfo.surface) {
-            newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
+          // Only update stats if we have a valid length
+          if (segmentLength > 0) {
+            // Update highway type counts
+            if (roadInfo.class) {
+              newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
+            }
+            
+            // Update surface type counts
+            if (roadInfo.surface) {
+              newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
+            }
           }
           
           return {
@@ -449,7 +462,7 @@ map.addLayer({
           };
         });
       }
-
+      
       // Resample points to 100m intervals
       const resampledPoints = resampleLineEvery100m(newPoints);
       logStateChange('Points resampled', { 
@@ -865,6 +878,7 @@ properties: {
     hoveredPoint,
     handleHover,
     map,
+    roadStats,  // Add this line
     line: drawnCoordinates.length > 0 ? {
       geometry: {
         type: 'LineString',
