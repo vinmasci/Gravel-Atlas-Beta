@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';  // Added useMemo
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -34,11 +34,14 @@ function calculateGrades(elevationProfile: ElevationPoint[]): number[] {
     const endPoint = elevationProfile[endIndex];
     const rise = endPoint.elevation - startPoint.elevation;
     const run = (endPoint.distance - startPoint.distance) * 1000; // Convert to meters
-    const grade = (rise / run) * 100;
+
+    // Prevent division by zero and handle invalid values
+    const grade = run === 0 ? 0 : (rise / run) * 100;
+    const validGrade = isFinite(grade) ? Math.round(grade * 10) / 10 : 0;
     
     // Apply this grade to all points in the 100m segment
     for (let i = currentIndex; i <= endIndex; i++) {
-      grades.push(Math.round(grade * 10) / 10);
+      grades.push(validGrade);
     }
     
     currentIndex = endIndex;
@@ -68,10 +71,102 @@ interface ElevationPoint {
   elevation: number;
 }
 
+interface DisplayDataPoint extends ElevationPoint {
+  grade: number;
+  gradeColor: string;
+}
+
 export function FloatingElevationProfile() {
   const drawMode = useDrawModeContext();
-  const [hoverPoint, setHoverPoint] = useState<{distance: number; elevation: number} | null>(null);
+  const [hoverPoint, setHoverPoint] = useState<ElevationPoint | null>(null);
 
+  // Calculate display data and related values using useMemo
+  const {
+    displayData,
+    minElevation,
+    maxElevation,
+    elevationPadding,
+    maxDistance,
+    gradeSegments,
+    maxGrade,
+    minGrade
+  } = useMemo(() => {
+    if (!drawMode?.isDrawing || !drawMode.elevationProfile) {
+      return {
+        displayData: [{ distance: 0, elevation: 0, grade: 0, gradeColor: '#84CC16' }],
+        minElevation: 0,
+        maxElevation: 100,
+        elevationPadding: 10,
+        maxDistance: 1,
+        gradeSegments: [],
+        maxGrade: 0,
+        minGrade: 0
+      };
+    }
+
+    const elevations = drawMode.elevationProfile.map(point => point.elevation);
+    const minElev = Math.min(...elevations, 0);
+    const maxElev = Math.max(...elevations, 100);
+    const padding = (maxElev - minElev) * 0.1;
+    const maxDist = Math.max(
+      ...drawMode.elevationProfile.map(point => point.distance),
+      1
+    );
+
+    if (drawMode.elevationProfile.length < 2) {
+      return {
+        displayData: [{ distance: 0, elevation: 0, grade: 0, gradeColor: '#84CC16' }],
+        minElevation: minElev,
+        maxElevation: maxElev,
+        elevationPadding: padding,
+        maxDistance: maxDist,
+        gradeSegments: [],
+        maxGrade: 0,
+        minGrade: 0
+      };
+    }
+
+    const grades = calculateGrades(drawMode.elevationProfile);
+    const data = drawMode.elevationProfile.map((point, index) => ({
+      ...point,
+      grade: grades[index] || 0,
+      gradeColor: getGradeColor(grades[index] || 0)
+    }));
+
+    // Create segments for coloring based on grade with overlap at transition points
+    const segments = [];
+    let currentColor = data[0].gradeColor;
+    let currentSegment = [data[0]];
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i].gradeColor === currentColor) {
+        currentSegment.push(data[i]);
+      } else {
+        // Add the transition point to both segments to ensure no gaps
+        currentSegment.push(data[i]);
+        segments.push({ points: currentSegment, color: currentColor });
+        currentColor = data[i].gradeColor;
+        currentSegment = [data[i - 1], data[i]]; // Include previous point for continuity
+      }
+    }
+    segments.push({ points: currentSegment, color: currentColor });
+
+    const maxGrade = Math.max(...grades);
+    const minGrade = Math.min(...grades);
+
+    return {
+      displayData: data,
+      minElevation: minElev,
+      maxElevation: maxElev,
+      elevationPadding: padding,
+      maxDistance: maxDist,
+      gradeSegments: segments,
+      maxGrade,
+      minGrade
+    };
+  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+
+  // Map hover effect
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
 
@@ -115,28 +210,6 @@ export function FloatingElevationProfile() {
     return null;
   }
 
-  const elevations = drawMode.elevationProfile.map(point => point.elevation);
-  const minElevation = Math.min(...elevations, 0);
-  const maxElevation = Math.max(...elevations, 100);
-  const elevationPadding = (maxElevation - minElevation) * 0.1;
-
-  const emptyData = [{ distance: 0, elevation: 0 }, { distance: 1, elevation: 0 }];
-  const displayData = drawMode.elevationProfile.length >= 2 
-    ? drawMode.elevationProfile.map((point, index, array) => {
-        const grades = calculateGrades(array);
-        return {
-          ...point,
-          grade: grades[index] || 0,
-          gradeColor: getGradeColor(grades[index] || 0)
-        };
-      })
-    : emptyData;
-
-  const maxDistance = Math.max(
-    ...drawMode.elevationProfile.map(point => point.distance),
-    1
-  );
-
   return (
     <div 
       data-elevation-profile
@@ -157,8 +230,8 @@ export function FloatingElevationProfile() {
                 <span>Distance: {maxDistance.toFixed(1)}km</span>
                 <span>Min: {Math.round(minElevation)}m</span>
                 <span>Max: {Math.round(maxElevation)}m</span>
-                <span>Max Grade: {Math.max(...calculateGrades(drawMode.elevationProfile)).toFixed(1)}%</span>
-                <span>Min Grade: {Math.min(...calculateGrades(drawMode.elevationProfile)).toFixed(1)}%</span>
+                <span>Max Grade: {maxGrade.toFixed(1)}%</span>
+                <span>Min Grade: {minGrade.toFixed(1)}%</span>
               </>
             )}
             {drawMode.elevationProfile.length < 2 && (
@@ -231,40 +304,61 @@ export function FloatingElevationProfile() {
                         fontWeight: '400'
                       }}>
                         <p className="mb-1">{label.toFixed(1)} km</p>
-                        <p style={{ color: '#ef4444' }}>Elevation : {Math.round(payload[0].value)}m</p>
-                        <p style={{ color: '#3b82f6' }}>Grade : {payload[1]?.value.toFixed(1)}%</p>
+                        <p style={{ color: '#ef4444' }}>Elevation: {Math.round(payload[0].value)}m</p>
+                        <p style={{ color: '#3b82f6' }}>Grade: {payload[0].payload.grade.toFixed(1)}%</p>
                       </div>
                     );
                   }
                   return null;
                 }}
               />
-<Area 
-  type="monotone"
-  dataKey="elevation"
-  stroke="#ef4444"  // Keep this as string
-  strokeWidth={2}
-  fill="none"
-  dot={false}
-  isAnimationActive={false}
-  connectNulls
-/>
-<Area
-  yAxisId="right"
-  type="monotone"
-  dataKey="grade"
-  stroke="none"
-  fill="none"
-  dot={false}
-/>
+              
+              {/* Render colored grade segments */}
+{/* Render colored grade segments with gradients */}
+{gradeSegments.map((segment, index) => (
+                <Area
+                  key={index}
+                  type="monotone"
+                  data={segment.points}
+                  dataKey="elevation"
+                  stroke={segment.color}
+                  strokeWidth={0.9}  // Reduced stroke width
+                  fill={segment.color}
+                  fillOpacity={0.4}  // Reduced fill opacity for gradient effect
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                >
+                  <defs>
+                    <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                </Area>
+              ))}
+
+              {/* Render top stroke line */}
+              <Area
+                type="monotone"
+                data={displayData}
+                dataKey="elevation"
+                stroke="rgba(255,255,255,0.0001)"  // Semi-transparent white stroke
+                strokeWidth={0.00000001}  // Very thin stroke
+                fill="none"
+                dot={false}
+                isAnimationActive={false}
+                connectNulls
+              />
+
               {hoverPoint && (
                 <ReferenceDot
                   x={hoverPoint.distance}
                   y={hoverPoint.elevation}
                   r={4}
-                  fill="white"
-                  stroke="#ef4444"
-                  strokeWidth={2}
+                  fill="charcoal"
+                  stroke="white"
+                  strokeWidth={1}
                 />
               )}
             </AreaChart>

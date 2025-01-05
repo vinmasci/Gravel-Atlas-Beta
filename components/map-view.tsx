@@ -223,7 +223,11 @@ function MapViewInner({
 
   useEffect(() => {
     if (!mapInstance) return;
-    updateSegmentLayer(mapInstance, overlayStates.segments);
+    updateSegmentLayer(
+      mapInstance, 
+      overlayStates.segments,
+      (segmentData) => setSelectedSegment(segmentData)
+    );
   }, [mapInstance, overlayStates.segments]);
 
   useEffect(() => {

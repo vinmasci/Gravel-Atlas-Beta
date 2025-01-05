@@ -18,7 +18,9 @@ export const initializeDrawControls = (map: mapboxgl.Map) => {
     // Add marker at clicked point
     const marker = new mapboxgl.Marker({
       color: '#FF0000',
-      scale: 0.5
+      scale: 0.5,
+      clickTolerance: 0,  // Add this line to disable popup
+      draggable: false    // Add this line to disable popup
     })
       .setLngLat([lng, lat])
       .addTo(map);

@@ -630,7 +630,7 @@ Consider:
 - Added proper cleanup for map layers and sources
 - Improved error handling for map operations
 
-UP TO HERE
+WE ARE UP TO HERE
 What we're trying to achieve:
 
 We want to color the elevation profile line segments based on grade data
