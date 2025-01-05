@@ -207,11 +207,21 @@ export const useDrawMode = (map: Map | null) => {
   const [roadStats, setRoadStats] = useState<{
     highways: { [key: string]: number },
     surfaces: { [key: string]: number },
-    totalLength: number
+    totalLength: number,
+    surfacePercentages: {
+      paved: number,
+      unpaved: number,
+      unknown: number
+    }
   }>({
     highways: {},
     surfaces: {},
-    totalLength: 0
+    totalLength: 0,
+    surfacePercentages: {
+      paved: 0,
+      unpaved: 0,
+      unknown: 0
+    }
   });
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
@@ -248,115 +258,112 @@ export const useDrawMode = (map: Map | null) => {
             if (data.features && data.features.length > 0) {
                 // Sort features by class priority and distance
                 const sortedFeatures = data.features.sort((a: any, b: any) => {
-                    // Define priority for road classes
+                    // Define priority for road classes (higher number = higher priority)
                     const priority: { [key: string]: number } = {
-                        path: 1,
-                        track: 2,
-                        service: 3,
-                        residential: 4,
-                        tertiary: 5,
-                        secondary: 6,
-                        primary: 7
+                        cycleway: 10,    // Dedicated bike paths highest priority
+                        path: 8,         // Mixed-use paths
+                        tertiary: 7,     // Small roads often good for cycling
+                        residential: 6,   // Residential streets
+                        secondary: 5,     // Medium roads
+                        primary: 4,       // Main roads
+                        trunk: 3,         // Major roads
+                        motorway: 1,      // Highways lowest priority
+                        service: 2,       // Service roads low priority
+                        track: 9         // Gravel/dirt tracks high priority for this use case
                     };
                     
                     const aPriority = priority[a.properties.class] || 0;
                     const bPriority = priority[b.properties.class] || 0;
+
+                    // Also consider bicycle-specific properties
+                    const aBikePriority = a.properties.bicycle === 'designated' ? 5 : 0;
+                    const bBikePriority = b.properties.bicycle === 'designated' ? 5 : 0;
                     
-                    // First sort by priority, then by distance if priority is equal
-                    if (aPriority !== bPriority) {
-                        return bPriority - aPriority;
+                    // Combine base priority with bike priority
+                    const aTotal = aPriority + aBikePriority;
+                    const bTotal = bPriority + bBikePriority;
+                    
+                    // First sort by total priority, then by distance if priority is equal
+                    if (aTotal !== bTotal) {
+                        return bTotal - aTotal;
                     }
                     return a.properties.tilequery.distance - b.properties.tilequery.distance;
                 });
 
                 const feature = sortedFeatures[0];
                 const snappedPoint = feature.geometry.coordinates as [number, number];
-                console.log('Snapped to point:', { original: clickedPoint, snapped: snappedPoint });
                 return {
                     coordinates: [snappedPoint],
                     roadInfo: feature.properties
                 };
             }
-        } else {
-            // For line segments, try multiple routing profiles
-            const profiles = ['walking', 'cycling', 'driving'];
-            console.log('Trying profiles:', profiles);
+            return { coordinates: [clickedPoint] };
+        }
 
-            const routeRequests = profiles.map(profile => 
-                fetch(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&exclude=ferry&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`)
-                    .then(r => r.json())
+        // For line segments, try profiles in priority order
+        const profiles = ['cycling', 'driving', 'walking'];  // Changed order to prioritize cycling
+        console.log('Trying profiles in order:', profiles);
+
+        // Try each profile sequentially instead of in parallel
+        let bestRoute = null;
+        let bestRouteInfo = null;
+
+        for (const profile of profiles) {
+            const response = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&exclude=ferry&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
-
-            const results = await Promise.all(routeRequests);
-            console.log('Route responses:', results);
-
-            // Collect all valid routes
-            const validRoutes = results.flatMap((data, index) => {
-                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                    return data.routes.map((route: any) => ({
-                        ...route,
-                        profile: profiles[index]
-                    }));
-                }
-                return [];
-            });
-
-            if (validRoutes.length > 0) {
-                // Sort routes by our criteria
+            const data = await response.json();
+            
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                // Calculate straight-line distance for comparison
                 const straightLineDistance = turf.distance(
                     turf.point(previousPoint),
                     turf.point(clickedPoint),
                     { units: 'meters' }
                 );
 
-                const scoredRoutes = validRoutes.map(route => {
-                    const deviation = (route.distance - straightLineDistance) / straightLineDistance;
-                    const pointDensity = route.geometry.coordinates.length / route.distance;
-                    
-                    // Score based on multiple factors
-                    const score = (
-                        (deviation * 0.4) +         // 40% weight on path deviation
-                        (1 / pointDensity * 0.3) +  // 30% weight on point density
-                        (route.duration * 0.3)      // 30% weight on duration
-                    );
-                    
-                    return { ...route, score };
+                // Score each alternative route
+                data.routes.forEach((route: any) => {
+                    const distance = route.distance;
+                    const deviation = (distance - straightLineDistance) / straightLineDistance;
+                    const pointDensity = route.geometry.coordinates.length / distance;
+
+                    // Calculate base score
+                    let score = deviation * 0.4 + (1 / pointDensity * 0.3) + (route.duration * 0.3);
+
+                    // Apply profile bonuses
+                    if (profile === 'cycling') score *= 0.7;  // 30% bonus for cycling routes
+                    if (profile === 'driving') score *= 1.2;  // 20% penalty for driving routes
+                    if (profile === 'walking') score *= 1.5;  // 50% penalty for walking routes
+
+                    // Only consider routes that don't deviate too much
+                    if (deviation < 0.5 && (!bestRoute || score < bestRoute.score)) {
+                        bestRoute = { ...route, score };
+                        bestRouteInfo = { profile };
+                    }
                 });
 
-                // Sort by score (lower is better)
-                scoredRoutes.sort((a, b) => a.score - b.score);
-                const bestRoute = scoredRoutes[0];
-                console.log('Selected best route:', bestRoute);
-
-                // Get road info for the middle point
-                const coordinates = bestRoute.geometry.coordinates;
-                const midPoint = coordinates[Math.floor(coordinates.length / 2)];
-                
-                const tileQueryResponse = await fetch(
-                    `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=1&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-                );
-                
-                const tileData = await tileQueryResponse.json();
-                const roadInfo = tileData.features?.[0]?.properties || {};
-
-                return {
-                    coordinates: coordinates,
-                    roadInfo: { ...roadInfo, profile: bestRoute.profile }
-                };
+                // If we found a good cycling route, use it immediately
+                if (profile === 'cycling' && bestRoute) {
+                    break;
+                }
             }
         }
 
-        // Only fall back to non-snapped if we've exhausted all options
-        console.log('No valid routes found, falling back to straight line');
-        return { 
-            coordinates: previousPoint ? [previousPoint, clickedPoint] : [clickedPoint]
-        };
+        if (bestRoute) {
+            const coordinates = bestRoute.geometry.coordinates;
+            return {
+                coordinates: coordinates,
+                roadInfo: { ...bestRouteInfo }
+            };
+        }
+
+        // Fall back to straight line if no good routes found
+        return { coordinates: [previousPoint, clickedPoint] };
 
     } catch (error) {
         console.error('Error in snapToNearestRoad:', error);
-        return { 
-            coordinates: previousPoint ? [previousPoint, clickedPoint] : [clickedPoint]
-        };
+        return { coordinates: [previousPoint, clickedPoint] };
     }
 };
 
@@ -509,47 +516,51 @@ map.addLayer({
         timestamp: Date.now()
       };
   
-      // Get snapped points and road info
-      const { coordinates: newPoints, roadInfo } = await snapToNearestRoad(clickedPoint, previousPoint);
-      console.log('Road Info received:', roadInfo); // Add this line
-      logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
-      
-      // Update road stats if we have road info
-      if (roadInfo) {
-        let segmentLength = 0;
-        
-        // Only calculate length if we have at least 2 points
-        if (newPoints.length >= 2) {
-          try {
-            segmentLength = turf.length(turf.lineString(newPoints), {units: 'kilometers'});
-          } catch (error) {
-            console.error('Error calculating segment length:', error);
-          }
-        }
-        
-        setRoadStats(prev => {
-          const newHighways = { ...prev.highways };
-          const newSurfaces = { ...prev.surfaces };
-          
-          // Only update stats if we have a valid length
-          if (segmentLength > 0) {
-            // Update highway type counts
-            if (roadInfo.class) {
-              newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
-            }
-            
-            // Update surface type counts
-            if (roadInfo.surface) {
-              newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
-            }
-          }
-          
-          return {
-            highways: newHighways,
-            surfaces: newSurfaces,
-            totalLength: prev.totalLength + segmentLength
-          };
-        });
+// Get snapped points and road info
+const { coordinates: newPoints, roadInfo } = await snapToNearestRoad(clickedPoint, previousPoint);
+console.log('Road Info received:', roadInfo);
+logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
+
+// Calculate segment length and update road stats
+let segmentLength = 0;
+if (newPoints.length >= 2) {
+  try {
+    const lineString = turf.lineString(newPoints);
+    segmentLength = turf.length(lineString, { units: 'kilometers' });
+  } catch (error) {
+    console.error('Error calculating segment length:', error);
+  }
+}
+
+// Determine surface type from road info
+const surfaceType = roadInfo?.surface ? mapSurfaceType(roadInfo.surface) : 'unknown';
+
+setRoadStats(prev => {
+  const newSurfaces = { ...prev.surfaces };
+  
+  // Update surface lengths
+  if (segmentLength > 0) {
+    newSurfaces[surfaceType] = (newSurfaces[surfaceType] || 0) + segmentLength;
+  }
+
+  const totalLength = Object.values(newSurfaces).reduce((sum, len) => sum + len, 0);
+  
+  // Calculate percentages
+  const pavedLength = newSurfaces['paved'] || 0;
+  const unpavedLength = newSurfaces['unpaved'] || 0;
+  const unknownLength = newSurfaces['unknown'] || 0;
+
+  return {
+    ...prev,
+    surfaces: newSurfaces,
+    totalLength: totalLength,
+    surfacePercentages: {
+      paved: totalLength > 0 ? (pavedLength / totalLength) * 100 : 0,
+      unpaved: totalLength > 0 ? (unpavedLength / totalLength) * 100 : 0,
+      unknown: totalLength > 0 ? (unknownLength / totalLength) * 100 : 0
+    }
+  };
+});
       }
       
       // Resample points to 100m intervals
@@ -683,8 +694,18 @@ logStateChange('New elevation points calculated', {
         return newClickPoints;
       });
   
-// Update drawn coordinates with elevation data
-const allCoordinates = [...drawnCoordinates, ...elevationData];
+// Update drawn coordinates
+let allCoordinates: [number, number][];
+if (drawnCoordinates.length === 0) {
+    // First point
+    allCoordinates = [newPoints[0]];
+} else {
+    // Get all coordinates except the last one from the previous set
+    const previousCoordinates = drawnCoordinates.slice(0, -1);
+    
+    // Add all points from the new segment
+    allCoordinates = [...previousCoordinates, ...newPoints];
+}
 setDrawnCoordinates(allCoordinates);
 
 // Update map sources
