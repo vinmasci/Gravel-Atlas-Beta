@@ -269,7 +269,7 @@ export const useDrawMode = (map: Map | null) => {
 
         logStateChange('Snapping line segment');
         const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/cycling/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&steps=true&annotations=distance,duration&approaches=curb;curb&radius=50;50&continue_straight=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            `https://api.mapbox.com/directions/v5/mapbox/walking/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
         
         const data = await response.json();
@@ -280,8 +280,8 @@ export const useDrawMode = (map: Map | null) => {
             // Get road info for the middle point of the snapped segment
             const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
             const tileQueryResponse = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=5&limit=5&dedupe=true&include=features.properties.class,features.properties.surface&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-            );
+              `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+          );
             
             const tileData = await tileQueryResponse.json();
             const roadInfo = tileData.features?.[0]?.properties || {};
