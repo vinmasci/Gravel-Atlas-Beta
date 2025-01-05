@@ -168,31 +168,52 @@ const {
   // Calculate elevation stats
   const elevationStats = calculateElevationStats(drawMode.elevationProfile);
 
-  // Calculate grades and create display data
-  const grades = calculateGrades(drawMode.elevationProfile);
-  const data = drawMode.elevationProfile.map((point, index) => ({
-    ...point,
-    grade: grades[index] || 0,
-    gradeColor: getGradeColor(grades[index] || 0)
-  }));
+// Calculate grades and create display data
+const grades = calculateGrades(drawMode.elevationProfile);
+const totalLength = drawMode.roadStats?.totalLength || 1;
+const pavedRatio = (drawMode.roadStats?.surfaces?.paved || 0) / totalLength;
 
-  // Create segments for coloring based on grade with overlap at transition points
-  const segments = [];
+const data = drawMode.elevationProfile.map((point, index) => ({
+  ...point,
+  grade: grades[index] || 0,
+  gradeColor: getGradeColor(grades[index] || 0),
+  isPaved: (point.distance / maxDist) <= pavedRatio
+}));
+
+// Create segments for coloring based on grade and surface type
+const segments = [];
+if (data.length > 0) {
   let currentColor = data[0].gradeColor;
+  let currentPaved = data[0].isPaved;
   let currentSegment = [data[0]];
 
   for (let i = 1; i < data.length; i++) {
-    if (data[i].gradeColor === currentColor) {
-      currentSegment.push(data[i]);
-    } else {
-      // Add the transition point to both segments to ensure no gaps
-      currentSegment.push(data[i]);
-      segments.push({ points: currentSegment, color: currentColor });
+    const surfaceChanged = data[i].isPaved !== currentPaved;
+    const colorChanged = data[i].gradeColor !== currentColor;
+
+    if (colorChanged || surfaceChanged) {
+      segments.push({
+        points: [...currentSegment, data[i]],
+        color: currentColor,
+        isPaved: currentPaved
+      });
       currentColor = data[i].gradeColor;
-      currentSegment = [data[i - 1], data[i]]; // Include previous point for continuity
+      currentPaved = data[i].isPaved;
+      currentSegment = [data[i]];
+    } else {
+      currentSegment.push(data[i]);
     }
   }
-  segments.push({ points: currentSegment, color: currentColor });
+
+  // Add the last segment
+  if (currentSegment.length > 0) {
+    segments.push({
+      points: currentSegment,
+      color: currentColor,
+      isPaved: currentPaved
+    });
+  }
+}
 
   const maxGrade = Math.max(...grades);
   const minGrade = Math.min(...grades);
@@ -369,60 +390,50 @@ const {
                 }}
               />
               
-{/* Keep your original grade segments exactly as they are */}
+{/* First, render the surface type areas */}
+{surfaceSegments.map((segment, index) => {
+  if (segment.type === 'paved') return null; // No pattern for paved sections
+  
+  return (
+    <Area
+      key={`surface-${index}`}
+      type="monotone"
+      data={segment.points}
+      dataKey="elevation"
+      stroke="none"
+      fill={segment.type === 'unpaved' ? '#000000' : '#666666'}
+      fillOpacity={0.1}
+      strokeWidth={0}
+      dot={false}
+      isAnimationActive={false}
+      connectNulls
+    />
+  );
+})}
+
+{/* Then render the grade-colored segments on top */}
 {gradeSegments.map((segment, index) => (
   <Area
-    key={index}
+    key={`grade-${index}`}
     type="monotone"
     data={segment.points}
     dataKey="elevation"
     stroke={segment.color}
     strokeWidth={0.9}
     fill={segment.color}
-    fillOpacity={0.4}
-    dot={false}
-    isAnimationActive={false}
-    connectNulls
-  >
-    <defs>
-      <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
-        <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
-      </linearGradient>
-    </defs>
-  </Area>
-))}
-
-{/* Add separate overlay for unpaved sections */}
-{drawMode.roadStats?.surfacePercentages?.unpaved > 0 && (
-  <Area
-    type="monotone"
-    data={displayData}
-    dataKey="elevation"
-    stroke="none"
-    fill="url(#stripe-pattern)"
     fillOpacity={0.3}
     dot={false}
     isAnimationActive={false}
     connectNulls
   >
     <defs>
-      <pattern
-        id="stripe-pattern"
-        patternUnits="userSpaceOnUse"
-        width="4"
-        height="4"
-        patternTransform="rotate(45)"
-      >
-        <path
-          d="M -1 -1 L 5 5"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1"
-        />
-      </pattern>
+      <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={segment.color} stopOpacity={0.3}/>
+        <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
+      </linearGradient>
     </defs>
   </Area>
-)}
+))}
 
               {/* Render top stroke line */}
               <Area
