@@ -171,16 +171,22 @@ const {
 // Calculate grades and create display data
 const grades = calculateGrades(drawMode.elevationProfile);
 const data = drawMode.elevationProfile.map((point, index) => {
-  // Find which surface segment this point belongs to
-  const surfaceSegment = drawMode.roadStats?.surfaceSegments?.find(
-    segment => point.distance >= segment.start && point.distance <= segment.end
-  );
+  const surfaceType = drawMode.segments.find(segment => {
+    // Get segment bounds
+    const segmentLine = turf.lineString(segment.roadPoints);
+    const totalLength = turf.length(segmentLine, { units: 'kilometers' });
+    const segmentStart = 0;
+    const segmentEnd = totalLength;
+
+    // Check if point is within segment bounds
+    return point.distance >= segmentStart && point.distance <= segmentEnd;
+  })?.roadInfo?.surface;
 
   return {
     ...point,
     grade: grades[index] || 0,
     gradeColor: getGradeColor(grades[index] || 0),
-    isPaved: surfaceSegment?.type === 'paved'
+    isPaved: surfaceType ? mapSurfaceType(surfaceType) === 'paved' : true
   };
 });
 
