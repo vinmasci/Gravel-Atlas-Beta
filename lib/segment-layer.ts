@@ -87,96 +87,97 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       }
     });
 
-// AFTER - in segment-layer.ts
-// Add the main line layer
-map.addLayer({
-  id: layerId,
-  type: 'line',
-  source: sourceId,
-  layout: {
-    'line-join': 'round',
-    'line-cap': 'round',
-    'line-dasharray': [
-      'case',
-      ['==', ['to-string', ['get', 'surfaceType']], 'paved'], ['literal', [1]], // Solid line for paved
-      ['literal', [2, 2]] // Dashed line for unpaved/unknown
-    ]
-  },
-  paint: {
-    'line-color': [
-      'match',
-      ['case',
-        ['==', ['get', 'totalVotes'], 0], -1,
-        ['floor', ['get', 'averageRating']]
-      ],
-      -1, '#00FFFF',   // Cyan for unrated (no votes)
-      0, '#84CC16',    // lime-500 for 0 rating
-      1, '#84CC16',    // lime-500
-      2, '#EAB308',    // yellow-500
-      3, '#F97316',    // orange-500
-      4, '#EF4444',    // red-500
-      5, '#991B1B',    // red-800
-      6, '#450a0a',    // dark red/black
-      '#00FFFF'        // Default to cyan
-    ],
-    'line-width': 1.5,
-    'line-opacity': 1
-  }
-});
+    // Add the main line layer
+    map.addLayer({
+      id: layerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': [
+          'match',
+          ['case',
+            ['==', ['get', 'totalVotes'], 0], -1,
+            ['floor', ['get', 'averageRating']]
+          ],
+          -1, '#00FFFF',   // Cyan for unrated (no votes)
+          0, '#84CC16',    // lime-500 for 0 rating
+          1, '#84CC16',    // lime-500
+          2, '#EAB308',    // yellow-500
+          3, '#F97316',    // orange-500
+          4, '#EF4444',    // red-500
+          5, '#991B1B',    // red-800
+          6, '#450a0a',    // dark red/black
+          '#00FFFF'        // Default to cyan
+        ],
+        'line-width': 1.5,
+        'line-opacity': 1,
+        'line-dasharray': [
+          'match',
+          ['get', 'surfaceType'],
+          'paved', ['literal', [1]],
+          ['literal', [2, 2]]
+        ]
+      }
+    });
 
-// Add a black stroke layer that sits underneath
-map.addLayer({
-  id: `${layerId}-stroke`,
-  type: 'line',
-  source: sourceId,
-  layout: {
-    'line-join': 'round',
-    'line-cap': 'round',
-    'line-dasharray': [
-      'case',
-      ['==', ['to-string', ['get', 'surfaceType']], 'paved'], ['literal', [1]], // Solid line for paved
-      ['literal', [2, 2]] // Dashed line for unpaved/unknown
-    ]
-  },
-  paint: {
-    'line-color': '#000000',
-    'line-width': 2,
-    'line-opacity': 1
-  }
-}, layerId);
+    // Add a black stroke layer that sits underneath
+    map.addLayer({
+      id: `${layerId}-stroke`,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#000000',
+        'line-width': 2,
+        'line-opacity': 1,
+        'line-dasharray': [
+          'match',
+          ['get', 'surfaceType'],
+          'paved', ['literal', [1]],
+          ['literal', [2, 2]]
+        ]
+      }
+    }, layerId);
 
-// Add hover effect
-map.on('mouseenter', layerId, (e) => {
-  map.getCanvas().style.cursor = 'pointer';
-  
-  if (e.features && e.features.length > 0) {
-    const feature = e.features[0];
-    const coordinates = e.lngLat;
-    const title = feature.properties.title;
-    const rating = feature.properties.averageRating;
-    
-    // Create HTML content for popup
-    const popupContent = document.createElement('div');
-    popupContent.className = 'flex items-center gap-2 px-2 py-1 bg-background/95 backdrop-blur-sm border shadow-md rounded-md';
-    popupContent.innerHTML = `
-      <span class="text-sm font-medium">${title}</span>
-      <i class="fa-solid ${rating !== undefined ? `fa-circle-${Math.floor(rating)}` : 'fa-circle-question'} ${getRatingIconClass(rating)}"></i>
-    `;
+    // Add hover effect
+    map.on('mouseenter', layerId, (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      
+      if (e.features && e.features.length > 0) {
+        const feature = e.features[0];
+        const coordinates = e.lngLat;
+        const title = feature.properties.title;
+        const rating = feature.properties.averageRating;
+        
+        // Create HTML content for popup
+        const popupContent = document.createElement('div');
+        popupContent.className = 'flex items-center gap-2 px-2 py-1 bg-background/95 backdrop-blur-sm border shadow-md rounded-md';
+        popupContent.innerHTML = `
+          <span class="text-sm font-medium">${title}</span>
+          <i class="fa-solid ${rating !== undefined ? `fa-circle-${Math.floor(rating)}` : 'fa-circle-question'} ${getRatingIconClass(rating)}"></i>
+        `;
 
-    popup.setLngLat(coordinates).setDOMContent(popupContent).addTo(map);
-  }
-});
+        popup.setLngLat(coordinates).setDOMContent(popupContent).addTo(map);
+      }
+    });
 
-map.on('mousemove', layerId, (e) => {
-  if (e.features && e.features.length > 0) {
-    popup.setLngLat(e.lngLat);
-  }
-});
+    map.on('mousemove', layerId, (e) => {
+      if (e.features && e.features.length > 0) {
+        popup.setLngLat(e.lngLat);
+      }
+    });
 
-map.on('mouseleave', layerId, () => {
-  map.getCanvas().style.cursor = '';
-  popup.remove();
-});
+    map.on('mouseleave', layerId, () => {
+      map.getCanvas().style.cursor = '';
+      popup.remove();
+    });
 
     // Add click handler for segment details
     map.on('click', layerId, async (e) => {
@@ -218,7 +219,6 @@ const cleanupSegmentLayer = (map: Map) => {
   }
 };
 
-// Add the new function here
 export const updateSegmentColor = (map: Map, segmentId: string, newRating: number) => {
   // Get the source
   const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
@@ -242,14 +242,12 @@ export const updateSegmentColor = (map: Map, segmentId: string, newRating: numbe
     return feature;
   });
 
-    // Update the source with new data
-    source.setData({
-      type: 'FeatureCollection',
-      features: updatedFeatures
-    });
-  };
-
-// In lib/segment-layer.ts
+  // Update the source with new data
+  source.setData({
+    type: 'FeatureCollection',
+    features: updatedFeatures
+  });
+};
 
 export const updateSegmentLayer = async (
   map: Map, 
@@ -290,7 +288,7 @@ export const updateSegmentLayer = async (
 
         source.setData({
           type: 'FeatureCollection',
-          features: updatedFeatures.filter(f => f && f.geometry) // Make sure we have valid features
+          features: updatedFeatures.filter(f => f && f.geometry)
         });
         return;
       }
@@ -307,34 +305,33 @@ export const updateSegmentLayer = async (
       return;
     }
 
-// AFTER - in segment-layer.ts updateSegmentLayer function
-const features = data.segments
-  .map((segment: any) => {
-    if (!segment?.geojson?.geometry) {
-      console.warn('Invalid segment data:', segment);
-      return null;
-    }
-
-    return {
-      type: 'Feature',
-      geometry: segment.geojson.geometry,
-      properties: {
-        id: segment._id,
-        title: segment.metadata?.title,
-        length: segment.metadata?.length,
-        userName: segment.userName,
-        auth0Id: segment.auth0Id,
-        averageRating: segment.stats?.averageRating,
-        totalVotes: segment.stats?.totalVotes,
-        surfaceType: segment.metadata?.surfaceTypes?.[0] || 'unknown',
-        metadata: {
-          elevationProfile: segment.metadata?.elevationProfile || [],
-          elevationGain: segment.metadata?.elevationGain,
-          elevationLoss: segment.metadata?.elevationLoss
+    const features = data.segments
+      .map((segment: any) => {
+        if (!segment?.geojson?.geometry) {
+          console.warn('Invalid segment data:', segment);
+          return null;
         }
-      }
-    };
-  })
+
+        return {
+          type: 'Feature',
+          geometry: segment.geojson.geometry,
+          properties: {
+            id: segment._id,
+            title: segment.metadata?.title,
+            length: segment.metadata?.length,
+            userName: segment.userName,
+            auth0Id: segment.auth0Id,
+            averageRating: segment.stats?.averageRating,
+            totalVotes: segment.stats?.totalVotes,
+            surfaceType: segment.metadata?.surfaceTypes?.[0] || 'unknown',
+            metadata: {
+              elevationProfile: segment.metadata?.elevationProfile || [],
+              elevationGain: segment.metadata?.elevationGain,
+              elevationLoss: segment.metadata?.elevationLoss
+            }
+          }
+        };
+      })
       .filter(feature => feature !== null && feature.geometry);
 
     source.setData({

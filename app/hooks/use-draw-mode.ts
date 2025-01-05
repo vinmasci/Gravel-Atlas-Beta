@@ -595,34 +595,23 @@ const resampledPoints = resampleLineEvery100m(newPoints);
       let newElevationPoints;
       let grades: number[] = [];
       
-      if (resampledPoints.length >= 2) {
-        // Convert elevation data to points with elevation
-        const pointsWithElevation = elevationData.map(point => ({
-          coordinates: [point[0], point[1]] as [number, number],
-          elevation: point[2]
-        }));
-      
-        // Calculate distances and create elevation points
-        let distance = 0;
-        newElevationPoints = pointsWithElevation.map((point, index, array) => {
-          if (index === 0) return { distance: 0, elevation: point.elevation };
-          
-          const prevPoint = array[index - 1];
-          const segmentDistance = turf.distance(
-            turf.point(prevPoint.coordinates),
-            turf.point(point.coordinates),
-            { units: 'kilometers' }
-          );
-          
-          distance += segmentDistance;
-          return {
-            distance,
-            elevation: point.elevation
-          };
-        });
-      
-        // Smooth the elevation data
-        newElevationPoints = smoothElevationData(newElevationPoints);
+// AFTER - Remove duplicate smoothing and distance calculations
+if (resampledPoints.length >= 2) {
+  // Convert elevation data to [lon, lat, elev] format
+  const pointsWithElevation = elevationData.map(point => [
+    point[0],
+    point[1],
+    point[2]
+  ] as [number, number, number]);
+
+  // Calculate elevation points with actual distances
+  newElevationPoints = calculatePointDistances(pointsWithElevation);
+
+  // Smooth elevation data (only once)
+  newElevationPoints = smoothElevationData(newElevationPoints, 2);
+  
+  // Calculate grades
+  grades = calculateGrades(newElevationPoints);
         grades = calculateGrades(newElevationPoints);
       } else {
         // Handle single point case
