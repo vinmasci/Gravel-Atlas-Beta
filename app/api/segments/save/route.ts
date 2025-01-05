@@ -126,7 +126,7 @@ export async function POST(req: Request) {
           elevationGain: body.metadata?.elevationGain || null,
           elevationLoss: body.metadata?.elevationLoss || null,
           elevationProfile: body.metadata?.elevationProfile || [], 
-          surfaceTypes: []
+          surfaceTypes: body.metadata?.surfaceTypes || ['unknown']  // Use the metadata from request
         },
         auth0Id: session.user.sub,
         userName: session.user.name || 'Anonymous',
