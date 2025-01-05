@@ -231,89 +231,132 @@ export const useDrawMode = (map: Map | null) => {
   }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
   const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<{coordinates: [number, number][], roadInfo?: any}> => {
-    logStateChange('Snapping to road', {
-      clickedPoint,
-      previousPoint,
-      snapEnabled: snapToRoad
-    });
+    console.log('Snapping to road:', { clickedPoint, previousPoint });
 
     if (!snapToRoad) return { coordinates: [clickedPoint] };
 
     try {
+        // For single point snapping
         if (!previousPoint) {
-            // For single point snapping, use a tighter radius and consider more road types
             const response = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=5&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const data = await response.json();
+            console.log('Single point snap response:', data);
+
             if (data.features && data.features.length > 0) {
-                const feature = data.features[0];
+                // Sort features by class priority and distance
+                const sortedFeatures = data.features.sort((a: any, b: any) => {
+                    // Define priority for road classes
+                    const priority: { [key: string]: number } = {
+                        path: 1,
+                        track: 2,
+                        service: 3,
+                        residential: 4,
+                        tertiary: 5,
+                        secondary: 6,
+                        primary: 7
+                    };
+                    
+                    const aPriority = priority[a.properties.class] || 0;
+                    const bPriority = priority[b.properties.class] || 0;
+                    
+                    // First sort by priority, then by distance if priority is equal
+                    if (aPriority !== bPriority) {
+                        return bPriority - aPriority;
+                    }
+                    return a.properties.tilequery.distance - b.properties.tilequery.distance;
+                });
+
+                const feature = sortedFeatures[0];
                 const snappedPoint = feature.geometry.coordinates as [number, number];
+                console.log('Snapped to point:', { original: clickedPoint, snapped: snappedPoint });
                 return {
                     coordinates: [snappedPoint],
                     roadInfo: feature.properties
                 };
             }
-            return { coordinates: [clickedPoint] };
-        }
+        } else {
+            // For line segments, try multiple routing profiles
+            const profiles = ['walking', 'cycling', 'driving'];
+            console.log('Trying profiles:', profiles);
 
-        // Use both walking and cycling profiles to get better route options
-        const profiles = ['walking', 'cycling'];
-        const routePromises = profiles.map(profile => 
-            fetch(
-                `https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-            ).then(r => r.json())
-        );
+            const routeRequests = profiles.map(profile => 
+                fetch(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&exclude=ferry&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`)
+                    .then(r => r.json())
+            );
 
-        const results = await Promise.all(routePromises);
-        
-        // Find the best route by comparing distances and number of points
-        let bestRoute = null;
-        let shortestDistance = Infinity;
-        
-        results.forEach(data => {
-            if (data.code === 'Ok' && data.routes.length > 0) {
-                data.routes.forEach((route: any) => {
-                    const distance = route.distance;
-                    // Prefer routes that are not too much longer than the straight-line distance
-                    const straightLineDistance = turf.distance(
-                        turf.point(previousPoint),
-                        turf.point(clickedPoint),
-                        { units: 'meters' }
+            const results = await Promise.all(routeRequests);
+            console.log('Route responses:', results);
+
+            // Collect all valid routes
+            const validRoutes = results.flatMap((data, index) => {
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    return data.routes.map((route: any) => ({
+                        ...route,
+                        profile: profiles[index]
+                    }));
+                }
+                return [];
+            });
+
+            if (validRoutes.length > 0) {
+                // Sort routes by our criteria
+                const straightLineDistance = turf.distance(
+                    turf.point(previousPoint),
+                    turf.point(clickedPoint),
+                    { units: 'meters' }
+                );
+
+                const scoredRoutes = validRoutes.map(route => {
+                    const deviation = (route.distance - straightLineDistance) / straightLineDistance;
+                    const pointDensity = route.geometry.coordinates.length / route.distance;
+                    
+                    // Score based on multiple factors
+                    const score = (
+                        (deviation * 0.4) +         // 40% weight on path deviation
+                        (1 / pointDensity * 0.3) +  // 30% weight on point density
+                        (route.duration * 0.3)      // 30% weight on duration
                     );
                     
-                    // Accept route if it's within 30% of straight-line distance
-                    if (distance < shortestDistance && distance < straightLineDistance * 1.3) {
-                        shortestDistance = distance;
-                        bestRoute = route;
-                    }
+                    return { ...route, score };
                 });
+
+                // Sort by score (lower is better)
+                scoredRoutes.sort((a, b) => a.score - b.score);
+                const bestRoute = scoredRoutes[0];
+                console.log('Selected best route:', bestRoute);
+
+                // Get road info for the middle point
+                const coordinates = bestRoute.geometry.coordinates;
+                const midPoint = coordinates[Math.floor(coordinates.length / 2)];
+                
+                const tileQueryResponse = await fetch(
+                    `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=1&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                );
+                
+                const tileData = await tileQueryResponse.json();
+                const roadInfo = tileData.features?.[0]?.properties || {};
+
+                return {
+                    coordinates: coordinates,
+                    roadInfo: { ...roadInfo, profile: bestRoute.profile }
+                };
             }
-        });
-
-        if (bestRoute) {
-            const snappedPoints = bestRoute.geometry.coordinates as [number, number][];
-            
-            // Get road info for the middle point of the snapped segment
-            const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
-            const tileQueryResponse = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-            );
-            
-            const tileData = await tileQueryResponse.json();
-            const roadInfo = tileData.features?.[0]?.properties || {};
-
-            return {
-                coordinates: snappedPoints,
-                roadInfo
-            };
         }
-        
-        return { coordinates: [clickedPoint] };
+
+        // Only fall back to non-snapped if we've exhausted all options
+        console.log('No valid routes found, falling back to straight line');
+        return { 
+            coordinates: previousPoint ? [previousPoint, clickedPoint] : [clickedPoint]
+        };
+
     } catch (error) {
-        console.error('Error snapping to road:', error);
-        return { coordinates: [clickedPoint] };
+        console.error('Error in snapToNearestRoad:', error);
+        return { 
+            coordinates: previousPoint ? [previousPoint, clickedPoint] : [clickedPoint]
+        };
     }
 };
 
