@@ -1,6 +1,7 @@
+// app/contexts/draw-mode-context.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useDrawMode } from '../../app/hooks/use-draw-mode';
-import type { UseDrawModeReturn } from '../../app/hooks/use-draw-mode';
+import { useDrawMode } from '../hooks/use-draw-mode';
+import type { UseDrawModeReturn } from '../hooks/use-draw-mode';
 
 // Create a default value that matches the shape of UseDrawModeReturn
 const defaultDrawModeValue: UseDrawModeReturn = {
@@ -30,68 +31,67 @@ const defaultDrawModeValue: UseDrawModeReturn = {
   line: null
 };
 
-// First define a separate loading state type
-interface DrawModeState {
+interface DrawModeContextValue {
   isInitialized: boolean;
   drawMode: UseDrawModeReturn;
 }
 
-const DrawModeContext = createContext<DrawModeState>({
+const DrawModeContext = createContext<DrawModeContextValue>({
   isInitialized: false,
   drawMode: defaultDrawModeValue
 });
 
 export const useDrawModeContext = () => {
-  const { isInitialized, drawMode } = useContext(DrawModeContext);
-  
-  if (!isInitialized) {
-    return defaultDrawModeValue;
+  const context = useContext(DrawModeContext);
+  if (context === undefined) {
+    throw new Error('useDrawModeContext must be used within a DrawModeProvider');
   }
-  
-  return drawMode;
+  return context.drawMode;
 };
 
-export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
-  const [state, setState] = React.useState<DrawModeState>({
-    isInitialized: false,
-    drawMode: defaultDrawModeValue
-  });
+interface DrawModeProviderProps {
+  children: React.ReactNode;
+  map: mapboxgl.Map | null;
+}
 
+export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
+  const [isInitialized, setIsInitialized] = useState(false);
   const drawMode = useDrawMode(map);
 
-  React.useEffect(() => {
-    const checkAndInitialize = () => {
-      if (map && map.isStyleLoaded()) {
-        setState({
-          isInitialized: true,
-          drawMode: {
-            ...defaultDrawModeValue,
-            ...drawMode,
-            map: map
-          }
-        });
+  useEffect(() => {
+    if (!map) {
+      setIsInitialized(false);
+      return;
+    }
+
+    const checkInit = () => {
+      if (map.isStyleLoaded()) {
+        setIsInitialized(true);
         return true;
       }
       return false;
     };
 
     // Try to initialize immediately
-    if (!checkAndInitialize() && map) {
-      // If not ready, wait for style load
+    if (!checkInit()) {
       const handleStyleLoad = () => {
-        checkAndInitialize();
+        checkInit();
       };
       
       map.on('style.load', handleStyleLoad);
-      
       return () => {
         map.off('style.load', handleStyleLoad);
       };
     }
-  }, [map, drawMode]);
+  }, [map]);
+
+  const contextValue = {
+    isInitialized,
+    drawMode: isInitialized ? drawMode : defaultDrawModeValue
+  };
 
   return (
-    <DrawModeContext.Provider value={state}>
+    <DrawModeContext.Provider value={contextValue}>
       {children}
     </DrawModeContext.Provider>
   );
