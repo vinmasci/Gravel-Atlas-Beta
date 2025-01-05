@@ -319,48 +319,40 @@ return (
       ref={mapRef}
       onLoad={(evt) => {
         const map = evt.target;
-        setMapInstance(map);
-        onMapInit(map);
         
+        // Wait for style to load before doing anything
         map.once('style.load', () => {
           try {
-            // Initialize base layers only after style is loaded
-            addGravelRoadsSource(map);
-            addGravelRoadsLayer(map);
-            updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-      
-            addBikeInfraSource(map);
-            addBikeInfraLayer(map);
-            updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-      
-            addUnknownSurfaceSource(map);
-            addUnknownSurfaceLayer(map);
-            updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
-      
-            addPavedRoadsSource(map);
-            addPavedRoadsLayer(map);
-            updatePavedRoadsLayer(map, overlayStates['asphalt-roads']);
-      
-            addPrivateRoadsLayer(map);
-            updatePrivateRoadsLayer(map, overlayStates['private-roads']);
-            
-            // Load water icon first, then add water points layer
-            map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-              if (error) {
-                console.error('Error loading water icon:', error);
-                return;
-              }
-              if (!map.hasImage('water-icon')) {
-                map.addImage('water-icon', image);
-                addWaterPointsSource(map);
-                addWaterPointsLayer(map);
-                updateWaterPointsLayer(map, overlayStates['water-points']);
-              }
+            // First clean up any existing layers
+            ['gravel-roads', 'bike-infrastructure', 'unknown-surface', 'private-roads'].forEach(layerId => {
+              if (map.getLayer(layerId)) map.removeLayer(layerId);
+              if (map.getSource(layerId)) map.removeSource(layerId);
             });
-            
-            // Wait a brief moment to ensure layers are fully loaded
+      
+            // Add sources first
+            addGravelRoadsSource(map);
+            addBikeInfraSource(map);
+            addUnknownSurfaceSource(map);
+            addPavedRoadsSource(map);
+      
+            // Then add layers
+            addGravelRoadsLayer(map);
+            addBikeInfraLayer(map);
+            addUnknownSurfaceLayer(map);
+            addPavedRoadsLayer(map);
+            addPrivateRoadsLayer(map);
+      
+            // Wait a moment for layers to be fully added
             setTimeout(() => {
-              initializeLayers(map);
+              // Update visibility states
+              updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+              updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+              updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+              updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+      
+              // Finally set map instance and init
+              setMapInstance(map);
+              onMapInit(map);
             }, 100);
       
           } catch (error) {

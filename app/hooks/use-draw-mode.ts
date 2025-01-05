@@ -47,27 +47,39 @@ interface ResampledPoint {
 }
 
 const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): 'paved' | 'unpaved' | 'unknown' => {
-  // Query the gravel roads layer first
-  const gravelFeatures = map.queryRenderedFeatures(
-    map.project(point as mapboxgl.LngLatLike),
-    { layers: ['gravel_roads'] }  // Your gravel roads layer ID
-  );
+  try {
+    // Check if gravel roads layer exists before querying
+    if (map.getLayer('gravel-roads')) { // Note the hyphen instead of underscore
+      const gravelFeatures = map.queryRenderedFeatures(
+        map.project(point as mapboxgl.LngLatLike),
+        { layers: ['gravel-roads'] }
+      );
 
-  if (gravelFeatures.length > 0) {
-    return 'unpaved';
+      if (gravelFeatures.length > 0) {
+        return 'unpaved';
+      }
+    }
+
+    // Query multiple possible road layers
+    const roadLayers = ['road', 'road-street', 'road-secondary-tertiary'];
+    for (const layer of roadLayers) {
+      if (map.getLayer(layer)) {
+        const roadFeatures = map.queryRenderedFeatures(
+          map.project(point as mapboxgl.LngLatLike),
+          { layers: [layer] }
+        );
+
+        if (roadFeatures.length > 0 && roadFeatures[0].properties?.surface) {
+          return mapSurfaceType(roadFeatures[0].properties.surface);
+        }
+      }
+    }
+
+    return 'unknown';
+  } catch (error) {
+    console.log('Error querying surface type:', error);
+    return 'unknown';
   }
-
-  // Query standard road layers
-  const roadFeatures = map.queryRenderedFeatures(
-    map.project(point as mapboxgl.LngLatLike),
-    { layers: ['road'] }  // Mapbox default road layer
-  );
-
-  if (roadFeatures.length > 0 && roadFeatures[0].properties?.surface) {
-    return mapSurfaceType(roadFeatures[0].properties.surface);
-  }
-
-  return 'unknown';
 };
 
 function resampleLineEvery100m(map: mapboxgl.Map, coordinates: [number, number][]): ResampledPoint[] {
