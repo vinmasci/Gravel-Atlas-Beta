@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useDrawMode } from '../../app/hooks/use-draw-mode';
 import type { UseDrawModeReturn } from '../../app/hooks/use-draw-mode';
 
