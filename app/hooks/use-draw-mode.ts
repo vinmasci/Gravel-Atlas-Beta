@@ -212,25 +212,26 @@ function calculateGrades(points: ElevationPoint[], minDistance: number = 0.05): 
   return grades;
 }
 
-async function getElevation(coordinates: [number, number][]): Promise<[number, number, number][]> {
-    logStateChange('getElevation called', { coordinates });
-    
-    if (coordinates.length === 0) {
-        return [];
-    }
+async function getElevation(coordinates: [number, number][], signal?: AbortSignal): Promise<[number, number, number][]> {
+  logStateChange('getElevation called', { coordinates });
+  
+  if (coordinates.length === 0) {
+      return [];
+  }
 
-    try {
-        const response = await fetch('/api/get-elevation', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ coordinates }),
-        });
+  try {
+      const response = await fetch('/api/get-elevation', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ coordinates }),
+          signal, // Pass the abort signal to fetch
+      });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
         const data = await response.json();
         logStateChange('Elevation data received', { data });
@@ -608,14 +609,14 @@ map.addLayer({
       return;
     }
   
-    if (pendingOperation.current) {
-      logStateChange('Aborting pending operation');
-      pendingOperation.current.abort();
-    }
-  
     isProcessingClick.current = true;
-    const controller = new AbortController();
-    pendingOperation.current = controller;
+    
+    // Only create a new controller if there isn't one
+    if (!pendingOperation.current) {
+      pendingOperation.current = new AbortController();
+    }
+    
+    const signal = pendingOperation.current.signal;
   
     try {
       const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
@@ -685,7 +686,7 @@ logStateChange('Points resampled', {
     resampledCount: resampledPoints.length 
 });
 
-const elevationData = await getElevation(resampledPoints);
+const elevationData = await getElevation(resampledPoints, signal);
       logStateChange('Elevation data received', { elevationData });
       
 // Create new segment
@@ -920,7 +921,9 @@ if (lineSource && markerSource) {
             }
           } finally {
             isProcessingClick.current = false;
-            pendingOperation.current = null;
+            if (pendingOperation.current) {
+              pendingOperation.current = null;
+            }
             logStateChange('Click processing complete');
           }
         }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
