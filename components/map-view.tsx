@@ -312,13 +312,7 @@ return (
       onMove={evt => setViewState(evt.viewState)}
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
       style={mapContainerStyle}
-      mapStyle={
-        selectedStyle === 'osm-cycle'
-          ? MAP_STYLES[selectedStyle].style
-          : selectedStyle === 'mapbox'
-          ? MAP_STYLES[selectedStyle].style
-          : 'mapbox://styles/mapbox/empty-v9'
-      }
+      mapStyle={MAP_STYLES[selectedStyle].style}
       projection={selectedStyle === 'osm-cycle' ? 'mercator' : 'globe'}
       reuseMaps
       ref={mapRef}
@@ -327,39 +321,36 @@ return (
         setMapInstance(map);
         onMapInit(map);
         
-        // Initialize base layers immediately
-        addGravelRoadsSource(map);
-        addGravelRoadsLayer(map);
-        addBikeInfraSource(map);
-        addBikeInfraLayer(map);
-        addUnknownSurfaceSource(map);
-        addUnknownSurfaceLayer(map);
-
-  // Add these two lines:
-  addPavedRoadsSource(map);
-  addPavedRoadsLayer(map);
-
-        // Private roads layer depends on gravel-roads source, so it should come after
-        addPrivateRoadsLayer(map);
-      
-        // Load water icon first, then add water points layer
-        map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
-          if (error) throw error;
-          if (!map.hasImage('water-icon')) {
-            map.addImage('water-icon', image);
-            // Only add water points after icon is loaded
-            addWaterPointsSource(map);
-            addWaterPointsLayer(map);
-            updateWaterPointsLayer(map, overlayStates['water-points']);
-          }
+        map.once('style.load', () => {
+          // Initialize base layers only after style is loaded
+          addGravelRoadsSource(map);
+          addGravelRoadsLayer(map);
+          addBikeInfraSource(map);
+          addBikeInfraLayer(map);
+          addUnknownSurfaceSource(map);
+          addUnknownSurfaceLayer(map);
+          addPavedRoadsSource(map);
+          addPavedRoadsLayer(map);
+          addPrivateRoadsLayer(map);
+          
+          // Load water icon first, then add water points layer
+          map.loadImage('/icons/glass-water-droplet-duotone-thin.png', (error, image) => {
+            if (error) throw error;
+            if (!map.hasImage('water-icon')) {
+              map.addImage('water-icon', image);
+              addWaterPointsSource(map);
+              addWaterPointsLayer(map);
+              updateWaterPointsLayer(map, overlayStates['water-points']);
+            }
+          });
+          
+          // Then update their visibility
+          updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+          updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+          updateWaterPointsLayer(map, overlayStates['water-points']);
+          updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+          updatePrivateRoadsLayer(map, overlayStates['private-roads']);
         });
-        
-        // Then update their visibility
-        updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-        updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-        updateWaterPointsLayer(map, overlayStates['water-points']);
-        updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
-        updatePrivateRoadsLayer(map, overlayStates['private-roads']);
       }}
     />
     {isLoading && <LoadingSpinner />}

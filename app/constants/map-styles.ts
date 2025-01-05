@@ -6,8 +6,8 @@ import { MapStyle, MapStyleConfig } from '../types/map';
 export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
   frank: {
     id: 'frank',
-    title: 'Frank',
-    style: 'mapbox://styles/mapbox/light-v11',  // This is the correct style that includes the composite source
+    title: 'Main',  // You can change this title to whatever you want
+    style: 'mapbox://styles/vinmasci/cm5j8d1ds002d01q08tf019dv',
     type: 'mapbox'
 },
   mapbox: {

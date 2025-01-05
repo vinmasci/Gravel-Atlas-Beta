@@ -241,9 +241,9 @@ export const useDrawMode = (map: Map | null) => {
 
     try {
         if (!previousPoint) {
-            logStateChange('Snapping single point');
+            // For single point snapping, use a tighter radius and consider more road types
             const response = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const data = await response.json();
@@ -258,20 +258,47 @@ export const useDrawMode = (map: Map | null) => {
             return { coordinates: [clickedPoint] };
         }
 
-        logStateChange('Snapping line segment');
-        const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        // Use both walking and cycling profiles to get better route options
+        const profiles = ['walking', 'cycling'];
+        const routePromises = profiles.map(profile => 
+            fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            ).then(r => r.json())
         );
+
+        const results = await Promise.all(routePromises);
         
-        const data = await response.json();
+        // Find the best route by comparing distances and number of points
+        let bestRoute = null;
+        let shortestDistance = Infinity;
         
-        if (data.code === 'Ok' && data.routes.length > 0) {
-            const snappedPoints = data.routes[0].geometry.coordinates as [number, number][];
+        results.forEach(data => {
+            if (data.code === 'Ok' && data.routes.length > 0) {
+                data.routes.forEach((route: any) => {
+                    const distance = route.distance;
+                    // Prefer routes that are not too much longer than the straight-line distance
+                    const straightLineDistance = turf.distance(
+                        turf.point(previousPoint),
+                        turf.point(clickedPoint),
+                        { units: 'meters' }
+                    );
+                    
+                    // Accept route if it's within 30% of straight-line distance
+                    if (distance < shortestDistance && distance < straightLineDistance * 1.3) {
+                        shortestDistance = distance;
+                        bestRoute = route;
+                    }
+                });
+            }
+        });
+
+        if (bestRoute) {
+            const snappedPoints = bestRoute.geometry.coordinates as [number, number][];
             
             // Get road info for the middle point of the snapped segment
             const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
             const tileQueryResponse = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const tileData = await tileQueryResponse.json();
