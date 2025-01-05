@@ -13,4 +13,12 @@ export const MapContext = createContext<MapContextType>({
   setMap: () => {},
 });
 
-export const useMapContext = () => useContext(MapContext);
+export const useMapContext = () => {
+  const context = useContext(MapContext);
+  console.log('=== useMapContext called ===', {
+    hasMap: !!context.map,
+    isStyleLoaded: context.map?.isStyleLoaded(),
+    timestamp: new Date().toISOString()
+  });
+  return context;
+};

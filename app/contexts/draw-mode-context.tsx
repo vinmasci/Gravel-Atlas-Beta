@@ -43,6 +43,13 @@ const DrawModeContext = createContext<DrawModeContextValue>({
 
 export const useDrawModeContext = () => {
   const context = useContext(DrawModeContext);
+  console.log('=== useDrawModeContext called ===', {
+    contextExists: !!context,
+    hasDrawMode: !!context?.drawMode,
+    hasStartDrawing: !!context?.drawMode?.startDrawing,
+    timestamp: new Date().toISOString()
+  });
+  
   if (context === undefined) {
     throw new Error('useDrawModeContext must be used within a DrawModeProvider');
   }
