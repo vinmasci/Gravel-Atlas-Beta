@@ -66,6 +66,25 @@ function getGradeColor(grade: number): string {
   return '#450a0a';                      // red-950
 }
 
+function calculateElevationStats(points: ElevationPoint[]) {
+  let ascent = 0;
+  let descent = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const elevationDiff = points[i].elevation - points[i - 1].elevation;
+    if (elevationDiff > 0) {
+      ascent += elevationDiff;
+    } else {
+      descent += Math.abs(elevationDiff);
+    }
+  }
+
+  return {
+    ascent: Math.round(ascent),
+    descent: Math.round(descent)
+  };
+}
+
 interface ElevationPoint {
   distance: number;
   elevation: number;
@@ -93,7 +112,9 @@ export function FloatingElevationProfile() {
     maxDistance,
     gradeSegments,
     maxGrade,
-    minGrade
+    minGrade,
+    ascent,
+    descent
   } = useMemo(() => {
     if (!drawMode?.isDrawing || !drawMode.elevationProfile) {
       return {
@@ -117,16 +138,20 @@ export function FloatingElevationProfile() {
       1
     );
 
+    const { ascent, descent } = calculateElevationStats(drawMode.elevationProfile);
+
     if (drawMode.elevationProfile.length < 2) {
       return {
-        displayData: [{ distance: 0, elevation: 0, grade: 0, gradeColor: '#84CC16' }],
+        displayData: data,
         minElevation: minElev,
         maxElevation: maxElev,
         elevationPadding: padding,
         maxDistance: maxDist,
-        gradeSegments: [],
-        maxGrade: 0,
-        minGrade: 0
+        gradeSegments: segments,
+        maxGrade,
+        minGrade,
+        ascent,
+        descent
       };
     }
 
@@ -215,44 +240,56 @@ export function FloatingElevationProfile() {
   }
 
   return (
-    <div 
-      data-elevation-profile
-      className="fixed mx-auto inset-x-0 bottom-4 bg-background/80 backdrop-blur-sm border border-border rounded-lg shadow-lg max-w-4xl"
-      style={{
-        height: '200px',
-        zIndex: 9999,
-        left: '360px',
-        right: '16px',
-      }}
-    >
-      <div className="p-4 h-full">
-        <div className="flex justify-between items-start mb-2">
-          <div className="text-sm space-x-4">
-            <span className="font-medium">Elevation Profile</span>
-            {drawMode.elevationProfile.length >= 2 && (
-              <>
-                <span>Distance: {maxDistance.toFixed(1)}km</span>
-                <span>Min: {Math.round(minElevation)}m</span>
-                <span>Max: {Math.round(maxElevation)}m</span>
-                <span>Max Grade: {maxGrade.toFixed(1)}%</span>
-                <span>Min Grade: {minGrade.toFixed(1)}%</span>
-              </>
-            )}
-            {drawMode.elevationProfile.length < 2 && (
-              <span className="text-muted-foreground">Click points on the map to see elevation data</span>
+<div 
+  data-elevation-profile
+  className="fixed mx-auto inset-x-0 bottom-4 bg-background/80 backdrop-blur-sm border border-border rounded-lg shadow-lg max-w-4xl"
+  style={{
+    height: 'auto',
+    minHeight: '200px',
+    maxHeight: '400px',
+    zIndex: 9999,
+    left: '360px',
+    right: '16px',
+  }}
+>
+<div className="p-4 h-full">
+        <div className="flex flex-col space-y-1 mb-2">
+          <div className="flex justify-between items-start">
+            <div className="text-sm space-x-4">
+              <span>Elevation</span>
+              {drawMode.elevationProfile.length >= 2 && (
+                <>
+                  <span>Ascent: {ascent}m</span>
+                  <span>Descent: {descent}m</span>
+                </>
+              )}
+            </div>
+            {drawMode.clearDrawing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => drawMode.clearDrawing()}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             )}
           </div>
-          {drawMode.clearDrawing && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => drawMode.clearDrawing()}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+
+          {drawMode.elevationProfile.length >= 2 && (
+            <div className="text-sm space-x-4">
+              <span>Distance: {maxDistance.toFixed(1)}km</span>
+              <span>Paved: {((drawMode.roadStats?.surfaces?.paved || 0) / (drawMode.roadStats?.totalLength || 1) * 100).toFixed(1)}%</span>
+              <span>Unpaved: {((drawMode.roadStats?.surfaces?.unpaved || 0) / (drawMode.roadStats?.totalLength || 1) * 100).toFixed(1)}%</span>
+              <span>Unknown: {((drawMode.roadStats?.surfaces?.unknown || 0) / (drawMode.roadStats?.totalLength || 1) * 100).toFixed(1)}%</span>
+            </div>
+          )}
+          
+          {drawMode.elevationProfile.length < 2 && (
+            <span className="text-sm text-muted-foreground">Click points on the map to see elevation data</span>
           )}
         </div>
+        
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
@@ -317,8 +354,7 @@ export function FloatingElevationProfile() {
                 }}
               />
               
-{/* Render colored grade segments */}
-{gradeSegments.map((segment, index) => (
+              {gradeSegments.map((segment, index) => (
                 <Area
                   key={index}
                   type="monotone"
@@ -367,39 +403,6 @@ export function FloatingElevationProfile() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Road stats section */}
-        {drawMode.roadStats && drawMode.roadStats.totalLength > 0 && (
-          <div className="mt-4 grid grid-cols-2 gap-4 text-sm border-t pt-4">
-            <div>
-              <h3 className="font-medium mb-2">Highway Types</h3>
-              <div className="space-y-1">
-                {Object.entries(drawMode.roadStats.highways)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([type, length]) => (
-                    <div key={type} className="flex justify-between">
-                      <span className="capitalize">{type.replace(/_/g, ' ')}</span>
-                      <span>{((length / drawMode.roadStats.totalLength) * 100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-2">Surface Types</h3>
-              <div className="space-y-1">
-                {Object.entries(drawMode.roadStats.surfaces)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([type, length]) => (
-                    <div key={type} className="flex justify-between">
-                      <span className="capitalize">{type.replace(/_/g, ' ')}</span>
-                      <span>{((length / drawMode.roadStats.totalLength) * 100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
