@@ -731,15 +731,34 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
-  lineSource.setData({
+  const features = segments.map(segment => ({
     type: 'Feature',
     properties: {
-      surfaceType  // Add the surface type here so the line styles can use it
+      surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
     },
     geometry: {
       type: 'LineString',
-      coordinates: allCoordinates // This will now include elevation data
+      coordinates: segment.roadPoints
     }
+  }));
+  
+  // Add the current drawing segment if it exists
+  if (newPoints.length > 0) {
+    features.push({
+      type: 'Feature',
+      properties: {
+        surfaceType: surfaceType
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: newPoints
+      }
+    });
+  }
+  
+  lineSource.setData({
+    type: 'FeatureCollection',
+    features: features
   });
   
         markerSource.setData({
