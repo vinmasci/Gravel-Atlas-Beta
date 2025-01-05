@@ -284,16 +284,67 @@ async function getElevation(coordinates: [number, number][], signal?: AbortSigna
 export const useDrawMode = (map: Map | null) => {
   const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
   const [initialized, setInitialized] = useState(false);
+  const [isDrawingEnabled, setIsDrawingEnabled] = useState(false);
   
   useEffect(() => {
-    if (map && map.isStyleLoaded() && !initialized) {
-      logStateChange('Hook initialized', { 
-        instanceId: hookInstanceId.current,
-        mapExists: true 
-      });
-      setInitialized(true);
+    if (!map) return;
+    
+    const initializeDrawing = () => {
+      if (!map.isStyleLoaded()) {
+        map.once('style.load', initializeDrawing);
+        return;
+      }
+      
+      // Make sure we have our drawing source and layer
+      try {
+        if (!map.getSource('drawing')) {
+          map.addSource('drawing', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+          });
+        }
+        
+        if (!map.getLayer('drawing-base')) {
+          map.addLayer({
+            id: 'drawing-base',
+            type: 'line',
+            source: 'drawing',
+            paint: {
+              'line-color': '#000',
+              'line-width': 3
+            }
+          });
+        }
+        
+        setInitialized(true);
+      } catch (e) {
+        console.error('Failed to initialize drawing:', e);
+      }
+    };
+    
+    initializeDrawing();
+    
+    return () => {
+      // Cleanup if unmounted
+      if (map.getLayer('drawing-base')) {
+        map.removeLayer('drawing-base');
+      }
+      if (map.getSource('drawing')) {
+        map.removeSource('drawing');
+      }
+    };
+  }, [map]);
+
+  // Modify startDrawing to check initialization
+  const startDrawing = useCallback(() => {
+    if (!initialized || !map) {
+      console.log('Cannot start drawing - not initialized');
+      return;
     }
-  }, [map, initialized]);
+    
+    setIsDrawingEnabled(true);
+    // Rest of your startDrawing logic
+  }, [initialized, map]);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);

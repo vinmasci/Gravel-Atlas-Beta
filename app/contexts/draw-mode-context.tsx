@@ -30,43 +30,68 @@ const defaultDrawModeValue: UseDrawModeReturn = {
   line: null
 };
 
-const DrawModeContext = createContext<UseDrawModeReturn>(defaultDrawModeValue);
-
-export const useDrawModeContext = () => {
-  const context = useContext(DrawModeContext);
-  return context || defaultDrawModeValue;
-};
-
-interface DrawModeProviderProps {
-  children: React.ReactNode;
-  map: mapboxgl.Map | null;
+// First define a separate loading state type
+interface DrawModeState {
+  isInitialized: boolean;
+  drawMode: UseDrawModeReturn;
 }
 
+const DrawModeContext = createContext<DrawModeState>({
+  isInitialized: false,
+  drawMode: defaultDrawModeValue
+});
+
+export const useDrawModeContext = () => {
+  const { isInitialized, drawMode } = useContext(DrawModeContext);
+  
+  if (!isInitialized) {
+    return defaultDrawModeValue;
+  }
+  
+  return drawMode;
+};
+
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
-  const [isReady, setIsReady] = React.useState(false);
-  const drawMode = useDrawMode(map);  // Remove the conditional here
+  const [state, setState] = React.useState<DrawModeState>({
+    isInitialized: false,
+    drawMode: defaultDrawModeValue
+  });
+
+  const drawMode = useDrawMode(map);
 
   React.useEffect(() => {
-    if (map && map.isStyleLoaded()) {
-      setIsReady(true);
-    } else if (map) {
+    const checkAndInitialize = () => {
+      if (map && map.isStyleLoaded()) {
+        setState({
+          isInitialized: true,
+          drawMode: {
+            ...defaultDrawModeValue,
+            ...drawMode,
+            map: map
+          }
+        });
+        return true;
+      }
+      return false;
+    };
+
+    // Try to initialize immediately
+    if (!checkAndInitialize() && map) {
+      // If not ready, wait for style load
       const handleStyleLoad = () => {
-        setIsReady(true);
+        checkAndInitialize();
       };
-      map.once('style.load', handleStyleLoad);
+      
+      map.on('style.load', handleStyleLoad);
+      
       return () => {
         map.off('style.load', handleStyleLoad);
       };
     }
-  }, [map]);
-
-  // Only provide the drawMode when everything is ready
-  const value = React.useMemo(() => 
-    isReady ? drawMode : defaultDrawModeValue
-  , [isReady, drawMode]);
+  }, [map, drawMode]);
 
   return (
-    <DrawModeContext.Provider value={value || defaultDrawModeValue}>
+    <DrawModeContext.Provider value={state}>
       {children}
     </DrawModeContext.Provider>
   );

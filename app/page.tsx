@@ -158,26 +158,53 @@ export default function Home() {
             overlayStates={overlayStates}
             className="z-[60]"
           />
-          <MapView
-            viewState={viewState}
-            setViewState={setViewState}
-            selectedStyle={selectedStyle}
-            overlayStates={overlayStates}
-            mapillaryVisible={mapillaryVisible}
-            onMapInit={(map) => {
-              // Ensure map is fully loaded before setting instance
-              if (map.isStyleLoaded()) {
-                setMapInstance(map);
-              } else {
-                map.once('style.load', () => {
-                  setMapInstance(map);
-                });
-              }
-            }}
-          />
+<MapView
+  viewState={viewState}
+  setViewState={setViewState}
+  selectedStyle={selectedStyle}
+  overlayStates={overlayStates}
+  mapillaryVisible={mapillaryVisible}
+  onMapInit={(map) => {
+    // Set instance immediately to make map available
+    setMapInstance(map);
+    
+    // Handle style loading
+    const initializeMap = () => {
+      // Force style load if needed
+      if (!map.isStyleLoaded()) {
+        map.once('style.load', initializeMap);
+        return;
+      }
+      
+      // Initialize layers after style is loaded
+      try {
+        map.addSource('drawing', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
+        });
+        
+        // Add base layers needed for drawing
+        if (!map.getLayer('drawing-base')) {
+          map.addLayer({
+            id: 'drawing-base',
+            type: 'line',
+            source: 'drawing',
+            paint: {
+              'line-color': '#000',
+              'line-width': 3
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Error initializing map layers:', e);
+      }
+    };
+
+    initializeMap();
+  }}
+/>
         </DrawModeProvider>
       </MapContext.Provider>
     </div>
   )
-  
 }
