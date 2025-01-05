@@ -315,6 +315,12 @@ export const useDrawMode = (map: Map | null) => {
       unknown: 0
     }
   });
+
+  const initializeLayers = useCallback(() => {
+    logStateChange('Initializing layers', { mapExists: !!map });
+    if (!map) return;
+    // [... rest of initializeLayers implementation, keep exactly as is ...]
+  }, [map]);
   
   useEffect(() => {
     if (!map) return;
@@ -357,6 +363,8 @@ export const useDrawMode = (map: Map | null) => {
       }
     };
   }, [map, initializeLayers]);
+
+  // [... rest of your code, exactly as is ...]
 
   // Debug state changes
   useEffect(() => {
