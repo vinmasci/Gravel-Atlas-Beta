@@ -519,10 +519,6 @@ export const useDrawMode = (map: Map | null) => {
     }
 };
 
-  const initializeLayers = useCallback(() => {
-    logStateChange('Initializing layers', { mapExists: !!map });
-    if (!map) return;
-
     // Clean up existing layers
     if (layerRefs.current.drawing) {
       map.removeLayer(layerRefs.current.drawing);
