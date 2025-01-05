@@ -390,28 +390,67 @@ if (data.length > 0) {
                 }}
               />
               
-              {gradeSegments.map((segment, index) => (
-                <Area
-                  key={index}
-                  type="monotone"
-                  data={segment.points}
-                  dataKey="elevation"
-                  stroke={segment.color}
-                  strokeWidth={0.9}
-                  fill={segment.color}
-                  fillOpacity={0.4}
-                  dot={false}
-                  isAnimationActive={false}
-                  connectNulls
-                >
-                  <defs>
-                    <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
-                      <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                </Area>
-              ))}
+{/* Define the stripe pattern once */}
+<defs>
+  <pattern 
+    id="unpavedPattern" 
+    patternUnits="userSpaceOnUse" 
+    width="6" 
+    height="6" 
+    patternTransform="rotate(45)"
+  >
+    <line 
+      x1="0" 
+      y1="0" 
+      x2="0" 
+      y2="6" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      opacity="0.2"
+    />
+  </pattern>
+</defs>
+
+{/* First render the grade-colored segments */}
+{gradeSegments.map((segment, index) => (
+  <Area
+    key={index}
+    type="monotone"
+    data={segment.points}
+    dataKey="elevation"
+    stroke={segment.color}
+    strokeWidth={0.9}
+    fill={segment.color}
+    fillOpacity={0.4}
+    dot={false}
+    isAnimationActive={false}
+    connectNulls
+  >
+    <defs>
+      <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
+        <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
+      </linearGradient>
+    </defs>
+  </Area>
+))}
+
+{/* Then render the unpaved pattern overlay for unpaved segments */}
+{gradeSegments.map((segment, index) => (
+  !segment.isPaved && (
+    <Area
+      key={`unpaved-${index}`}
+      type="monotone"
+      data={segment.points}
+      dataKey="elevation"
+      stroke="none"
+      fill="url(#unpavedPattern)"
+      dot={false}
+      isAnimationActive={false}
+      connectNulls
+    />
+  )
+))}
 
               {/* Render top stroke line */}
               <Area
