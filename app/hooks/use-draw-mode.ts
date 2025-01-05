@@ -922,16 +922,9 @@ if (lineSource && markerSource) {
           
           // Adjust new points to continue from last distance
           const adjustedNewPoints = newElevationPoints.map((point, index) => {
-            // Query surface type at this point's coordinates
-            const surfaceInfo = map.queryRenderedFeatures(
-              map.project([resampledPoints[index][0], resampledPoints[index][1]]),
-              { layers: ['road', 'gravel_roads'] }  // Include your road layers
-            )[0];
-        
-            const surfaceType = surfaceInfo?.properties?.surface ? 
-              mapSurfaceType(surfaceInfo.properties.surface) : 
-              'unknown';
-        
+            // Get surface type from the resampled data we already have
+            const surfaceType = resampledData[index]?.surfaceType || 'unknown';
+            
             return {
               distance: lastDistance + point.distance,
               elevation: point.elevation,

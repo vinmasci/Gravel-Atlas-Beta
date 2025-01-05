@@ -320,44 +320,79 @@ return (
       onLoad={(evt) => {
         const map = evt.target;
         
-        // Set map instance immediately
-        setMapInstance(map);
-        
-        // Wait for style to load before initializing layers
-        map.once('style.load', () => {
+        const initializeLayers = () => {
           try {
-            // First clean up any existing layers
+            if (!map.isStyleLoaded()) {
+              map.once('style.load', initializeLayers);
+              return;
+            }
+      
+            // Clean up any existing layers with try/catch for each operation
             ['gravel-roads', 'bike-infrastructure', 'unknown-surface', 'private-roads'].forEach(layerId => {
-              if (map.getLayer(layerId)) map.removeLayer(layerId);
-              if (map.getSource(layerId)) map.removeSource(layerId);
+              try {
+                if (map.getLayer(layerId)) map.removeLayer(layerId);
+                if (map.getSource(layerId)) map.removeSource(layerId);
+              } catch (e) {
+                console.log(`Cleanup for ${layerId} failed:`, e);
+              }
             });
       
-            // Add sources first
-            addGravelRoadsSource(map);
-            addBikeInfraSource(map);
-            addUnknownSurfaceSource(map);
-            addPavedRoadsSource(map);
+            // Add sources with error handling
+            const addSources = () => {
+              try {
+                addGravelRoadsSource(map);
+                addBikeInfraSource(map);
+                addUnknownSurfaceSource(map);
+                addPavedRoadsSource(map);
+              } catch (e) {
+                console.error('Error adding sources:', e);
+                return false;
+              }
+              return true;
+            };
       
-            // Then add layers
-            addGravelRoadsLayer(map);
-            addBikeInfraLayer(map);
-            addUnknownSurfaceLayer(map);
-            addPavedRoadsLayer(map);
-            addPrivateRoadsLayer(map);
+            // Add layers with error handling
+            const addLayers = () => {
+              try {
+                addGravelRoadsLayer(map);
+                addBikeInfraLayer(map);
+                addUnknownSurfaceLayer(map);
+                addPavedRoadsLayer(map);
+                addPrivateRoadsLayer(map);
+              } catch (e) {
+                console.error('Error adding layers:', e);
+                return false;
+              }
+              return true;
+            };
       
-            // Update visibility states immediately
-            updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-            updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-            updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
-            updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+            // Update layer visibility with error handling
+            const updateVisibility = () => {
+              try {
+                updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+                updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+                updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+                updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+              } catch (e) {
+                console.error('Error updating visibility:', e);
+                return false;
+              }
+              return true;
+            };
       
-            // Call onMapInit after layers are initialized
-            onMapInit(map);
+            // Execute initialization steps in sequence
+            if (addSources() && addLayers() && updateVisibility()) {
+              setMapInstance(map);
+              onMapInit(map);
+            }
       
           } catch (error) {
-            console.error('Error initializing map layers:', error);
+            console.error('Error in layer initialization:', error);
           }
-        });
+        };
+      
+        // Start initialization
+        initializeLayers();
       }}
     />
     {isLoading && <LoadingSpinner />}

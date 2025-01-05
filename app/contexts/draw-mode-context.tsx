@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useDrawMode } from '../../app/hooks/use-draw-mode';
 import type { UseDrawModeReturn } from '../../app/hooks/use-draw-mode';
 
@@ -16,7 +16,18 @@ interface DrawModeProviderProps {
 }
 
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
-  const drawMode = useDrawMode(map);
+  const [isReady, setIsReady] = React.useState(false);
+  const drawMode = useDrawMode(isReady ? map : null);
+
+  React.useEffect(() => {
+    if (map && map.isStyleLoaded()) {
+      setIsReady(true);
+    } else if (map) {
+      map.once('style.load', () => {
+        setIsReady(true);
+      });
+    }
+  }, [map]);
 
   return (
     <DrawModeContext.Provider value={drawMode}>
