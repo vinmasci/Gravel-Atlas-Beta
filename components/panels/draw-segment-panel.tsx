@@ -44,39 +44,30 @@ export function DrawSegmentPanel() {
   const { user } = useUser();
   const { toast } = useToast();
   
-  // Local state
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [segmentTitle, setSegmentTitle] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Debug mount
-  useEffect(() => {
-    console.log('DrawSegmentPanel mounted:', {
-      timestamp: new Date().toISOString(),
-      mapExists: !!map,
-      userExists: !!user
-    });
-    return () => {
-      console.log('DrawSegmentPanel unmounted:', {
-        timestamp: new Date().toISOString()
-      });
-    };
-  }, [map, user]);
-
-  // Initialize draw mode hook
+  // Initialize draw mode hook with null check
   const drawMode = useDrawModeContext();
   const { 
-    isDrawing, 
-    drawnCoordinates,
-    elevationProfile,
-    snapToRoad,
-    startDrawing, 
-    handleClick, 
-    finishDrawing, 
-    clearDrawing, 
-    undoLastPoint,
-    toggleSnapToRoad
-  } = drawMode;
+    isDrawing = false, 
+    drawnCoordinates = [],
+    elevationProfile = [],
+    snapToRoad = true,
+    startDrawing = () => {},
+    handleClick = () => {}, 
+    finishDrawing = () => null, 
+    clearDrawing = () => {},
+    undoLastPoint = () => {},
+    toggleSnapToRoad = () => {}
+  } = drawMode || {};
+
+  // Add debug logging for initialization
+  useEffect(() => {
+    console.log('DrawMode state:', {
+      drawModeExists: !!drawMode,
+      isDrawing,
+      mapExists: !!map,
+      hasCoordinates: drawnCoordinates.length
+    });
+  }, [drawMode, isDrawing, map, drawnCoordinates]);
 
   // Debug state changes
   useEffect(() => {
@@ -93,34 +84,47 @@ export function DrawSegmentPanel() {
 
   // Set up map click handler once
   useEffect(() => {
-    if (!map) return;
-
+    if (!map || !drawMode) return;
+  
     console.log('Setting up map click handler:', {
       timestamp: new Date().toISOString(),
       isDrawing,
-      mapExists: !!map
+      mapExists: !!map,
+      drawModeExists: !!drawMode,
+      mapStyleLoaded: map.isStyleLoaded()
     });
-
-    if (isDrawing) {
+  
+    if (isDrawing && map.isStyleLoaded()) {
       map.on('click', handleClick);
       return () => {
         console.log('Removing map click handler');
         map.off('click', handleClick);
       };
     }
-  }, [map, isDrawing, handleClick]);
+  }, [map, isDrawing, handleClick, drawMode]);
 
   // Handler functions
   const handleDrawingToggle = useCallback(() => {
     console.log('Drawing toggle clicked:', {
-      timestamp: new Date().toISOString(),
+      drawModeExists: !!drawMode,
+      mapExists: !!map,
       currentState: {
         isDrawing,
         coordinates: drawnCoordinates.length,
         userExists: !!user
       }
     });
-
+  
+    if (!drawMode || !map) {
+      console.log('Cannot start drawing - missing dependencies');
+      toast({
+        title: "Error",
+        description: "Map is not ready. Please try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+  
     if (!user) {
       console.log('No user, redirecting to login');
       toast({
@@ -131,7 +135,7 @@ export function DrawSegmentPanel() {
       window.location.href = '/api/auth/login';
       return;
     }
-
+  
     if (isDrawing) {
       console.log('Ending drawing mode:', {
         coordinatesDrawn: drawnCoordinates.length
@@ -148,13 +152,14 @@ export function DrawSegmentPanel() {
       console.log('Starting drawing mode');
       startDrawing();
     }
-
+  
     console.log('Drawing toggle complete:', {
       timestamp: new Date().toISOString(),
       newDrawingState: !isDrawing,
-      coordinates: drawnCoordinates.length
+      coordinates: drawnCoordinates.length,
+      drawModeActive: !!drawMode
     });
-  }, [user, isDrawing, drawnCoordinates.length, clearDrawing, startDrawing, toast]);
+  }, [user, isDrawing, drawnCoordinates.length, clearDrawing, startDrawing, toast, drawMode, map]);
 
   const handleSnapToggle = useCallback((enabled: boolean) => {
     console.log('Snap toggle clicked:', {
