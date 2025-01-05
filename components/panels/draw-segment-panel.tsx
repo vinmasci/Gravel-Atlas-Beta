@@ -44,6 +44,11 @@ export function DrawSegmentPanel() {
   const { user } = useUser();
   const { toast } = useToast();
   
+  // Add state variables
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [segmentTitle, setSegmentTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  
   // Initialize draw mode hook with null check
   const drawMode = useDrawModeContext();
   const { 
@@ -121,6 +126,15 @@ export function DrawSegmentPanel() {
         title: "Error",
         description: "Map is not ready. Please try again in a moment.",
         variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!map.isStyleLoaded()) {
+      console.log('Map style not yet loaded');
+      map.once('style.load', () => {
+        console.log('Style loaded, starting drawing mode');
+        if (startDrawing) startDrawing();
       });
       return;
     }

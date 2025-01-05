@@ -320,7 +320,10 @@ return (
       onLoad={(evt) => {
         const map = evt.target;
         
-        // Wait for style to load before doing anything
+        // Set map instance immediately
+        setMapInstance(map);
+        
+        // Wait for style to load before initializing layers
         map.once('style.load', () => {
           try {
             // First clean up any existing layers
@@ -342,18 +345,14 @@ return (
             addPavedRoadsLayer(map);
             addPrivateRoadsLayer(map);
       
-            // Wait a moment for layers to be fully added
-            setTimeout(() => {
-              // Update visibility states
-              updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
-              updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
-              updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
-              updatePrivateRoadsLayer(map, overlayStates['private-roads']);
+            // Update visibility states immediately
+            updateGravelRoadsLayer(map, overlayStates['gravel-roads']);
+            updateBikeInfraLayer(map, overlayStates['bike-infrastructure']);
+            updateUnknownSurfaceLayer(map, overlayStates['unknown-surface']);
+            updatePrivateRoadsLayer(map, overlayStates['private-roads']);
       
-              // Finally set map instance and init
-              setMapInstance(map);
-              onMapInit(map);
-            }, 100);
+            // Call onMapInit after layers are initialized
+            onMapInit(map);
       
           } catch (error) {
             console.error('Error initializing map layers:', error);
