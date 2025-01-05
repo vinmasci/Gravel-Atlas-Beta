@@ -40,8 +40,16 @@ const logStateChange = (action: string, data: any) => {
   });
 };
 
-function resampleLineEvery100m(coordinates: [number, number][]): [number, number][] {
-  if (coordinates.length < 2) return coordinates;
+interface ResampledPoint {
+  coordinates: [number, number];
+  surfaceType: 'paved' | 'unpaved' | 'unknown';
+}
+
+function resampleLineEvery100m(map: mapboxgl.Map, coordinates: [number, number][]): ResampledPoint[] {
+  if (coordinates.length < 2) return coordinates.map(coord => ({
+    coordinates: coord,
+    surfaceType: getSurfaceTypeFromMapbox(map, coord)
+  }));
   
   // Create a line from the coordinates
   const line = turf.lineString(coordinates);
@@ -52,21 +60,31 @@ function resampleLineEvery100m(coordinates: [number, number][]): [number, number
   // Calculate how many points we need for 100m intervals
   const pointsCount = Math.floor(length * 10) + 1; // *10 because 1km = 10 points at 100m intervals
   
-  if (pointsCount <= 1) return coordinates;
+  if (pointsCount <= 1) return [{
+    coordinates: coordinates[0],
+    surfaceType: getSurfaceTypeFromMapbox(map, coordinates[0])
+  }];
 
   // Create points at regular intervals
-  const resampled = [];
+  const resampled: ResampledPoint[] = [];
   for (let i = 0; i < pointsCount; i++) {
-      const point = turf.along(line, i * 0.1, {units: 'kilometers'}); // 0.1 km = 100m
-      resampled.push(point.geometry.coordinates as [number, number]);
+    const point = turf.along(line, i * 0.1, {units: 'kilometers'}); // 0.1 km = 100m
+    const coord = point.geometry.coordinates as [number, number];
+    resampled.push({
+      coordinates: coord,
+      surfaceType: getSurfaceTypeFromMapbox(map, coord)
+    });
   }
   
   // Always include the last point if it's not already included
   const lastOriginal = coordinates[coordinates.length - 1];
-  const lastResampled = resampled[resampled.length - 1];
+  const lastResampled = resampled[resampled.length - 1].coordinates;
   
   if (lastOriginal[0] !== lastResampled[0] || lastOriginal[1] !== lastResampled[1]) {
-      resampled.push(lastOriginal);
+    resampled.push({
+      coordinates: lastOriginal,
+      surfaceType: getSurfaceTypeFromMapbox(map, lastOriginal)
+    });
   }
 
   return resampled;
@@ -619,14 +637,17 @@ setRoadStats(prev => {
   };
 });
 
-// Resample points to 100m intervals
-const resampledPoints = resampleLineEvery100m(newPoints);
-      logStateChange('Points resampled', { 
-          originalCount: newPoints.length, 
-          resampledCount: resampledPoints.length 
-      });
+// Resample points to 100m intervals with surface types
+const resampledData = resampleLineEvery100m(map, newPoints);
+const resampledPoints = resampledData.map(point => point.coordinates);
+const resampledSurfaceTypes = resampledData.map(point => point.surfaceType);
 
-      const elevationData = await getElevation(resampledPoints);
+logStateChange('Points resampled', { 
+    originalCount: newPoints.length, 
+    resampledCount: resampledPoints.length 
+});
+
+const elevationData = await getElevation(resampledPoints);
       logStateChange('Elevation data received', { elevationData });
       
 // Create new segment
@@ -829,33 +850,28 @@ if (lineSource && markerSource) {
           // Get the last distance from previous profile
           const lastDistance = prev.length > 0 ? prev[prev.length - 1].distance : 0;
           
-          // Add debugging
-          console.log('Updating elevation profile:', {
-            prevLength: prev.length,
-            newPointsLength: newElevationPoints.length,
-            lastDistance,
-            firstNewPoint: newElevationPoints[0],
-            lastPrevPoint: prev[prev.length - 1]
-          });
-          
           // Adjust new points to continue from last distance
-          const adjustedNewPoints = newElevationPoints.map(point => ({
-            distance: lastDistance + point.distance,
-            elevation: point.elevation
-          }));
+          const adjustedNewPoints = newElevationPoints.map((point, index) => {
+            // Query surface type at this point's coordinates
+            const surfaceInfo = map.queryRenderedFeatures(
+              map.project([resampledPoints[index][0], resampledPoints[index][1]]),
+              { layers: ['road', 'gravel_roads'] }  // Include your road layers
+            )[0];
+        
+            const surfaceType = surfaceInfo?.properties?.surface ? 
+              mapSurfaceType(surfaceInfo.properties.surface) : 
+              'unknown';
+        
+            return {
+              distance: lastDistance + point.distance,
+              elevation: point.elevation,
+              surfaceType: surfaceType
+            };
+          });
         
           const newProfile = [...prev, ...adjustedNewPoints];
           
-          logStateChange('Elevation profile updated', {
-            previousCount: prev.length,
-            newCount: newProfile.length,
-            lastDistance,
-            firstNewDistance: adjustedNewPoints[0]?.distance,
-            elevationRange: newProfile.map(p => p.elevation)
-          });
-          
           return newProfile;
-
         });
       } // Make sure this closing brace is here
       

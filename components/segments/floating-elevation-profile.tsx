@@ -170,15 +170,19 @@ const {
 
 // Calculate grades and create display data
 const grades = calculateGrades(drawMode.elevationProfile);
-const totalLength = drawMode.roadStats?.totalLength || 1;
-const pavedLength = drawMode.roadStats?.surfaces?.paved || 0;
+const data = drawMode.elevationProfile.map((point, index) => {
+  // Find which surface segment this point belongs to
+  const surfaceSegment = drawMode.roadStats?.surfaceSegments?.find(
+    segment => point.distance >= segment.start && point.distance <= segment.end
+  );
 
-const data = drawMode.elevationProfile.map((point, index) => ({
-  ...point,
-  grade: grades[index] || 0,
-  gradeColor: getGradeColor(grades[index] || 0),
-  isPaved: (point.distance / maxDist) <= (pavedLength / totalLength)
-}));
+  return {
+    ...point,
+    grade: grades[index] || 0,
+    gradeColor: getGradeColor(grades[index] || 0),
+    isPaved: surfaceSegment?.type === 'paved'
+  };
+});
 
 // Create segments for coloring based on grade and surface type
 const segments = [];
@@ -230,7 +234,7 @@ if (data.length > 0) {
     ascent: elevationStats.ascent,
     descent: elevationStats.descent
   };
-}, [drawMode?.isDrawing, drawMode?.elevationProfile, drawMode?.roadStats]);
+}, [drawMode?.isDrawing, drawMode?.elevationProfile]);
   // Map hover effect
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
