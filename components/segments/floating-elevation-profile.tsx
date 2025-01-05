@@ -369,7 +369,8 @@ const {
                 }}
               />
               
-              {gradeSegments.map((segment, index) => (
+{/* Keep your original grade segments exactly as they are */}
+{gradeSegments.map((segment, index) => (
   <Area
     key={index}
     type="monotone"
@@ -377,36 +378,13 @@ const {
     dataKey="elevation"
     stroke={segment.color}
     strokeWidth={0.9}
-    fill={`url(#pattern-${index})`}
+    fill={segment.color}
     fillOpacity={0.4}
     dot={false}
     isAnimationActive={false}
     connectNulls
   >
     <defs>
-      <pattern
-        id={`pattern-${index}`}
-        patternUnits="userSpaceOnUse"
-        width="6"
-        height="6"
-        patternTransform="rotate(45)"
-      >
-        {drawMode.roadStats?.surfacePercentages?.unpaved > 50 || 
-         drawMode.roadStats?.surfacePercentages?.unknown > 50 ? (
-          <>
-            {/* Background fill with base color */}
-            <rect width="6" height="6" fill={segment.color} />
-            {/* Diagonal stripes overlay */}
-            <path
-              d="M -1 -1 L 7 7"
-              stroke="rgba(0,0,0,0.3)"
-              strokeWidth="2"
-            />
-          </>
-        ) : (
-          <rect width="6" height="6" fill={segment.color} />
-        )}
-      </pattern>
       <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
         <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
@@ -415,18 +393,49 @@ const {
   </Area>
 ))}
 
-{/* Keep existing top stroke line */}
-<Area
-  type="monotone"
-  data={displayData}
-  dataKey="elevation"
-  stroke="rgba(255,255,255,0.0001)"
-  strokeWidth={0.00000001}
-  fill="none"
-  dot={false}
-  isAnimationActive={false}
-  connectNulls
-/>
+{/* Add separate overlay for unpaved sections */}
+{drawMode.roadStats?.surfacePercentages?.unpaved > 0 && (
+  <Area
+    type="monotone"
+    data={displayData}
+    dataKey="elevation"
+    stroke="none"
+    fill="url(#stripe-pattern)"
+    fillOpacity={0.3}
+    dot={false}
+    isAnimationActive={false}
+    connectNulls
+  >
+    <defs>
+      <pattern
+        id="stripe-pattern"
+        patternUnits="userSpaceOnUse"
+        width="4"
+        height="4"
+        patternTransform="rotate(45)"
+      >
+        <path
+          d="M -1 -1 L 5 5"
+          stroke="rgba(0,0,0,0.5)"
+          strokeWidth="1"
+        />
+      </pattern>
+    </defs>
+  </Area>
+)}
+
+              {/* Render top stroke line */}
+              <Area
+                type="monotone"
+                data={displayData}
+                dataKey="elevation"
+                stroke="rgba(255,255,255,0.0001)"
+                strokeWidth={0.00000001}
+                fill="none"
+                dot={false}
+                isAnimationActive={false}
+                connectNulls
+              />
 
               {hoverPoint && (
                 <ReferenceDot
