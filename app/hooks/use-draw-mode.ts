@@ -45,6 +45,30 @@ interface ResampledPoint {
   surfaceType: 'paved' | 'unpaved' | 'unknown';
 }
 
+const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): 'paved' | 'unpaved' | 'unknown' => {
+  // Query the gravel roads layer first
+  const gravelFeatures = map.queryRenderedFeatures(
+    map.project(point as mapboxgl.LngLatLike),
+    { layers: ['gravel_roads'] }  // Your gravel roads layer ID
+  );
+
+  if (gravelFeatures.length > 0) {
+    return 'unpaved';
+  }
+
+  // Query standard road layers
+  const roadFeatures = map.queryRenderedFeatures(
+    map.project(point as mapboxgl.LngLatLike),
+    { layers: ['road'] }  // Mapbox default road layer
+  );
+
+  if (roadFeatures.length > 0 && roadFeatures[0].properties?.surface) {
+    return mapSurfaceType(roadFeatures[0].properties.surface);
+  }
+
+  return 'unknown';
+};
+
 function resampleLineEvery100m(map: mapboxgl.Map, coordinates: [number, number][]): ResampledPoint[] {
   if (coordinates.length < 2) return coordinates.map(coord => ({
     coordinates: coord,
