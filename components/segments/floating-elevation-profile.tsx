@@ -370,40 +370,63 @@ const {
               />
               
               {gradeSegments.map((segment, index) => (
-                <Area
-                  key={index}
-                  type="monotone"
-                  data={segment.points}
-                  dataKey="elevation"
-                  stroke={segment.color}
-                  strokeWidth={0.9}
-                  fill={segment.color}
-                  fillOpacity={0.4}
-                  dot={false}
-                  isAnimationActive={false}
-                  connectNulls
-                >
-                  <defs>
-                    <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
-                      <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                </Area>
-              ))}
+  <Area
+    key={index}
+    type="monotone"
+    data={segment.points}
+    dataKey="elevation"
+    stroke={segment.color}
+    strokeWidth={0.9}
+    fill={`url(#pattern-${index})`}
+    fillOpacity={0.4}
+    dot={false}
+    isAnimationActive={false}
+    connectNulls
+  >
+    <defs>
+      <pattern
+        id={`pattern-${index}`}
+        patternUnits="userSpaceOnUse"
+        width="6"
+        height="6"
+        patternTransform="rotate(45)"
+      >
+        {drawMode.roadStats?.surfacePercentages?.unpaved > 50 || 
+         drawMode.roadStats?.surfacePercentages?.unknown > 50 ? (
+          <>
+            {/* Background fill with base color */}
+            <rect width="6" height="6" fill={segment.color} />
+            {/* Diagonal stripes overlay */}
+            <path
+              d="M -1 -1 L 7 7"
+              stroke="rgba(0,0,0,0.3)"
+              strokeWidth="2"
+            />
+          </>
+        ) : (
+          <rect width="6" height="6" fill={segment.color} />
+        )}
+      </pattern>
+      <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
+        <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
+      </linearGradient>
+    </defs>
+  </Area>
+))}
 
-              {/* Render top stroke line */}
-              <Area
-                type="monotone"
-                data={displayData}
-                dataKey="elevation"
-                stroke="rgba(255,255,255,0.0001)"
-                strokeWidth={0.00000001}
-                fill="none"
-                dot={false}
-                isAnimationActive={false}
-                connectNulls
-              />
+{/* Keep existing top stroke line */}
+<Area
+  type="monotone"
+  data={displayData}
+  dataKey="elevation"
+  stroke="rgba(255,255,255,0.0001)"
+  strokeWidth={0.00000001}
+  fill="none"
+  dot={false}
+  isAnimationActive={false}
+  connectNulls
+/>
 
               {hoverPoint && (
                 <ReferenceDot

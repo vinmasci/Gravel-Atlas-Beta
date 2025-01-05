@@ -445,30 +445,40 @@ map.addLayer({
     'line-width': 3,
     'line-opacity': 1
   }
-}, `${drawingId}-stroke`);
+});
 
-// 3. Top white dash pattern layer (only for unpaved)
+// 3. White dash pattern for unpaved sections
 map.addLayer({
-  id: `${drawingId}-dash`,
+  id: `${drawingId}-dashes`,
   type: 'line',
   source: drawingId,
   layout: {
-    'line-cap': 'round',
+    'line-cap': 'butt',  // Changed to butt for crisper dashes
     'line-join': 'round'
   },
   paint: {
-    'line-color': '#ffffff',
+    'line-color': '#009999',
     'line-width': 2,
     'line-opacity': [
       'case',
-      ['==', ['get', 'surfaceType'], 'unpaved'],
+      ['any',
+        ['==', ['get', 'surfaceType'], 'unpaved'],
+        ['==', ['get', 'surfaceType'], 'unknown']
+      ],
       1,
       0
     ],
-    'line-dasharray': [1, 3]  // Small, closely spaced dashes
+    'line-dasharray': [2, 4]  // Adjusted for better visibility
   }
-}, drawingId);
+});
 
+// Clean up layers in the clearDrawing function
+if (layerRefs.current.drawing) {
+  map.removeLayer(`${layerRefs.current.drawing}-dashes`);  // Remove dashes layer
+  map.removeLayer(layerRefs.current.drawing);             // Remove main layer
+  map.removeLayer(`${layerRefs.current.drawing}-stroke`); // Remove stroke layer
+  map.removeSource(layerRefs.current.drawing);
+}
 // Add map hover handlers
 map.on('mousemove', drawingId, (e) => {
   if (!e.features?.[0]) return;
