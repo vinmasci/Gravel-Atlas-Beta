@@ -243,20 +243,14 @@ const segmentLength = lastPoint ? Math.round(lastPoint.distance * 1000) : 0;  //
 const payload = {
   title: segmentTitle,
   gpxData,
-  geojson: {
-    type: 'Feature' as const,
-    geometry: {
-      type: 'LineString' as const,
-      coordinates: segment.geometry.coordinates
-    },
-    properties: {}
-  },
+  geojson: segment,  // Use the complete segment object
   metadata: {
     title: segmentTitle,
     length: segmentLength,
     elevationGain,
     elevationLoss,
-    surfaceTypes: []
+    elevationProfile,
+    surfaceTypes: segment.properties.surfaceTypes || ['unknown']
   }
 };
   

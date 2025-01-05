@@ -116,13 +116,24 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
         'line-width': 1.5,
         'line-opacity': 1,
         'line-dasharray': [
-          'match',
-          ['get', 'surfaceType'],
-          'paved', ['literal', [1]],
-          ['literal', [2, 2]]
+          'step',
+          ['zoom'],
+          [ // Default pattern for zoomed out
+            'match',
+            ['get', 'surfaceType'],
+            'paved', ['literal', [1]],
+            ['literal', [2, 2]]
+          ],
+          10, [ // Slightly longer dashes at zoom 10+
+            'match',
+            ['get', 'surfaceType'],
+            'paved', ['literal', [1]],
+            ['literal', [4, 4]]
+          ]
         ]
       }
     });
+    
 
     // Add a black stroke layer that sits underneath
     map.addLayer({
@@ -138,10 +149,20 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
         'line-width': 2,
         'line-opacity': 1,
         'line-dasharray': [
-          'match',
-          ['get', 'surfaceType'],
-          'paved', ['literal', [1]],
-          ['literal', [2, 2]]
+          'step',
+          ['zoom'],
+          [ // Default pattern for zoomed out
+            'match',
+            ['get', 'surfaceType'],
+            'paved', ['literal', [1]],
+            ['literal', [2, 2]]
+          ],
+          10, [ // Slightly longer dashes at zoom 10+
+            'match',
+            ['get', 'surfaceType'],
+            'paved', ['literal', [1]],
+            ['literal', [4, 4]]
+          ]
         ]
       }
     }, layerId);
@@ -306,32 +327,39 @@ export const updateSegmentLayer = async (
     }
 
     const features = data.segments
-      .map((segment: any) => {
-        if (!segment?.geojson?.geometry) {
-          console.warn('Invalid segment data:', segment);
-          return null;
-        }
-
-        return {
-          type: 'Feature',
-          geometry: segment.geojson.geometry,
-          properties: {
-            id: segment._id,
-            title: segment.metadata?.title,
-            length: segment.metadata?.length,
-            userName: segment.userName,
-            auth0Id: segment.auth0Id,
-            averageRating: segment.stats?.averageRating,
-            totalVotes: segment.stats?.totalVotes,
-            surfaceType: segment.metadata?.surfaceTypes?.[0] || 'unknown',
-            metadata: {
-              elevationProfile: segment.metadata?.elevationProfile || [],
-              elevationGain: segment.metadata?.elevationGain,
-              elevationLoss: segment.metadata?.elevationLoss
-            }
+    .map((segment: any) => {
+      if (!segment?.geojson?.geometry) {
+        console.warn('Invalid segment data:', segment);
+        return null;
+      }
+  
+      // Add this logging to help debug surface types
+      console.log('Processing segment surface types:', {
+        id: segment._id,
+        surfaceTypes: segment.metadata?.surfaceTypes,
+        mappedType: segment.metadata?.surfaceTypes?.[0] || 'unknown'
+      });
+  
+      return {
+        type: 'Feature',
+        geometry: segment.geojson.geometry,
+        properties: {
+          id: segment._id,
+          title: segment.metadata?.title,
+          length: segment.metadata?.length,
+          userName: segment.userName,
+          auth0Id: segment.auth0Id,
+          averageRating: segment.stats?.averageRating,
+          totalVotes: segment.stats?.totalVotes,
+          surfaceType: segment.metadata?.surfaceTypes?.[0] || 'unknown',  // Add this line
+          metadata: {
+            elevationProfile: segment.metadata?.elevationProfile || [],
+            elevationGain: segment.metadata?.elevationGain,
+            elevationLoss: segment.metadata?.elevationLoss
           }
-        };
-      })
+        }
+      };
+    })
       .filter(feature => feature !== null && feature.geometry);
 
     source.setData({
