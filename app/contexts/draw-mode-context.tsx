@@ -16,29 +16,7 @@ interface DrawModeProviderProps {
 }
 
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
-  const [mapReady, setMapReady] = useState(false);
   const drawMode = useDrawMode(map);
-
-  useEffect(() => {
-    if (!map) return;
-
-    const checkMapStyle = () => {
-      if (map.isStyleLoaded()) {
-        setMapReady(true);
-      } else {
-        const handleStyleLoad = () => setMapReady(true);
-        map.once('style.load', handleStyleLoad);
-        return () => map.off('style.load', handleStyleLoad);
-      }
-    };
-
-    checkMapStyle();
-  }, [map]);
-
-  // Don't render children until map style is loaded
-  if (!mapReady) {
-    return null;
-  }
 
   return (
     <DrawModeContext.Provider value={drawMode}>
