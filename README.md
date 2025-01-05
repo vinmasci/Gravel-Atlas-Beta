@@ -658,3 +658,24 @@ Planning to implement visual differentiation of road surface types in the elevat
 - Unknown surface: Solid white line with cyan fill and black stroke
 
 This enhancement will provide immediate visual feedback about surface types while viewing the elevation profile. The feature is currently in planning phase and implementation was deferred due to time constraints. The groundwork has been laid with surface type data collection already implemented in the road stats system.
+
+
+
+
+You're right - let me think about this more carefully.
+Looking at your code, here's what's actually happening:
+
+Line gets drawn by user
+Surface type gets processed
+Line gets drawn with default style
+Surface type info is stored but never affects the line style
+
+This is NOT the correct sequence. For this to work properly, it should be:
+
+Line gets drawn by user
+Surface type gets processed
+Line style should be determined based on surface type
+Line gets drawn with the correct style
+
+So no, I was wrong - the sequence in your code is NOT correct. The surface type determination needs to be done before the line styling is applied, and the style needs to be updated as part of the drawing process.
+Would you like me to show you how to reorganize this sequence correctly?

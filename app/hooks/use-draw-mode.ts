@@ -412,18 +412,6 @@ map.addSource(drawingId, {
 });
 
 map.addLayer({
-  id: `${drawingId}-stroke`,  // stroke layer (goes first/underneath)
-  type: 'line',
-  source: drawingId,
-  layout: { 'line-cap': 'round', 'line-join': 'round' },
-  paint: { 
-    'line-color': '#000000',  // black stroke
-    'line-width': 5,  // slightly wider than main line
-    'line-opacity': 1
-  }
-});
-
-map.addLayer({
   id: drawingId,  // main cyan line (goes on top of stroke)
   type: 'line',
   source: drawingId,
@@ -431,9 +419,38 @@ map.addLayer({
   paint: { 
     'line-color': '#00ffff',  // cyan main line
     'line-width': 3,
-    'line-opacity': 1
+    'line-opacity': 1,
+    'line-dasharray': [
+      'case',
+      ['==', ['get', 'surfaceType'], 'unpaved'],
+      ['literal', [2, 2]],  // dashed for unpaved
+      ['==', ['get', 'surfaceType'], 'unknown'],
+      ['literal', [2, 2]],  // dashed for unknown
+      ['literal', [1]]      // solid for paved
+    ]
   }
 });
+
+// Also update the stroke layer
+map.addLayer({
+  id: `${drawingId}-stroke`,  // stroke layer
+  type: 'line',
+  source: drawingId,
+  layout: { 'line-cap': 'round', 'line-join': 'round' },
+  paint: { 
+    'line-color': '#000000',  // black stroke
+    'line-width': 5,
+    'line-opacity': 1,
+    'line-dasharray': [
+      'case',
+      ['==', ['get', 'surfaceType'], 'unpaved'],
+      ['literal', [2, 2]],  // dashed for unpaved
+      ['==', ['get', 'surfaceType'], 'unknown'],
+      ['literal', [2, 2]],  // dashed for unknown
+      ['literal', [1]]      // solid for paved
+    ]
+  }
+}, drawingId);  // Make sure stroke goes under main line
 
 // Add map hover handlers
 map.on('mousemove', drawingId, (e) => {
@@ -806,31 +823,36 @@ if (lineSource && markerSource) {
       layerExists: !!layerRefs.current.drawing,
       segmentsCount: segments.length
     });
-
+  
     if (!map || !layerRefs.current.drawing || segments.length === 0) return;
-
+  
     // Remove the last segment
     const newSegments = segments.slice(0, -1);
     const newClickPoints = clickPoints.slice(0, -1);
     
     // Reconstruct coordinates
     const newCoordinates = newSegments.flatMap(segment => segment.roadPoints);
+  
+    // Get the last segment's surface type
+    const lastSegmentSurfaceType = segments[newSegments.length - 1]?.roadInfo?.surface 
+      ? mapSurfaceType(segments[newSegments.length - 1].roadInfo.surface)
+      : 'unknown';
     
     const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
     const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
-
+  
     if (lineSource && markerSource) {
       lineSource.setData({
         type: 'Feature',
         properties: {
-          surfaceType  // Add the surface type here so the line styles can use it
+          surfaceType: lastSegmentSurfaceType
         },
         geometry: {
           type: 'LineString',
           coordinates: newCoordinates
         }
       });
-
+  
       markerSource.setData({
         type: 'FeatureCollection',
         features: newClickPoints.map(point => ({
@@ -839,12 +861,12 @@ if (lineSource && markerSource) {
             type: 'Point',
             coordinates: point.coordinates
           },
-properties: {
+          properties: {
             timestamp: point.timestamp
           }
         }))
       });
-
+  
       setSegments(newSegments);
       setClickPoints(newClickPoints);
       setDrawnCoordinates(newCoordinates);
