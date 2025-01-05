@@ -185,6 +185,15 @@ export const useDrawMode = (map: Map | null) => {
   const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
+  const [roadStats, setRoadStats] = useState<{
+    highways: { [key: string]: number },
+    surfaces: { [key: string]: number },
+    totalLength: number
+  }>({
+    highways: {},
+    surfaces: {},
+    totalLength: 0
+  });
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
   const isProcessingClick = useRef(false);
@@ -411,43 +420,34 @@ map.addLayer({
         timestamp: Date.now()
       };
   
-      // Get snapped points first
-// NEW CODE
       // Get snapped points and road info
       const { coordinates: newPoints, roadInfo } = await snapToNearestRoad(clickedPoint, previousPoint);
       logStateChange('Points snapped', { originalPoint: clickedPoint, snappedPoints: newPoints });
-
-      // If we have road info, show the popup
-      if (roadInfo && map) {
-          const popup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: false,
-              className: 'road-info-popup'
-          });
-
-          const popupContent = document.createElement('div');
-          popupContent.className = 'px-2 py-1 space-y-1';
+      
+      // Update road stats if we have road info
+      if (roadInfo) {
+        const segmentLength = turf.length(turf.lineString(newPoints), {units: 'kilometers'});
+        
+        setRoadStats(prev => {
+          const newHighways = { ...prev.highways };
+          const newSurfaces = { ...prev.surfaces };
           
-          const content = `
-              <div class="text-sm space-y-1">
-                  ${roadInfo.name ? `<div><strong>Name:</strong> ${roadInfo.name}</div>` : ''}
-                  ${roadInfo.class ? `<div><strong>Type:</strong> ${roadInfo.class}</div>` : ''}
-                  ${roadInfo.surface ? `<div><strong>Surface:</strong> ${roadInfo.surface}</div>` : ''}
-                  ${roadInfo.access ? `<div><strong>Access:</strong> ${roadInfo.access}</div>` : ''}
-              </div>
-          `;
+          // Update highway type counts
+          if (roadInfo.class) {
+            newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
+          }
           
-          popupContent.innerHTML = content;
-
-          // Show popup at the clicked point
-          popup.setLngLat(clickedPoint)
-               .setDOMContent(popupContent)
-               .addTo(map);
-
-          // Remove popup after 3 seconds
-          setTimeout(() => {
-              popup.remove();
-          }, 3000);
+          // Update surface type counts
+          if (roadInfo.surface) {
+            newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
+          }
+          
+          return {
+            highways: newHighways,
+            surfaces: newSurfaces,
+            totalLength: prev.totalLength + segmentLength
+          };
+        });
       }
 
       // Resample points to 100m intervals

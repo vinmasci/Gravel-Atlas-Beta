@@ -313,8 +313,7 @@ export function FloatingElevationProfile() {
                 }}
               />
               
-              {/* Render colored grade segments */}
-{/* Render colored grade segments with gradients */}
+{/* Render colored grade segments */}
 {gradeSegments.map((segment, index) => (
                 <Area
                   key={index}
@@ -322,9 +321,9 @@ export function FloatingElevationProfile() {
                   data={segment.points}
                   dataKey="elevation"
                   stroke={segment.color}
-                  strokeWidth={0.9}  // Reduced stroke width
+                  strokeWidth={0.9}
                   fill={segment.color}
-                  fillOpacity={0.4}  // Reduced fill opacity for gradient effect
+                  fillOpacity={0.4}
                   dot={false}
                   isAnimationActive={false}
                   connectNulls
@@ -343,8 +342,8 @@ export function FloatingElevationProfile() {
                 type="monotone"
                 data={displayData}
                 dataKey="elevation"
-                stroke="rgba(255,255,255,0.0001)"  // Semi-transparent white stroke
-                strokeWidth={0.00000001}  // Very thin stroke
+                stroke="rgba(255,255,255,0.0001)"
+                strokeWidth={0.00000001}
                 fill="none"
                 dot={false}
                 isAnimationActive={false}
@@ -364,6 +363,39 @@ export function FloatingElevationProfile() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Road stats section */}
+        {drawMode.roadStats && drawMode.roadStats.totalLength > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-4 text-sm border-t pt-4">
+            <div>
+              <h3 className="font-medium mb-2">Highway Types</h3>
+              <div className="space-y-1">
+                {Object.entries(drawMode.roadStats.highways)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([type, length]) => (
+                    <div key={type} className="flex justify-between">
+                      <span className="capitalize">{type.replace(/_/g, ' ')}</span>
+                      <span>{((length / drawMode.roadStats.totalLength) * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Surface Types</h3>
+              <div className="space-y-1">
+                {Object.entries(drawMode.roadStats.surfaces)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([type, length]) => (
+                    <div key={type} className="flex justify-between">
+                      <span className="capitalize">{type.replace(/_/g, ' ')}</span>
+                      <span>{((length / drawMode.roadStats.totalLength) * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
