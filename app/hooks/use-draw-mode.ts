@@ -269,9 +269,8 @@ export const useDrawMode = (map: Map | null) => {
 
         logStateChange('Snapping line segment');
         const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/walking/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&steps=true&continue_straight=true&radiuses=25;25&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
-        
         const data = await response.json();
         
         if (data.code === 'Ok' && data.routes.length > 0) {
