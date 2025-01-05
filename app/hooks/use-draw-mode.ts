@@ -48,31 +48,40 @@ interface ResampledPoint {
 
 const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): 'paved' | 'unpaved' | 'unknown' => {
   try {
-    // Check if gravel roads layer exists before querying
-    if (map.getLayer('gravel-roads')) { // Note the hyphen instead of underscore
-      const gravelFeatures = map.queryRenderedFeatures(
-        map.project(point as mapboxgl.LngLatLike),
-        { layers: ['gravel-roads'] }
-      );
-
-      if (gravelFeatures.length > 0) {
-        return 'unpaved';
-      }
+    // Get all layers first
+    const style = map.getStyle();
+    if (!style || !style.layers) {
+      console.log('Map style not loaded yet');
+      return 'unknown';
     }
 
-    // Query multiple possible road layers
-    const roadLayers = ['road', 'road-street', 'road-secondary-tertiary'];
-    for (const layer of roadLayers) {
-      if (map.getLayer(layer)) {
-        const roadFeatures = map.queryRenderedFeatures(
-          map.project(point as mapboxgl.LngLatLike),
-          { layers: [layer] }
-        );
+    // Find all road-related layers
+    const roadLayers = style.layers
+      .filter(layer => 
+        layer.id.includes('road') || 
+        layer.id.includes('street') || 
+        layer.id === 'gravel-roads'
+      )
+      .map(layer => layer.id);
 
-        if (roadFeatures.length > 0 && roadFeatures[0].properties?.surface) {
-          return mapSurfaceType(roadFeatures[0].properties.surface);
-        }
-      }
+    console.log('Found road layers:', roadLayers);
+
+    // Try to find any road features at the clicked point
+    const features = map.queryRenderedFeatures(
+      map.project(point as mapboxgl.LngLatLike),
+      { layers: roadLayers }
+    );
+
+    // First check for gravel roads
+    const gravelRoad = features.find(f => f.layer.id === 'gravel-roads');
+    if (gravelRoad) {
+      return 'unpaved';
+    }
+
+    // Then check other roads
+    const roadFeature = features.find(f => f.properties?.surface);
+    if (roadFeature) {
+      return mapSurfaceType(roadFeature.properties.surface);
     }
 
     return 'unknown';
