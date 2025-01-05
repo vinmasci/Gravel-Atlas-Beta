@@ -38,3 +38,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+scripts/MIGRATE-SEGMENT.md
+scripts/MIGRATE-SEGMENT2.md
+scripts/MIGRATE-SEGMENT.md
+scripts/MIGRATE-SEGMENT2.md
