@@ -170,25 +170,15 @@ const {
 
 // Calculate grades and create display data
 const grades = calculateGrades(drawMode.elevationProfile);
-const data = drawMode.elevationProfile.map((point, index) => {
-  const surfaceType = drawMode.segments.find(segment => {
-    // Get segment bounds
-    const segmentLine = turf.lineString(segment.roadPoints);
-    const totalLength = turf.length(segmentLine, { units: 'kilometers' });
-    const segmentStart = 0;
-    const segmentEnd = totalLength;
+const totalLength = drawMode.roadStats?.totalLength || 1;
+const pavedLength = drawMode.roadStats?.surfaces?.paved || 0;
 
-    // Check if point is within segment bounds
-    return point.distance >= segmentStart && point.distance <= segmentEnd;
-  })?.roadInfo?.surface;
-
-  return {
-    ...point,
-    grade: grades[index] || 0,
-    gradeColor: getGradeColor(grades[index] || 0),
-    isPaved: surfaceType ? mapSurfaceType(surfaceType) === 'paved' : true
-  };
-});
+const data = drawMode.elevationProfile.map((point, index) => ({
+  ...point,
+  grade: grades[index] || 0,
+  gradeColor: getGradeColor(grades[index] || 0),
+  isPaved: (point.distance / maxDist) <= (pavedLength / totalLength)
+}));
 
 // Create segments for coloring based on grade and surface type
 const segments = [];
