@@ -4,16 +4,16 @@
 import { MapStyle, MapStyleConfig } from '../types/map';
 
 export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
-  mapbox: {
-    id: 'mapbox',
-    title: 'Mapbox Streets',  // You can keep this title or change it
-    style: 'mapbox://styles/mapbox/streets-v12',  // Changed from outdoors-v12 to streets-v12
-    type: 'mapbox'
-  },
   frank: {
     id: 'frank',
     title: 'Frank',
-    style: 'mapbox://styles/mapbox/frank-v12',
+    style: 'mapbox://styles/mapbox/light-v11',  // This is the correct style that includes the composite source
+    type: 'mapbox'
+},
+  mapbox: {
+    id: 'mapbox',
+    title: 'Mapbox Streets',
+    style: 'mapbox://styles/mapbox/streets-v12',
     type: 'mapbox'
   },
   'osm-cycle': {
