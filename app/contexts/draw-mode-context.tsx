@@ -56,7 +56,22 @@ interface DrawModeProviderProps {
 
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
   const [isInitialized, setIsInitialized] = useState(false);
+  console.log('=== DrawModeProvider Render ===', {
+    hasMap: !!map,
+    isInitialized,
+    timestamp: new Date().toISOString()
+  });
+
   const drawMode = useDrawMode(map);
+  
+  console.log('=== DrawMode Hook Result ===', {
+    hasDrawMode: !!drawMode,
+    methods: {
+      hasStartDrawing: !!drawMode.startDrawing,
+      hasHandleClick: !!drawMode.handleClick
+    },
+    timestamp: new Date().toISOString()
+  });
 
   useEffect(() => {
     if (!map) {

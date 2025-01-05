@@ -51,6 +51,20 @@ export function DrawSegmentPanel() {
   
   // Initialize draw mode hook with null check
   const drawMode = useDrawModeContext();
+  console.log('=== DrawMode Context ===', {
+    exists: !!drawMode,
+    methods: {
+      hasStartDrawing: !!drawMode?.startDrawing,
+      hasHandleClick: !!drawMode?.handleClick,
+      hasFinishDrawing: !!drawMode?.finishDrawing
+    },
+    state: {
+      isDrawing: drawMode?.isDrawing,
+      coordsLength: drawMode?.drawnCoordinates?.length
+    },
+    timestamp: new Date().toISOString()
+  });
+  
   const { 
     isDrawing = false, 
     drawnCoordinates = [],
@@ -110,18 +124,18 @@ export function DrawSegmentPanel() {
 
   // Handler functions
   const handleDrawingToggle = useCallback(() => {
-    console.log('Drawing toggle clicked:', {
+    console.log('=== Draw Button Clicked ===', {
+      timestamp: new Date().toISOString(),
       drawModeExists: !!drawMode,
       mapExists: !!map,
-      currentState: {
-        isDrawing,
-        coordinates: drawnCoordinates.length,
-        userExists: !!user
-      }
+      isStyleLoaded: map?.isStyleLoaded(),
+      currentDrawingState: isDrawing,
+      existingLayers: map ? map.getStyle().layers.map(l => l.id) : [],
+      currentCoords: drawnCoordinates.length
     });
   
     if (!drawMode || !map) {
-      console.log('Cannot start drawing - missing dependencies');
+      console.log('❌ Cannot start drawing - missing dependencies');
       toast({
         title: "Error",
         description: "Map is not ready. Please try again in a moment.",
@@ -131,16 +145,16 @@ export function DrawSegmentPanel() {
     }
     
     if (!map.isStyleLoaded()) {
-      console.log('Map style not yet loaded');
+      console.log('⏳ Map style not yet loaded, waiting...');
       map.once('style.load', () => {
-        console.log('Style loaded, starting drawing mode');
+        console.log('✅ Style loaded, attempting to start drawing mode');
         if (startDrawing) startDrawing();
       });
       return;
     }
   
     if (!user) {
-      console.log('No user, redirecting to login');
+      console.log('❌ No user logged in');
       toast({
         title: "Authentication Required",
         description: "Please sign in to draw segments",
@@ -151,28 +165,29 @@ export function DrawSegmentPanel() {
     }
   
     if (isDrawing) {
-      console.log('Ending drawing mode:', {
-        coordinatesDrawn: drawnCoordinates.length
+      console.log('🛑 Ending drawing mode:', {
+        coordinatesDrawn: drawnCoordinates.length,
+        timestamp: new Date().toISOString()
       });
       
       if (drawnCoordinates.length > 1) {
-        console.log('Opening save dialog');
+        console.log('📝 Opening save dialog');
         setShowSaveDialog(true);
       } else {
-        console.log('Clearing drawing - insufficient points');
+        console.log('🧹 Clearing drawing - insufficient points');
         clearDrawing();
       }
     } else {
-      console.log('Starting drawing mode');
+      console.log('▶️ Starting drawing mode', {
+        timestamp: new Date().toISOString(),
+        mapStatus: {
+          isReady: !!map,
+          styleLoaded: map?.isStyleLoaded()
+        }
+      });
       startDrawing();
     }
   
-    console.log('Drawing toggle complete:', {
-      timestamp: new Date().toISOString(),
-      newDrawingState: !isDrawing,
-      coordinates: drawnCoordinates.length,
-      drawModeActive: !!drawMode
-    });
   }, [user, isDrawing, drawnCoordinates.length, clearDrawing, startDrawing, toast, drawMode, map]);
 
   const handleSnapToggle = useCallback((enabled: boolean) => {

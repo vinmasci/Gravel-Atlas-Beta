@@ -661,21 +661,24 @@ This enhancement will provide immediate visual feedback about surface types whil
 
 
 
+CURRENT PROBLEM 
+DRAW MODE NOT WORKING
 
-You're right - let me think about this more carefully.
-Looking at your code, here's what's actually happening:
+What we did:
+1. Tried to fix the initialization order by consolidating the `initializeLayers` function
+2. Added error handling for layer operations
+3. Fixed dependency arrays
 
-Line gets drawn by user
-Surface type gets processed
-Line gets drawn with default style
-Surface type info is stored but never affects the line style
+Why it's still not working:
+1. Looking at the error patterns, the main issue appears to be with the timing of map layer initialization. The drawing mode isn't initializing correctly because there's likely still a race condition between when the map is ready and when we try to add layers.
+2. We may have gone too far in restructuring the code - sometimes simpler is better.
 
-This is NOT the correct sequence. For this to work properly, it should be:
+What needs to be done to fix it:
+1. Let's go back to basics and look at when the drawing mode was last working
+2. The key might be in the original implementation's simplicity - it had a single initialization point rather than the split initialization we introduced
+3. I suggest:
+   - Reverting the complex layer initialization changes
+   - Going back to a simpler initialization approach where we add layers in a straightforward way
+   - Making sure we only have ONE initialization path, not multiple competing ones
 
-Line gets drawn by user
-Surface type gets processed
-Line style should be determined based on surface type
-Line gets drawn with the correct style
-
-So no, I was wrong - the sequence in your code is NOT correct. The surface type determination needs to be done before the line styling is applied, and the style needs to be updated as part of the drawing process.
-Would you like me to show you how to reorganize this sequence correctly?
+Would you like me to show you how to implement these fixes?
