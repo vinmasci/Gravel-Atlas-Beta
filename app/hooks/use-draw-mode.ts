@@ -561,10 +561,9 @@ setRoadStats(prev => {
     }
   };
 });
-      }
-      
-      // Resample points to 100m intervals
-      const resampledPoints = resampleLineEvery100m(newPoints);
+
+// Resample points to 100m intervals
+const resampledPoints = resampleLineEvery100m(newPoints);
       logStateChange('Points resampled', { 
           originalCount: newPoints.length, 
           resampledCount: resampledPoints.length 
