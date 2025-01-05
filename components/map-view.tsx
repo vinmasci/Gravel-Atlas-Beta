@@ -91,8 +91,9 @@ function MapViewInner({
   } | null>(null)
 
   interface ElevationPoint {
-    distance: number
-    elevation: number
+    distance: number;
+    elevation: number;
+    surfaceType?: 'paved' | 'unpaved' | 'unknown';
   }
 
   const mapContainerStyle = {

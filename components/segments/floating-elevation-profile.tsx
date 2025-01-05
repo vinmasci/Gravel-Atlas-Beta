@@ -88,6 +88,7 @@ function calculateElevationStats(points: ElevationPoint[]) {
 interface ElevationPoint {
   distance: number;
   elevation: number;
+  surfaceType?: 'paved' | 'unpaved' | 'unknown';
 }
 
 interface DisplayDataPoint extends ElevationPoint {
@@ -170,17 +171,15 @@ const {
 
 // Calculate grades and create display data
 const grades = calculateGrades(drawMode.elevationProfile);
-const totalLength = drawMode.roadStats?.totalLength || 1;
-const pavedLength = drawMode.roadStats?.surfaces?.paved || 0;
 const data = drawMode.elevationProfile.map((point, index) => {
-  // Calculate if this point is on a paved section based on distance ratio
-  const isPaved = (point.distance / totalLength) <= (pavedLength / totalLength);
-
+  // Use the surface type stored in the point when elevation profile was created
+  const surfaceType = point.surfaceType || 'unknown';
+  
   return {
     ...point,
     grade: grades[index] || 0,
     gradeColor: getGradeColor(grades[index] || 0),
-    isPaved: isPaved
+    isPaved: surfaceType === 'paved'
   };
 });
 

@@ -7,6 +7,7 @@ import * as turf from '@turf/turf';
 interface ElevationPoint {
   distance: number;
   elevation: number;
+  surfaceType?: 'paved' | 'unpaved' | 'unknown';
 }
 
 interface ClickPoint {
