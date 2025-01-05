@@ -243,44 +243,50 @@ export const useDrawMode = (map: Map | null) => {
         if (!previousPoint) {
             logStateChange('Snapping single point');
             const response = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=5&limit=5&dedupe=true&include=features.properties.class,features.properties.surface&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const data = await response.json();
             if (data.features && data.features.length > 0) {
-                // Find the closest road that's suitable for cycling
-                const suitableRoads = data.features.filter(f => {
-                    const roadClass = f.properties.class;
-                    return ['path', 'track', 'service', 'tertiary', 'residential', 'secondary', 'primary'].includes(roadClass);
-                });
-
-                if (suitableRoads.length > 0) {
-                    const feature = suitableRoads[0];
-                    const snappedPoint = feature.geometry.coordinates as [number, number];
-                    return {
-                        coordinates: [snappedPoint],
-                        roadInfo: feature.properties
-                    };
-                }
-                return { coordinates: [clickedPoint] };
+                const feature = data.features[0];
+                const snappedPoint = feature.geometry.coordinates as [number, number];
+                return {
+                    coordinates: [snappedPoint],
+                    roadInfo: feature.properties
+                };
             }
             return { coordinates: [clickedPoint] };
         }
 
-        logStateChange('Snapping line segment');
-        const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&steps=true&continue_straight=true&radiuses=25;25&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        // First, snap both points to their nearest roads
+        const [startResponse, endResponse] = await Promise.all([
+            fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${previousPoint[0]},${previousPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`),
+            fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`)
+        ]);
+
+        const [startData, endData] = await Promise.all([
+            startResponse.json(),
+            endResponse.json()
+        ]);
+
+        const startPoint = startData.features?.[0]?.geometry.coordinates || previousPoint;
+        const endPoint = endData.features?.[0]?.geometry.coordinates || clickedPoint;
+
+        // Then use the routing API with the snapped points
+        const routeResponse = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving/${startPoint[0]},${startPoint[1]};${endPoint[0]},${endPoint[1]}?geometries=geojson&overview=full&steps=true&continue_straight=true&waypoint_snapping=15&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
-        const data = await response.json();
         
-        if (data.code === 'Ok' && data.routes.length > 0) {
-            const snappedPoints = data.routes[0].geometry.coordinates as [number, number][];
+        const routeData = await routeResponse.json();
+        
+        if (routeData.code === 'Ok' && routeData.routes.length > 0) {
+            const snappedPoints = routeData.routes[0].geometry.coordinates as [number, number][];
             
-            // Get road info for the middle point of the snapped segment
+            // Get road info for the middle point
             const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
             const tileQueryResponse = await fetch(
-              `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
-          );
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            );
             
             const tileData = await tileQueryResponse.json();
             const roadInfo = tileData.features?.[0]?.properties || {};
