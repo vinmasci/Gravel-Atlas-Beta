@@ -390,50 +390,28 @@ if (data.length > 0) {
                 }}
               />
               
-{/* First, render the surface type areas */}
-{surfaceSegments.map((segment, index) => {
-  if (segment.type === 'paved') return null; // No pattern for paved sections
-  
-  return (
-    <Area
-      key={`surface-${index}`}
-      type="monotone"
-      data={segment.points}
-      dataKey="elevation"
-      stroke="none"
-      fill={segment.type === 'unpaved' ? '#000000' : '#666666'}
-      fillOpacity={0.1}
-      strokeWidth={0}
-      dot={false}
-      isAnimationActive={false}
-      connectNulls
-    />
-  );
-})}
-
-{/* Then render the grade-colored segments on top */}
-{gradeSegments.map((segment, index) => (
-  <Area
-    key={`grade-${index}`}
-    type="monotone"
-    data={segment.points}
-    dataKey="elevation"
-    stroke={segment.color}
-    strokeWidth={0.9}
-    fill={segment.color}
-    fillOpacity={0.3}
-    dot={false}
-    isAnimationActive={false}
-    connectNulls
-  >
-    <defs>
-      <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={segment.color} stopOpacity={0.3}/>
-        <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
-      </linearGradient>
-    </defs>
-  </Area>
-))}
+              {gradeSegments.map((segment, index) => (
+                <Area
+                  key={index}
+                  type="monotone"
+                  data={segment.points}
+                  dataKey="elevation"
+                  stroke={segment.color}
+                  strokeWidth={0.9}
+                  fill={segment.color}
+                  fillOpacity={0.4}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                >
+                  <defs>
+                    <linearGradient id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={segment.color} stopOpacity={0.4}/>
+                      <stop offset="100%" stopColor={segment.color} stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                </Area>
+              ))}
 
               {/* Render top stroke line */}
               <Area
