@@ -258,31 +258,17 @@ export const useDrawMode = (map: Map | null) => {
             return { coordinates: [clickedPoint] };
         }
 
-        // First, snap both points to their nearest roads
-        const [startResponse, endResponse] = await Promise.all([
-            fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${previousPoint[0]},${previousPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`),
-            fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`)
-        ]);
-
-        const [startData, endData] = await Promise.all([
-            startResponse.json(),
-            endResponse.json()
-        ]);
-
-        const startPoint = startData.features?.[0]?.geometry.coordinates || previousPoint;
-        const endPoint = endData.features?.[0]?.geometry.coordinates || clickedPoint;
-
-        // Then use the routing API with the snapped points
-        const routeResponse = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving/${startPoint[0]},${startPoint[1]};${endPoint[0]},${endPoint[1]}?geometries=geojson&overview=full&steps=true&continue_straight=true&waypoint_snapping=15&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        logStateChange('Snapping line segment');
+        const response = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
         
-        const routeData = await routeResponse.json();
+        const data = await response.json();
         
-        if (routeData.code === 'Ok' && routeData.routes.length > 0) {
-            const snappedPoints = routeData.routes[0].geometry.coordinates as [number, number][];
+        if (data.code === 'Ok' && data.routes.length > 0) {
+            const snappedPoints = data.routes[0].geometry.coordinates as [number, number][];
             
-            // Get road info for the middle point
+            // Get road info for the middle point of the snapped segment
             const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
             const tileQueryResponse = await fetch(
                 `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
@@ -330,9 +316,7 @@ map.addSource(drawingId, {
   type: 'geojson',
   data: {
     type: 'Feature',
-    properties: {
-      surface: 'paved'  // default to paved
-    },
+    properties: {},
     geometry: { type: 'LineString', coordinates: [] }
   }
 });
@@ -350,33 +334,7 @@ map.addLayer({
 });
 
 map.addLayer({
-  id: `${drawingId}-white`,  // white line layer for unpaved/unknown
-  type: 'line',
-  source: drawingId,
-  layout: { 
-    'line-cap': 'round', 
-    'line-join': 'round'
-  },
-  paint: { 
-    'line-color': '#ffffff',  // white line
-    'line-width': 3,
-    'line-opacity': [
-      'match',
-      ['get', 'surface'],
-      'paved', 0,  // invisible for paved
-      1  // visible for unpaved/unknown
-    ],
-    'line-dasharray': [
-      'match',
-      ['get', 'surface'],
-      'unpaved', ['literal', [2, 2]],  // dashed for unpaved
-      [1]  // solid for unknown
-    ]
-  }
-});
-
-map.addLayer({
-  id: drawingId,  // main cyan line (goes on top)
+  id: drawingId,  // main cyan line (goes on top of stroke)
   type: 'line',
   source: drawingId,
   layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -501,11 +459,7 @@ map.addLayer({
         
         setRoadStats(prev => {
           const newHighways = { ...prev.highways };
-          const newSurfaces = {
-            paved: prev.surfaces.paved || 0,
-            unpaved: prev.surfaces.unpaved || 0,
-            unknown: prev.surfaces.unknown || 0
-          };
+          const newSurfaces = { ...prev.surfaces };
           
           // Only update stats if we have a valid length
           if (segmentLength > 0) {
@@ -514,9 +468,10 @@ map.addLayer({
               newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
             }
             
-            // Map and update surface type
-            const surfaceType = mapSurfaceType(roadInfo.surface);
-            newSurfaces[surfaceType] += segmentLength;
+            // Update surface type counts
+            if (roadInfo.surface) {
+              newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
+            }
           }
           
           return {
@@ -667,33 +622,28 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
-  // Get the current surface type from roadInfo
-  const surfaceType = roadInfo ? mapSurfaceType(roadInfo.surface) : 'unknown';
-  
   lineSource.setData({
     type: 'Feature',
-    properties: {
-      surface: surfaceType
-    },
+    properties: {},
     geometry: {
       type: 'LineString',
       coordinates: allCoordinates // This will now include elevation data
     }
   });
   
-  markerSource.setData({
-    type: 'FeatureCollection',
-    features: [...clickPoints, newClickPoint].map(point => ({
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: point.coordinates
-      },
-      properties: {
-        timestamp: point.timestamp
-      }
-    }))
-  });
+        markerSource.setData({
+          type: 'FeatureCollection',
+          features: [...clickPoints, newClickPoint].map(point => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: point.coordinates
+            },
+            properties: {
+              timestamp: point.timestamp
+            }
+          }))
+        });
   
         setElevationProfile(prev => {
           // Get the last distance from previous profile
