@@ -736,7 +736,11 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
-  const features = newSegments.map(segment => ({
+  // First update segments state
+  const updatedSegments = [...segments, { ...newSegment, roadInfo }];
+  
+  // Then map the features using the updated segments
+  const features = updatedSegments.map(segment => ({
     type: 'Feature',
     properties: {
       surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
@@ -746,6 +750,25 @@ if (lineSource && markerSource) {
       coordinates: segment.roadPoints
     }
   }));
+
+  // Add the current drawing segment if it exists
+  if (newPoints.length > 0) {
+    features.push({
+      type: 'Feature',
+      properties: {
+        surfaceType: surfaceType
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: newPoints
+      }
+    });
+  }
+
+  lineSource.setData({
+    type: 'FeatureCollection',
+    features: features
+  });
 
   lineSource.setData({
     type: 'FeatureCollection',
