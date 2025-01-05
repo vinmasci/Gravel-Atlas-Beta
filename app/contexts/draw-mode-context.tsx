@@ -34,8 +34,7 @@ const DrawModeContext = createContext<UseDrawModeReturn>(defaultDrawModeValue);
 
 export const useDrawModeContext = () => {
   const context = useContext(DrawModeContext);
-  if (!context) throw new Error('useDrawModeContext must be used within DrawModeProvider');
-  return context;
+  return context || defaultDrawModeValue;
 };
 
 interface DrawModeProviderProps {
@@ -63,11 +62,11 @@ export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, ma
 
   // Only provide the drawMode when everything is ready
   const value = React.useMemo(() => 
-    isReady ? drawMode : null
+    isReady ? drawMode : defaultDrawModeValue
   , [isReady, drawMode]);
 
   return (
-    <DrawModeContext.Provider value={value}>
+    <DrawModeContext.Provider value={value || defaultDrawModeValue}>
       {children}
     </DrawModeContext.Provider>
   );
