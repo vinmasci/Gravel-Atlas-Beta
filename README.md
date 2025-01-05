@@ -649,3 +649,12 @@ The error we hit:
 
 You have duplicate declarations of variables (elevations, displayData, etc.)
 These are declared at the top of the component AND after the if (!drawMode?.isDrawing) check
+
+
+## 🔄 Planned Feature: Enhanced Surface Type Visualization (January 2025)
+Planning to implement visual differentiation of road surface types in the elevation profile:
+- Paved roads: Solid cyan line with black stroke
+- Unpaved roads: White dashed line with cyan fill and black stroke
+- Unknown surface: Solid white line with cyan fill and black stroke
+
+This enhancement will provide immediate visual feedback about surface types while viewing the elevation profile. The feature is currently in planning phase and implementation was deferred due to time constraints. The groundwork has been laid with surface type data collection already implemented in the road stats system.

@@ -103,32 +103,35 @@ export function FloatingElevationProfile() {
   });
   const [hoverPoint, setHoverPoint] = useState<ElevationPoint | null>(null);
 
-  // Calculate display data and related values using useMemo
-  const {
-    displayData,
-    minElevation,
-    maxElevation,
-    elevationPadding,
-    maxDistance,
-    gradeSegments,
-    maxGrade,
-    minGrade,
-    ascent,
-    descent
-  } = useMemo(() => {
-    if (!drawMode?.isDrawing || !drawMode.elevationProfile) {
-      return {
-        displayData: [{ distance: 0, elevation: 0, grade: 0, gradeColor: '#84CC16' }],
-        minElevation: 0,
-        maxElevation: 100,
-        elevationPadding: 10,
-        maxDistance: 1,
-        gradeSegments: [],
-        maxGrade: 0,
-        minGrade: 0
-      };
-    }
+// Calculate display data and related values using useMemo
+const {
+  displayData,
+  minElevation,
+  maxElevation,
+  elevationPadding,
+  maxDistance,
+  gradeSegments,
+  maxGrade,
+  minGrade,
+  ascent,
+  descent
+} = useMemo(() => {
+  if (!drawMode?.isDrawing || !drawMode.elevationProfile) {
+    return {
+      displayData: [{ distance: 0, elevation: 0, grade: 0, gradeColor: '#84CC16' }],
+      minElevation: 0,
+      maxElevation: 100,
+      elevationPadding: 10,
+      maxDistance: 1,
+      gradeSegments: [],
+      maxGrade: 0,
+      minGrade: 0,
+      ascent: 0,
+      descent: 0
+    };
+  }
 
+  if (drawMode.elevationProfile.length < 2) {
     const elevations = drawMode.elevationProfile.map(point => point.elevation);
     const minElev = Math.min(...elevations, 0);
     const maxElev = Math.max(...elevations, 100);
@@ -138,63 +141,75 @@ export function FloatingElevationProfile() {
       1
     );
 
-    const { ascent, descent } = calculateElevationStats(drawMode.elevationProfile);
-
-    if (drawMode.elevationProfile.length < 2) {
-      return {
-        displayData: data,
-        minElevation: minElev,
-        maxElevation: maxElev,
-        elevationPadding: padding,
-        maxDistance: maxDist,
-        gradeSegments: segments,
-        maxGrade,
-        minGrade,
-        ascent,
-        descent
-      };
-    }
-
-    const grades = calculateGrades(drawMode.elevationProfile);
-    const data = drawMode.elevationProfile.map((point, index) => ({
-      ...point,
-      grade: grades[index] || 0,
-      gradeColor: getGradeColor(grades[index] || 0)
-    }));
-
-    // Create segments for coloring based on grade with overlap at transition points
-    const segments = [];
-    let currentColor = data[0].gradeColor;
-    let currentSegment = [data[0]];
-
-    for (let i = 1; i < data.length; i++) {
-      if (data[i].gradeColor === currentColor) {
-        currentSegment.push(data[i]);
-      } else {
-        // Add the transition point to both segments to ensure no gaps
-        currentSegment.push(data[i]);
-        segments.push({ points: currentSegment, color: currentColor });
-        currentColor = data[i].gradeColor;
-        currentSegment = [data[i - 1], data[i]]; // Include previous point for continuity
-      }
-    }
-    segments.push({ points: currentSegment, color: currentColor });
-
-    const maxGrade = Math.max(...grades);
-    const minGrade = Math.min(...grades);
-
     return {
-      displayData: data,
+      displayData: [{ distance: 0, elevation: elevations[0] || 0, grade: 0, gradeColor: '#84CC16' }],
       minElevation: minElev,
       maxElevation: maxElev,
       elevationPadding: padding,
       maxDistance: maxDist,
-      gradeSegments: segments,
-      maxGrade,
-      minGrade
+      gradeSegments: [],
+      maxGrade: 0,
+      minGrade: 0,
+      ascent: 0,
+      descent: 0
     };
-  }, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+  }
 
+  // Calculate basic elevation data
+  const elevations = drawMode.elevationProfile.map(point => point.elevation);
+  const minElev = Math.min(...elevations, 0);
+  const maxElev = Math.max(...elevations, 100);
+  const padding = (maxElev - minElev) * 0.1;
+  const maxDist = Math.max(
+    ...drawMode.elevationProfile.map(point => point.distance),
+    1
+  );
+
+  // Calculate elevation stats
+  const elevationStats = calculateElevationStats(drawMode.elevationProfile);
+
+  // Calculate grades and create display data
+  const grades = calculateGrades(drawMode.elevationProfile);
+  const data = drawMode.elevationProfile.map((point, index) => ({
+    ...point,
+    grade: grades[index] || 0,
+    gradeColor: getGradeColor(grades[index] || 0)
+  }));
+
+  // Create segments for coloring based on grade with overlap at transition points
+  const segments = [];
+  let currentColor = data[0].gradeColor;
+  let currentSegment = [data[0]];
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i].gradeColor === currentColor) {
+      currentSegment.push(data[i]);
+    } else {
+      // Add the transition point to both segments to ensure no gaps
+      currentSegment.push(data[i]);
+      segments.push({ points: currentSegment, color: currentColor });
+      currentColor = data[i].gradeColor;
+      currentSegment = [data[i - 1], data[i]]; // Include previous point for continuity
+    }
+  }
+  segments.push({ points: currentSegment, color: currentColor });
+
+  const maxGrade = Math.max(...grades);
+  const minGrade = Math.min(...grades);
+
+  return {
+    displayData: data,
+    minElevation: minElev,
+    maxElevation: maxElev,
+    elevationPadding: padding,
+    maxDistance: maxDist,
+    gradeSegments: segments,
+    maxGrade,
+    minGrade,
+    ascent: elevationStats.ascent,
+    descent: elevationStats.descent
+  };
+}, [drawMode?.isDrawing, drawMode?.elevationProfile]);
   // Map hover effect
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
@@ -289,7 +304,7 @@ export function FloatingElevationProfile() {
             <span className="text-sm text-muted-foreground">Click points on the map to see elevation data</span>
           )}
         </div>
-        
+
         <div className="h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
