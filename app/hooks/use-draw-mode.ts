@@ -130,10 +130,11 @@ function calculatePointDistances(points: [number, number, number][]) {
     );
     
     distance += segmentDistance;
-    return {
-      distance: distance,
-      elevation: point[2]
-    };
+return {
+  distance: distance,
+  elevation: point[2],
+  surfaceType: resampledSurfaceTypes[index]  // Use the surface type from resampled data
+};
   });
 }
 
