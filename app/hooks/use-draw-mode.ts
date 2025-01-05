@@ -285,6 +285,32 @@ export const useDrawMode = (map: Map | null) => {
   const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
   const [initialized, setInitialized] = useState(false);
   const [isDrawingEnabled, setIsDrawingEnabled] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);
+  const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
+  const [snapToRoad, setSnapToRoad] = useState(true);
+  const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
+  const [roadStats, setRoadStats] = useState<{
+    highways: { [key: string]: number },
+    surfaces: { [key: string]: number },
+    totalLength: number,
+    surfacePercentages: {
+      paved: number,
+      unpaved: number,
+      unknown: number
+    }
+  }>({
+    highways: {},
+    surfaces: {},
+    totalLength: 0,
+    surfacePercentages: {
+      paved: 0,
+      unpaved: 0,
+      unknown: 0
+    }
+  });
   
   useEffect(() => {
     if (!map) return;
@@ -295,7 +321,6 @@ export const useDrawMode = (map: Map | null) => {
         return;
       }
       
-      // Make sure we have our drawing source and layer
       try {
         if (!map.getSource('drawing')) {
           map.addSource('drawing', {
@@ -325,7 +350,6 @@ export const useDrawMode = (map: Map | null) => {
     initializeDrawing();
     
     return () => {
-      // Cleanup if unmounted
       if (map.getLayer('drawing-base')) {
         map.removeLayer('drawing-base');
       }
@@ -334,44 +358,6 @@ export const useDrawMode = (map: Map | null) => {
       }
     };
   }, [map]);
-
-  // Modify startDrawing to check initialization
-  const startDrawing = useCallback(() => {
-    if (!initialized || !map) {
-      console.log('Cannot start drawing - not initialized');
-      return;
-    }
-    
-    setIsDrawingEnabled(true);
-    // Rest of your startDrawing logic
-  }, [initialized, map]);
-
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);
-  const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
-  const [snapToRoad, setSnapToRoad] = useState(true);
-  const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [hoveredPoint, setHoveredPoint] = useState<HoverPoint | null>(null);
-  const [roadStats, setRoadStats] = useState<{
-    highways: { [key: string]: number },
-    surfaces: { [key: string]: number },
-    totalLength: number,
-    surfacePercentages: {
-      paved: number,
-      unpaved: number,
-      unknown: number
-    }
-  }>({
-    highways: {},
-    surfaces: {},
-    totalLength: 0,
-    surfacePercentages: {
-      paved: 0,
-      unpaved: 0,
-      unknown: 0
-    }
-  });
   
   // The RoadStats update in handleClick remains the same as you have it
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
