@@ -17,6 +17,11 @@ interface ClickPoint {
 interface Segment {
   clickPoint: ClickPoint;
   roadPoints: [number, number][];
+  roadInfo: {
+    surface?: string;
+    class?: string;
+    [key: string]: any;
+  };
 }
 
 // Add this new interface right after them:
@@ -410,30 +415,7 @@ map.addSource(drawingId, {
   }
 });
 
-map.addLayer({
-  id: drawingId,
-  type: 'line',
-  source: drawingId,
-  layout: {
-    'line-cap': 'round',
-    'line-join': 'round'
-  },
-  paint: {
-    'line-color': '#00ffff',
-    'line-width': 3,
-    'line-opacity': 1,
-    'line-dasharray': [
-      'case',
-      ['==', ['get', 'surfaceType'], 'unpaved'],
-      ['literal', [2, 2]],
-      ['==', ['get', 'surfaceType'], 'unknown'],
-      ['literal', [2, 2]],
-      ['literal', [1]]
-    ]
-  }
-});
-
-// Update stroke layer too
+// 1. Bottom black stroke layer
 map.addLayer({
   id: `${drawingId}-stroke`,
   type: 'line',
@@ -445,15 +427,45 @@ map.addLayer({
   paint: {
     'line-color': '#000000',
     'line-width': 5,
-    'line-opacity': 1,
-    'line-dasharray': [
+    'line-opacity': 1
+  }
+});
+
+// 2. Middle cyan line layer
+map.addLayer({
+  id: drawingId,
+  type: 'line',
+  source: drawingId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#00ffff',
+    'line-width': 3,
+    'line-opacity': 1
+  }
+}, `${drawingId}-stroke`);
+
+// 3. Top white dash pattern layer (only for unpaved)
+map.addLayer({
+  id: `${drawingId}-dash`,
+  type: 'line',
+  source: drawingId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#ffffff',
+    'line-width': 2,
+    'line-opacity': [
       'case',
       ['==', ['get', 'surfaceType'], 'unpaved'],
-      ['literal', [2, 2]],
-      ['==', ['get', 'surfaceType'], 'unknown'],
-      ['literal', [2, 2]],
-      ['literal', [1]]
-    ]
+      1,
+      0
+    ],
+    'line-dasharray': [1, 3]  // Small, closely spaced dashes
   }
 }, drawingId);
 
@@ -607,11 +619,12 @@ const resampledPoints = resampleLineEvery100m(newPoints);
       const elevationData = await getElevation(resampledPoints);
       logStateChange('Elevation data received', { elevationData });
       
-      // Create new segment
-      const newSegment: Segment = {
-        clickPoint: newClickPoint,
-        roadPoints: newPoints
-      };
+// Create new segment
+const newSegment: Segment = {
+  clickPoint: newClickPoint,
+  roadPoints: newPoints,
+  roadInfo: roadInfo || {}  // Add this line
+};
       
       // Process elevation data
       let newElevationPoints;
@@ -736,11 +749,11 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
-  // First update segments state
-  const updatedSegments = [...segments, { ...newSegment, roadInfo }];
+  // Get existing segments from state
+  const currentSegments = segments;
   
-  // Then map the features using the updated segments
-  const features = updatedSegments.map(segment => ({
+  // Map all segments to features
+  const features = currentSegments.map(segment => ({
     type: 'Feature',
     properties: {
       surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
@@ -751,25 +764,19 @@ if (lineSource && markerSource) {
     }
   }));
 
-  // Add the current drawing segment if it exists
-  if (newPoints.length > 0) {
-    features.push({
-      type: 'Feature',
-      properties: {
-        surfaceType: surfaceType
-      },
-      geometry: {
-        type: 'LineString',
-        coordinates: newPoints
-      }
-    });
-  }
-
-  lineSource.setData({
-    type: 'FeatureCollection',
-    features: features
+  // Add the new segment as a separate feature
+  features.push({
+    type: 'Feature',
+    properties: {
+      surfaceType: surfaceType
+    },
+    geometry: {
+      type: 'LineString',
+      coordinates: newPoints
+    }
   });
 
+  // Update the source with all features
   lineSource.setData({
     type: 'FeatureCollection',
     features: features
@@ -879,30 +886,28 @@ if (lineSource && markerSource) {
     if (!map || !layerRefs.current.drawing || segments.length === 0) return;
   
     // Remove the last segment
-    const newSegments = segments.slice(0, -1);
+    const updatedSegments = segments.slice(0, -1);
     const newClickPoints = clickPoints.slice(0, -1);
-    
-    // Reconstruct coordinates
-    const newCoordinates = newSegments.flatMap(segment => segment.roadPoints);
-  
-    // Get the last segment's surface type
-    const lastSegmentSurfaceType = segments[newSegments.length - 1]?.roadInfo?.surface 
-      ? mapSurfaceType(segments[newSegments.length - 1].roadInfo.surface)
-      : 'unknown';
     
     const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONSource;
     const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
   
     if (lineSource && markerSource) {
-      lineSource.setData({
+      // Create features from remaining segments
+      const features = updatedSegments.map(segment => ({
         type: 'Feature',
         properties: {
-          surfaceType: lastSegmentSurfaceType
+          surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
         },
         geometry: {
           type: 'LineString',
-          coordinates: newCoordinates
+          coordinates: segment.roadPoints
         }
+      }));
+  
+      lineSource.setData({
+        type: 'FeatureCollection',
+        features: features
       });
   
       markerSource.setData({
@@ -919,9 +924,9 @@ if (lineSource && markerSource) {
         }))
       });
   
-      setSegments(newSegments);
+      setSegments(updatedSegments);
       setClickPoints(newClickPoints);
-      setDrawnCoordinates(newCoordinates);
+      setDrawnCoordinates(updatedSegments.flatMap(segment => segment.roadPoints));
       setElevationProfile(prev => {
         const newProfile = prev.slice(0, -1);
         logStateChange('Elevation profile updated after undo', {
