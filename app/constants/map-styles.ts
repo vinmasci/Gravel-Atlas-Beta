@@ -9,7 +9,13 @@ export const MAP_STYLES: Record<MapStyle, MapStyleConfig> = {
     title: 'Mapbox Streets',  // You can keep this title or change it
     style: 'mapbox://styles/mapbox/streets-v12',  // Changed from outdoors-v12 to streets-v12
     type: 'mapbox'
-},
+  },
+  frank: {
+    id: 'frank',
+    title: 'Frank',
+    style: 'mapbox://styles/mapbox/frank-v12',
+    type: 'mapbox'
+  },
   'osm-cycle': {
     id: 'osm-cycle',
     title: 'OSM Cycle',
