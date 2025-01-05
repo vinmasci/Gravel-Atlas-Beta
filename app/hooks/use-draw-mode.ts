@@ -108,6 +108,25 @@ function smoothElevationData(points: ElevationPoint[], windowSize: number = 3): 
   });
 }
 
+function mapSurfaceType(surface: string): 'paved' | 'unpaved' | 'unknown' {
+  // Paved surfaces
+  const pavedSurfaces = [
+    'paved', 'asphalt', 'concrete', 'paving_stones', 'sett',
+    'cobblestone', 'metal', 'wood', 'concrete:plates'
+  ];
+  
+  // Unpaved surfaces
+  const unpavedSurfaces = [
+    'unpaved', 'compacted', 'fine_gravel', 'gravel', 'dirt',
+    'earth', 'ground', 'grass', 'mud', 'sand', 'woodchips'
+  ];
+
+  if (!surface) return 'unknown';
+  if (pavedSurfaces.includes(surface.toLowerCase())) return 'paved';
+  if (unpavedSurfaces.includes(surface.toLowerCase())) return 'unpaved';
+  return 'unknown';
+}
+
 function calculateGrades(points: ElevationPoint[], minDistance: number = 0.05): number[] {  // reduced from 0.1 to 0.05
   // Calculate grades over minimum distance (50m = 0.05km)
   const grades: number[] = [];
@@ -224,7 +243,7 @@ export const useDrawMode = (map: Map | null) => {
         if (!previousPoint) {
             logStateChange('Snapping single point');
             const response = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=2&limit=1&dedupe=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const data = await response.json();
@@ -241,7 +260,7 @@ export const useDrawMode = (map: Map | null) => {
 
         logStateChange('Snapping line segment');
         const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            `https://api.mapbox.com/directions/v5/mapbox/cycling/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
         );
         
         const data = await response.json();
@@ -252,7 +271,7 @@ export const useDrawMode = (map: Map | null) => {
             // Get road info for the middle point of the snapped segment
             const midPoint = snappedPoints[Math.floor(snappedPoints.length / 2)];
             const tileQueryResponse = await fetch(
-                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=10&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=2&limit=1&dedupe=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
             );
             
             const tileData = await tileQueryResponse.json();
@@ -297,7 +316,9 @@ map.addSource(drawingId, {
   type: 'geojson',
   data: {
     type: 'Feature',
-    properties: {},
+    properties: {
+      surface: 'paved'  // default to paved
+    },
     geometry: { type: 'LineString', coordinates: [] }
   }
 });
@@ -315,7 +336,33 @@ map.addLayer({
 });
 
 map.addLayer({
-  id: drawingId,  // main cyan line (goes on top of stroke)
+  id: `${drawingId}-white`,  // white line layer for unpaved/unknown
+  type: 'line',
+  source: drawingId,
+  layout: { 
+    'line-cap': 'round', 
+    'line-join': 'round'
+  },
+  paint: { 
+    'line-color': '#ffffff',  // white line
+    'line-width': 3,
+    'line-opacity': [
+      'match',
+      ['get', 'surface'],
+      'paved', 0,  // invisible for paved
+      1  // visible for unpaved/unknown
+    ],
+    'line-dasharray': [
+      'match',
+      ['get', 'surface'],
+      'unpaved', ['literal', [2, 2]],  // dashed for unpaved
+      [1]  // solid for unknown
+    ]
+  }
+});
+
+map.addLayer({
+  id: drawingId,  // main cyan line (goes on top)
   type: 'line',
   source: drawingId,
   layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -440,7 +487,11 @@ map.addLayer({
         
         setRoadStats(prev => {
           const newHighways = { ...prev.highways };
-          const newSurfaces = { ...prev.surfaces };
+          const newSurfaces = {
+            paved: prev.surfaces.paved || 0,
+            unpaved: prev.surfaces.unpaved || 0,
+            unknown: prev.surfaces.unknown || 0
+          };
           
           // Only update stats if we have a valid length
           if (segmentLength > 0) {
@@ -449,10 +500,9 @@ map.addLayer({
               newHighways[roadInfo.class] = (newHighways[roadInfo.class] || 0) + segmentLength;
             }
             
-            // Update surface type counts
-            if (roadInfo.surface) {
-              newSurfaces[roadInfo.surface] = (newSurfaces[roadInfo.surface] || 0) + segmentLength;
-            }
+            // Map and update surface type
+            const surfaceType = mapSurfaceType(roadInfo.surface);
+            newSurfaces[surfaceType] += segmentLength;
           }
           
           return {
@@ -603,28 +653,33 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
+  // Get the current surface type from roadInfo
+  const surfaceType = roadInfo ? mapSurfaceType(roadInfo.surface) : 'unknown';
+  
   lineSource.setData({
     type: 'Feature',
-    properties: {},
+    properties: {
+      surface: surfaceType
+    },
     geometry: {
       type: 'LineString',
       coordinates: allCoordinates // This will now include elevation data
     }
   });
   
-        markerSource.setData({
-          type: 'FeatureCollection',
-          features: [...clickPoints, newClickPoint].map(point => ({
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: point.coordinates
-            },
-            properties: {
-              timestamp: point.timestamp
-            }
-          }))
-        });
+  markerSource.setData({
+    type: 'FeatureCollection',
+    features: [...clickPoints, newClickPoint].map(point => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: point.coordinates
+      },
+      properties: {
+        timestamp: point.timestamp
+      }
+    }))
+  });
   
         setElevationProfile(prev => {
           // Get the last distance from previous profile
