@@ -16,7 +16,19 @@ interface DrawModeProviderProps {
 }
 
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
+  const [initialized, setInitialized] = useState(false);
   const drawMode = useDrawMode(map);
+
+  useEffect(() => {
+    if (map && !initialized) {
+      setInitialized(true);
+    }
+  }, [map, initialized]);
+
+  if (!initialized && map) {
+    return null; // or a loading indicator
+  }
+
   return (
     <DrawModeContext.Provider value={drawMode}>
       {children}
