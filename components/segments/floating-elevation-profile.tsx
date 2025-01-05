@@ -230,7 +230,7 @@ if (data.length > 0) {
     ascent: elevationStats.ascent,
     descent: elevationStats.descent
   };
-}, [drawMode?.isDrawing, drawMode?.elevationProfile]);
+}, [drawMode?.isDrawing, drawMode?.elevationProfile, drawMode?.roadStats]);
   // Map hover effect
   useEffect(() => {
     if (!hoverPoint || !drawMode?.map) return;
