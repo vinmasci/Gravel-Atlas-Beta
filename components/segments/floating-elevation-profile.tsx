@@ -170,17 +170,17 @@ const {
 
 // Calculate grades and create display data
 const grades = calculateGrades(drawMode.elevationProfile);
+const totalLength = drawMode.roadStats?.totalLength || 1;
+const pavedLength = drawMode.roadStats?.surfaces?.paved || 0;
 const data = drawMode.elevationProfile.map((point, index) => {
-  // Find which surface segment this point belongs to
-  const surfaceSegment = drawMode.roadStats?.surfaceSegments?.find(
-    segment => point.distance >= segment.start && point.distance <= segment.end
-  );
+  // Calculate if this point is on a paved section based on distance ratio
+  const isPaved = (point.distance / totalLength) <= (pavedLength / totalLength);
 
   return {
     ...point,
     grade: grades[index] || 0,
     gradeColor: getGradeColor(grades[index] || 0),
-    isPaved: surfaceSegment?.type === 'paved'
+    isPaved: isPaved
   };
 });
 

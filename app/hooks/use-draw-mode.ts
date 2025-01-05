@@ -270,6 +270,8 @@ export const useDrawMode = (map: Map | null) => {
       unknown: 0
     }
   });
+  
+  // The RoadStats update in handleClick remains the same as you have it
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
   const isProcessingClick = useRef(false);
