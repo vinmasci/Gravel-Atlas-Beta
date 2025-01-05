@@ -283,6 +283,10 @@ async function getElevation(coordinates: [number, number][], signal?: AbortSigna
 
 export const useDrawMode = (map: Map | null) => {
   const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
+  const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
+  const pendingOperation = useRef<AbortController | null>(null);
+  const isProcessingClick = useRef(false);
+
   const [initialized, setInitialized] = useState(false);
   const [isDrawingEnabled, setIsDrawingEnabled] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -314,55 +318,45 @@ export const useDrawMode = (map: Map | null) => {
   
   useEffect(() => {
     if (!map) return;
-    
-    const initializeDrawing = () => {
+
+    const checkAndInitialize = () => {
       if (!map.isStyleLoaded()) {
-        map.once('style.load', initializeDrawing);
+        map.once('style.load', checkAndInitialize);
         return;
       }
-      
+
       try {
-        if (!map.getSource('drawing')) {
-          map.addSource('drawing', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] }
-          });
+        // Clean up any existing layers
+        if (layerRefs.current.drawing) {
+          map.removeLayer(`${layerRefs.current.drawing}-dashes`);
+          map.removeLayer(layerRefs.current.drawing);
+          map.removeLayer(`${layerRefs.current.drawing}-stroke`);
+          map.removeSource(layerRefs.current.drawing);
         }
         
-        if (!map.getLayer('drawing-base')) {
-          map.addLayer({
-            id: 'drawing-base',
-            type: 'line',
-            source: 'drawing',
-            paint: {
-              'line-color': '#000',
-              'line-width': 3
-            }
-          });
-        }
-        
+        // Initialize new layers
+        initializeLayers();
         setInitialized(true);
       } catch (e) {
-        console.error('Failed to initialize drawing:', e);
+        console.error('Error during initialization:', e);
       }
     };
-    
-    initializeDrawing();
-    
+
+    checkAndInitialize();
+
     return () => {
-      if (map.getLayer('drawing-base')) {
-        map.removeLayer('drawing-base');
-      }
-      if (map.getSource('drawing')) {
-        map.removeSource('drawing');
+      if (map && layerRefs.current.drawing) {
+        try {
+          map.removeLayer(`${layerRefs.current.drawing}-dashes`);
+          map.removeLayer(layerRefs.current.drawing);
+          map.removeLayer(`${layerRefs.current.drawing}-stroke`);
+          map.removeSource(layerRefs.current.drawing);
+        } catch (e) {
+          console.error('Error cleaning up drawing layers:', e);
+        }
       }
     };
-  }, [map]);
-  
-  // The RoadStats update in handleClick remains the same as you have it
-  const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
-  const pendingOperation = useRef<AbortController | null>(null);
-  const isProcessingClick = useRef(false);
+  }, [map, initializeLayers]);
 
   // Debug state changes
   useEffect(() => {
@@ -996,20 +990,18 @@ if (lineSource && markerSource) {
           }
         }, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
 
-  const startDrawing = useCallback(() => {
-    logStateChange('Starting drawing mode', { mapExists: !!map });
-    if (!map) return;
-    
-    setIsDrawing(true);
-    setDrawnCoordinates([]);
-    setElevationProfile([]);
-    setClickPoints([]);
-    setSegments([]);
-    
-    map.getCanvas().style.cursor = 'crosshair';
-    initializeLayers();
-    logStateChange('Drawing mode started');
-  }, [map, initializeLayers]);
+        const startDrawing = useCallback(() => {
+          if (!map || !map.isStyleLoaded()) return;
+          
+          setIsDrawing(true);
+          setDrawnCoordinates([]);
+          setElevationProfile([]);
+          setClickPoints([]);
+          setSegments([]);
+          
+          map.getCanvas().style.cursor = 'crosshair';
+          initializeLayers();
+        }, [map, initializeLayers]);
 
   const undoLastPoint = useCallback(() => {
     logStateChange('Undoing last point', {
