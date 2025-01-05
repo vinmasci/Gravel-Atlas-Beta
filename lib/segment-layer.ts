@@ -87,52 +87,63 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       }
     });
 
-    // Add the main line layer
-    map.addLayer({
-      id: layerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-'line-color': [
-  'match',
-  ['case',
-    ['==', ['get', 'totalVotes'], 0], -1,  // If no votes, use -1 to match cyan
-    ['floor', ['get', 'averageRating']]    // Otherwise use the rating
-  ],
-  -1, '#00FFFF',   // Cyan for unrated (no votes)
-  0, '#84CC16',    // lime-500 for 0 rating
-  1, '#84CC16',    // lime-500
-  2, '#EAB308',    // yellow-500
-  3, '#F97316',    // orange-500
-  4, '#EF4444',    // red-500
-  5, '#991B1B',    // red-800
-  6, '#450a0a',    // dark red/black
-  '#00FFFF'        // Default to cyan
-],
-        'line-width': 1.5,
-        'line-opacity': 1
-      }
-    });
+// AFTER - in segment-layer.ts
+// Add the main line layer
+map.addLayer({
+  id: layerId,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round',
+    'line-dasharray': [
+      'case',
+      ['==', ['to-string', ['get', 'surfaceType']], 'paved'], ['literal', [1]], // Solid line for paved
+      ['literal', [2, 2]] // Dashed line for unpaved/unknown
+    ]
+  },
+  paint: {
+    'line-color': [
+      'match',
+      ['case',
+        ['==', ['get', 'totalVotes'], 0], -1,
+        ['floor', ['get', 'averageRating']]
+      ],
+      -1, '#00FFFF',   // Cyan for unrated (no votes)
+      0, '#84CC16',    // lime-500 for 0 rating
+      1, '#84CC16',    // lime-500
+      2, '#EAB308',    // yellow-500
+      3, '#F97316',    // orange-500
+      4, '#EF4444',    // red-500
+      5, '#991B1B',    // red-800
+      6, '#450a0a',    // dark red/black
+      '#00FFFF'        // Default to cyan
+    ],
+    'line-width': 1.5,
+    'line-opacity': 1
+  }
+});
 
-    // Add a black stroke layer that sits underneath
-    map.addLayer({
-      id: `${layerId}-stroke`,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#000000',
-        'line-width': 2,
-        'line-opacity': 1
-      }
-    }, layerId); // This ensures the stroke is rendered beneath the main line
+// Add a black stroke layer that sits underneath
+map.addLayer({
+  id: `${layerId}-stroke`,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round',
+    'line-dasharray': [
+      'case',
+      ['==', ['to-string', ['get', 'surfaceType']], 'paved'], ['literal', [1]], // Solid line for paved
+      ['literal', [2, 2]] // Dashed line for unpaved/unknown
+    ]
+  },
+  paint: {
+    'line-color': '#000000',
+    'line-width': 2,
+    'line-opacity': 1
+  }
+}, layerId);
 
 // Add hover effect
 map.on('mouseenter', layerId, (e) => {
@@ -296,32 +307,34 @@ export const updateSegmentLayer = async (
       return;
     }
 
-    const features = data.segments
-      .map((segment: any) => {
-        if (!segment?.geojson?.geometry) {
-          console.warn('Invalid segment data:', segment);
-          return null;
-        }
+// AFTER - in segment-layer.ts updateSegmentLayer function
+const features = data.segments
+  .map((segment: any) => {
+    if (!segment?.geojson?.geometry) {
+      console.warn('Invalid segment data:', segment);
+      return null;
+    }
 
-        return {
-          type: 'Feature',
-          geometry: segment.geojson.geometry,
-          properties: {
-            id: segment._id,
-            title: segment.metadata?.title,
-            length: segment.metadata?.length,
-            userName: segment.userName,
-            auth0Id: segment.auth0Id,
-            averageRating: segment.stats?.averageRating,
-            totalVotes: segment.stats?.totalVotes,
-            metadata: {
-              elevationProfile: segment.metadata?.elevationProfile || [],
-              elevationGain: segment.metadata?.elevationGain,
-              elevationLoss: segment.metadata?.elevationLoss
-            }
-          }
-        };
-      })
+    return {
+      type: 'Feature',
+      geometry: segment.geojson.geometry,
+      properties: {
+        id: segment._id,
+        title: segment.metadata?.title,
+        length: segment.metadata?.length,
+        userName: segment.userName,
+        auth0Id: segment.auth0Id,
+        averageRating: segment.stats?.averageRating,
+        totalVotes: segment.stats?.totalVotes,
+        surfaceType: segment.metadata?.surfaceTypes?.[0] || 'unknown',
+        metadata: {
+          elevationProfile: segment.metadata?.elevationProfile || [],
+          elevationGain: segment.metadata?.elevationGain,
+          elevationLoss: segment.metadata?.elevationLoss
+        }
+      }
+    };
+  })
       .filter(feature => feature !== null && feature.geometry);
 
     source.setData({

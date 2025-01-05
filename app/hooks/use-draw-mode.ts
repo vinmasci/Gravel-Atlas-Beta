@@ -89,7 +89,7 @@ function calculatePointDistances(points: [number, number, number][]) {
   });
 }
 
-function smoothElevationData(points: ElevationPoint[], windowSize: number = 3): ElevationPoint[] {  // reduced from 5 to 3
+function smoothElevationData(points: ElevationPoint[], windowSize: number = 2): ElevationPoint[] {  // reduced from 5 to 3
   if (points.length < windowSize) return points;
   
   return points.map((point, i) => {
@@ -351,12 +351,25 @@ export const useDrawMode = (map: Map | null) => {
         }
 
         if (bestRoute) {
-            const coordinates = bestRoute.geometry.coordinates;
-            return {
-                coordinates: coordinates,
-                roadInfo: { ...bestRouteInfo }
-            };
-        }
+          const coordinates = bestRoute.geometry.coordinates;
+          
+          // Get road info for the middle point of the route
+          const midPoint = coordinates[Math.floor(coordinates.length / 2)];
+          const tileQueryResponse = await fetch(
+              `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+          );
+          
+          const tileData = await tileQueryResponse.json();
+          const roadInfo = tileData.features?.[0]?.properties || {};
+      
+          return {
+              coordinates: coordinates,
+              roadInfo: {
+                  ...roadInfo,
+                  profile: bestRouteInfo.profile
+              }
+          };
+      }
 
         // Fall back to straight line if no good routes found
         return { coordinates: [previousPoint, clickedPoint] };
@@ -853,34 +866,40 @@ properties: {
     }
   }, [map, segments, clickPoints]);
 
-  const finishDrawing = useCallback(() => {
-    logStateChange('Finishing drawing', {
-      mapExists: !!map,
-      isDrawing,
-      coordinatesCount: drawnCoordinates.length
+// AFTER - in use-draw-mode.ts
+const finishDrawing = useCallback(() => {
+  logStateChange('Finishing drawing', {
+    mapExists: !!map,
+    isDrawing,
+    coordinatesCount: drawnCoordinates.length
+  });
+
+  if (!map || !isDrawing || drawnCoordinates.length < 2) {
+    logStateChange('Cannot finish drawing', {
+      reason: !map ? 'no map' : !isDrawing ? 'not drawing' : 'insufficient coordinates'
     });
+    return null;
+  }
 
-    if (!map || !isDrawing || drawnCoordinates.length < 2) {
-      logStateChange('Cannot finish drawing', {
-        reason: !map ? 'no map' : !isDrawing ? 'not drawing' : 'insufficient coordinates'
-      });
-      return null;
+  setIsDrawing(false);
+  map.getCanvas().style.cursor = '';
+
+  const result = {
+    type: 'Feature' as const,
+    properties: {
+      // Add surface types based on road stats percentages
+      surfaceTypes: roadStats.surfacePercentages.unpaved > 50 ? ['unpaved'] :
+                   roadStats.surfacePercentages.paved > 50 ? ['paved'] :
+                   ['unknown']
+    },
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: drawnCoordinates
     }
+  };
 
-    setIsDrawing(false);
-    map.getCanvas().style.cursor = '';
-
-    const result = {
-      type: 'Feature' as const,
-      properties: {},
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: drawnCoordinates // This will now include the elevation data
-      }
-    };
-
-    return result;
-  }, [map, isDrawing, drawnCoordinates, elevationProfile]);
+  return result;
+}, [map, isDrawing, drawnCoordinates, roadStats]); // Add roadStats to dependencies
 
   const clearDrawing = useCallback(() => {
     logStateChange('Clearing drawing', {
