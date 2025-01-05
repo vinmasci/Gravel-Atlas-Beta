@@ -405,52 +405,57 @@ export const useDrawMode = (map: Map | null) => {
 map.addSource(drawingId, {
   type: 'geojson',
   data: {
-    type: 'Feature',
-    properties: {},
-    geometry: { type: 'LineString', coordinates: [] }
+    type: 'FeatureCollection',
+    features: []
   }
 });
 
 map.addLayer({
-  id: drawingId,  // main cyan line (goes on top of stroke)
+  id: drawingId,
   type: 'line',
   source: drawingId,
-  layout: { 'line-cap': 'round', 'line-join': 'round' },
-  paint: { 
-    'line-color': '#00ffff',  // cyan main line
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#00ffff',
     'line-width': 3,
     'line-opacity': 1,
     'line-dasharray': [
       'case',
       ['==', ['get', 'surfaceType'], 'unpaved'],
-      ['literal', [2, 2]],  // dashed for unpaved
+      ['literal', [2, 2]],
       ['==', ['get', 'surfaceType'], 'unknown'],
-      ['literal', [2, 2]],  // dashed for unknown
-      ['literal', [1]]      // solid for paved
+      ['literal', [2, 2]],
+      ['literal', [1]]
     ]
   }
 });
 
-// Also update the stroke layer
+// Update stroke layer too
 map.addLayer({
-  id: `${drawingId}-stroke`,  // stroke layer
+  id: `${drawingId}-stroke`,
   type: 'line',
   source: drawingId,
-  layout: { 'line-cap': 'round', 'line-join': 'round' },
-  paint: { 
-    'line-color': '#000000',  // black stroke
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#000000',
     'line-width': 5,
     'line-opacity': 1,
     'line-dasharray': [
       'case',
       ['==', ['get', 'surfaceType'], 'unpaved'],
-      ['literal', [2, 2]],  // dashed for unpaved
+      ['literal', [2, 2]],
       ['==', ['get', 'surfaceType'], 'unknown'],
-      ['literal', [2, 2]],  // dashed for unknown
-      ['literal', [1]]      // solid for paved
+      ['literal', [2, 2]],
+      ['literal', [1]]
     ]
   }
-}, drawingId);  // Make sure stroke goes under main line
+}, drawingId);
 
 // Add map hover handlers
 map.on('mousemove', drawingId, (e) => {
@@ -731,7 +736,7 @@ const lineSource = map.getSource(layerRefs.current.drawing) as mapboxgl.GeoJSONS
 const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSONSource;
 
 if (lineSource && markerSource) {
-  const features = segments.map(segment => ({
+  const features = newSegments.map(segment => ({
     type: 'Feature',
     properties: {
       surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
@@ -741,6 +746,11 @@ if (lineSource && markerSource) {
       coordinates: segment.roadPoints
     }
   }));
+
+  lineSource.setData({
+    type: 'FeatureCollection',
+    features: features
+  });
   
   // Add the current drawing segment if it exists
   if (newPoints.length > 0) {
