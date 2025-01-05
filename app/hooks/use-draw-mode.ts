@@ -283,10 +283,17 @@ async function getElevation(coordinates: [number, number][], signal?: AbortSigna
 
 export const useDrawMode = (map: Map | null) => {
   const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
-  logStateChange('Hook initialized', { 
-    instanceId: hookInstanceId.current,
-    mapExists: !!map 
-  });
+  const [initialized, setInitialized] = useState(false);
+  
+  useEffect(() => {
+    if (map && map.isStyleLoaded() && !initialized) {
+      logStateChange('Hook initialized', { 
+        instanceId: hookInstanceId.current,
+        mapExists: true 
+      });
+      setInitialized(true);
+    }
+  }, [map, initialized]);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawnCoordinates, setDrawnCoordinates] = useState<[number, number][]>([]);

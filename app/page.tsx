@@ -164,10 +164,20 @@ export default function Home() {
             selectedStyle={selectedStyle}
             overlayStates={overlayStates}
             mapillaryVisible={mapillaryVisible}
-            onMapInit={(map) => setMapInstance(map)}
+            onMapInit={(map) => {
+              // Ensure map is fully loaded before setting instance
+              if (map.isStyleLoaded()) {
+                setMapInstance(map);
+              } else {
+                map.once('style.load', () => {
+                  setMapInstance(map);
+                });
+              }
+            }}
           />
         </DrawModeProvider>
       </MapContext.Provider>
     </div>
   )
+  
 }
