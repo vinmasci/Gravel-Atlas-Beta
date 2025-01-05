@@ -716,7 +716,9 @@ const markerSource = map.getSource(layerRefs.current.markers) as mapboxgl.GeoJSO
 if (lineSource && markerSource) {
   lineSource.setData({
     type: 'Feature',
-    properties: {},
+    properties: {
+      surfaceType  // Add the surface type here so the line styles can use it
+    },
     geometry: {
       type: 'LineString',
       coordinates: allCoordinates // This will now include elevation data
@@ -820,7 +822,9 @@ if (lineSource && markerSource) {
     if (lineSource && markerSource) {
       lineSource.setData({
         type: 'Feature',
-        properties: {},
+        properties: {
+          surfaceType  // Add the surface type here so the line styles can use it
+        },
         geometry: {
           type: 'LineString',
           coordinates: newCoordinates

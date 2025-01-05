@@ -87,85 +87,78 @@ const setupSegmentLayer = (map: Map, onSegmentClick?: SegmentClickHandler) => {
       }
     });
 
-    // Add the main line layer
-    map.addLayer({
-      id: layerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': [
-          'match',
-          ['case',
-            ['==', ['get', 'totalVotes'], 0], -1,
-            ['floor', ['get', 'averageRating']]
-          ],
-          -1, '#00FFFF',   // Cyan for unrated (no votes)
-          0, '#84CC16',    // lime-500 for 0 rating
-          1, '#84CC16',    // lime-500
-          2, '#EAB308',    // yellow-500
-          3, '#F97316',    // orange-500
-          4, '#EF4444',    // red-500
-          5, '#991B1B',    // red-800
-          6, '#450a0a',    // dark red/black
-          '#00FFFF'        // Default to cyan
-        ],
-        'line-width': 1.5,
-        'line-opacity': 1,
-        'line-dasharray': [
-          'step',
-          ['zoom'],
-          [ // Default pattern for zoomed out
-            'match',
-            ['get', 'surfaceType'],
-            'paved', ['literal', [1]],
-            ['literal', [2, 2]]
-          ],
-          10, [ // Slightly longer dashes at zoom 10+
-            'match',
-            ['get', 'surfaceType'],
-            'paved', ['literal', [1]],
-            ['literal', [4, 4]]
-          ]
-        ]
-      }
-    });
-    
+// Add the main line layer
+map.addLayer({
+  id: layerId,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round'
+  },
+  paint: {
+    'line-color': [
+      'match',
+      ['case',
+        ['==', ['get', 'totalVotes'], 0], -1,
+        ['floor', ['get', 'averageRating']]
+      ],
+      -1, '#00FFFF',   // Cyan for unrated (no votes)
+      0, '#84CC16',    // lime-500 for 0 rating
+      1, '#84CC16',    // lime-500
+      2, '#EAB308',    // yellow-500
+      3, '#F97316',    // orange-500
+      4, '#EF4444',    // red-500
+      5, '#991B1B',    // red-800
+      6, '#450a0a',    // dark red/black
+      '#00FFFF'        // Default to cyan
+    ],
+    'line-width': 1.5,
+    'line-opacity': 1,
+    'line-dasharray': [
+      'case',
+      ['==', ['typeof', ['get', 'surfaceType']], 'string'],  // First check if surfaceType exists
+      [
+        'match',
+        ['get', 'surfaceType'],
+        'paved', ['literal', [1]],
+        'unpaved', ['literal', [2, 2]],
+        'unknown', ['literal', [2, 2]],
+        ['literal', [2, 2]]  // Default case
+      ],
+      ['literal', [2, 2]]  // Default if no surfaceType
+    ]
+  }
+});
 
-    // Add a black stroke layer that sits underneath
-    map.addLayer({
-      id: `${layerId}-stroke`,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#000000',
-        'line-width': 2,
-        'line-opacity': 1,
-        'line-dasharray': [
-          'step',
-          ['zoom'],
-          [ // Default pattern for zoomed out
-            'match',
-            ['get', 'surfaceType'],
-            'paved', ['literal', [1]],
-            ['literal', [2, 2]]
-          ],
-          10, [ // Slightly longer dashes at zoom 10+
-            'match',
-            ['get', 'surfaceType'],
-            'paved', ['literal', [1]],
-            ['literal', [4, 4]]
-          ]
-        ]
-      }
-    }, layerId);
+// Add a black stroke layer that sits underneath
+map.addLayer({
+  id: `${layerId}-stroke`,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round'
+  },
+  paint: {
+    'line-color': '#000000',
+    'line-width': 2,
+    'line-opacity': 1,
+    'line-dasharray': [
+      'case',
+      ['==', ['typeof', ['get', 'surfaceType']], 'string'],  // First check if surfaceType exists
+      [
+        'match',
+        ['get', 'surfaceType'],
+        'paved', ['literal', [1]],
+        'unpaved', ['literal', [2, 2]],
+        'unknown', ['literal', [2, 2]],
+        ['literal', [2, 2]]  // Default case
+      ],
+      ['literal', [2, 2]]  // Default if no surfaceType
+    ]
+  }
+}, layerId);
 
     // Add hover effect
     map.on('mouseenter', layerId, (e) => {
