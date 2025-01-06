@@ -68,13 +68,14 @@ export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, ma
 // TO (replace with this code):
 useEffect(() => {
   let mounted = true;
+  let checkInterval: NodeJS.Timeout | null = null;
 
   const initialize = () => {
     if (!mounted) return;
     
     console.log('🎯 Attempting initialization with:', {
       hasMap: !!map,
-      styleLoaded: map?.isStyleLoaded(),
+      styleLoaded: map?.isStyleLoaded?.(),
       timestamp: new Date().toISOString()
     });
 
@@ -84,32 +85,33 @@ useEffect(() => {
       return;
     }
 
-    // Style is loaded - initialize
-    if (map.isStyleLoaded()) {
-      console.log('✅ Style already loaded, initializing');
-      setIsInitialized(true);
-      return;
-    }
-
-    // Style not loaded - wait for it
-    console.log('⏳ Style not loaded, setting up listener');
-    const styleLoadHandler = () => {
+    // Start checking for style loaded
+    if (checkInterval) clearInterval(checkInterval);
+    
+    checkInterval = setInterval(() => {
       if (!mounted) return;
-      console.log('✅ Style load event fired, initializing');
-      setIsInitialized(true);
-    };
+      
+      console.log('🔄 Checking style loaded status:', {
+        isLoaded: map.isStyleLoaded(),
+        timestamp: new Date().toISOString()
+      });
 
-    map.once('style.load', styleLoadHandler);
+      if (map.isStyleLoaded()) {
+        if (checkInterval) clearInterval(checkInterval);
+        console.log('✅ Style loaded detected, initializing');
+        setIsInitialized(true);
+      }
+    }, 100); // Check every 100ms
   };
 
   initialize();
 
   return () => {
     mounted = false;
+    if (checkInterval) clearInterval(checkInterval);
     setIsInitialized(false);
   };
 }, [map]);
-
   const contextValue = {
     isInitialized,
     drawMode: isInitialized ? drawMode : defaultDrawModeValue
