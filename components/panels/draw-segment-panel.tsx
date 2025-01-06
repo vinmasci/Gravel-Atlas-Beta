@@ -65,18 +65,29 @@ export function DrawSegmentPanel() {
     timestamp: new Date().toISOString()
   });
   
-  const { 
-    isDrawing = false, 
-    drawnCoordinates = [],
-    elevationProfile = [],
-    snapToRoad = true,
-    startDrawing = () => {},
-    handleClick = () => {}, 
-    finishDrawing = () => null, 
-    clearDrawing = () => {},
-    undoLastPoint = () => {},
-    toggleSnapToRoad = () => {}
-  } = drawMode || {};
+// TO (replace with this):
+if (!drawMode) {
+  console.error('❌ DrawMode context is missing');
+  return null;
+}
+
+const { 
+  isDrawing, 
+  drawnCoordinates,
+  elevationProfile,
+  snapToRoad,
+  startDrawing,
+  handleClick, 
+  finishDrawing, 
+  clearDrawing,
+  undoLastPoint,
+  toggleSnapToRoad
+} = drawMode;
+
+if (!startDrawing) {
+  console.error('❌ startDrawing function is missing from drawMode');
+  return null;
+}
 
   // Add debug logging for initialization
   useEffect(() => {
