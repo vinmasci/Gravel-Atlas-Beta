@@ -77,7 +77,6 @@ interface Comment {
 interface ElevationPoint {
   distance: number;
   elevation: number;
-  surfaceType?: 'paved' | 'unpaved' | 'unknown';
 }
 
 interface SegmentSheetProps {
