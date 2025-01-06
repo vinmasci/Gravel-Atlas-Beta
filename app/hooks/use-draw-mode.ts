@@ -436,8 +436,9 @@ export const useDrawMode = (map: Map | null) => {
 
     // Clean up existing layers
     if (layerRefs.current.drawing) {
-      map.removeLayer(layerRefs.current.drawing);
-      map.removeLayer(`${layerRefs.current.drawing}-stroke`);
+      map.removeLayer(`${layerRefs.current.drawing}-dashes`);  // Remove dashes layer
+      map.removeLayer(`${layerRefs.current.drawing}-stroke`);  // Remove stroke layer
+      map.removeLayer(layerRefs.current.drawing);             // Remove main line layer
       map.removeSource(layerRefs.current.drawing);
     }
     if (layerRefs.current.markers) {
