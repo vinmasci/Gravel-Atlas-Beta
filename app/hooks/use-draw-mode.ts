@@ -355,8 +355,19 @@ export const useDrawMode = (map: Map | null) => {
         console.log('Trying profiles in order:', profiles);
 
         // Try each profile sequentially instead of in parallel
-        let bestRoute = null;
-        let bestRouteInfo = null;
+        interface RouteWithScore {
+          geometry: { coordinates: [number, number][] };
+          distance: number;
+          duration: number;
+          score: number;
+        }
+        
+        interface RouteInfo {
+          profile: string;
+        }
+        
+        let bestRoute: RouteWithScore | null = null;
+        let bestRouteInfo: RouteInfo | null = null;
 
         for (const profile of profiles) {
             const response = await fetch(
@@ -388,7 +399,12 @@ export const useDrawMode = (map: Map | null) => {
 
                     // Only consider routes that don't deviate too much
                     if (deviation < 0.5 && (!bestRoute || score < bestRoute.score)) {
-                        bestRoute = { ...route, score };
+                        bestRoute = {
+                          geometry: route.geometry,
+                          distance: route.distance,
+                          duration: route.duration,
+                          score
+                        };
                         bestRouteInfo = { profile };
                     }
                 });
@@ -422,6 +438,9 @@ export const useDrawMode = (map: Map | null) => {
       }
 
         // Fall back to straight line if no good routes found
+        if (!previousPoint) {
+          return { coordinates: [clickedPoint] };
+        }
         return { coordinates: [previousPoint, clickedPoint] };
 
     } catch (error) {
@@ -436,10 +455,13 @@ export const useDrawMode = (map: Map | null) => {
 
     // Clean up existing layers
     if (layerRefs.current.drawing) {
-      map.removeLayer(`${layerRefs.current.drawing}-dashes`);  // Remove dashes layer
-      map.removeLayer(`${layerRefs.current.drawing}-stroke`);  // Remove stroke layer
-      map.removeLayer(layerRefs.current.drawing);             // Remove main line layer
-      map.removeSource(layerRefs.current.drawing);
+      const drawingId = layerRefs.current.drawing;
+      if (drawingId) {
+        map.removeLayer(`${drawingId}-dashes`);  // Remove dashes layer
+        map.removeLayer(`${drawingId}-stroke`);  // Remove stroke layer
+        map.removeLayer(drawingId);             // Remove main line layer
+        map.removeSource(drawingId);
+      }
     }
     if (layerRefs.current.markers) {
       logStateChange('Cleaning up existing markers layer');
@@ -518,13 +540,7 @@ map.addLayer({
   }
 });
 
-// Clean up layers in the clearDrawing function
-if (layerRefs.current.drawing) {
-  map.removeLayer(`${layerRefs.current.drawing}-dashes`);  // Remove dashes layer
-  map.removeLayer(layerRefs.current.drawing);             // Remove main layer
-  map.removeLayer(`${layerRefs.current.drawing}-stroke`); // Remove stroke layer
-  map.removeSource(layerRefs.current.drawing);
-}
+
 // Add map hover handlers
 map.on('mousemove', drawingId, (e) => {
   if (!e.features?.[0]) return;
@@ -813,12 +829,12 @@ if (lineSource && markerSource) {
   
   // Map all segments to features
   const features = currentSegments.map(segment => ({
-    type: 'Feature',
+    type: 'Feature' as const,
     properties: {
       surfaceType: segment.roadInfo?.surface ? mapSurfaceType(segment.roadInfo.surface) : 'unknown'
     },
     geometry: {
-      type: 'LineString',
+      type: 'LineString' as const,
       coordinates: segment.roadPoints
     }
   }));
@@ -880,20 +896,11 @@ if (lineSource && markerSource) {
           
           // Adjust new points to continue from last distance
           const adjustedNewPoints = newElevationPoints.map((point, index) => {
-            // Query surface type at this point's coordinates
-            const surfaceInfo = map.queryRenderedFeatures(
-              map.project([resampledPoints[index][0], resampledPoints[index][1]]),
-              { layers: ['road', 'gravel_roads'] }  // Include your road layers
-            )[0];
-        
-            const surfaceType = surfaceInfo?.properties?.surface ? 
-              mapSurfaceType(surfaceInfo.properties.surface) : 
-              'unknown';
-        
+            // Use the surface type from resampled data
             return {
               distance: lastDistance + point.distance,
               elevation: point.elevation,
-              surfaceType: surfaceType
+              surfaceType: resampledSurfaceTypes[index]
             };
           });
         
@@ -903,11 +910,11 @@ if (lineSource && markerSource) {
         });
       } // Make sure this closing brace is here
       
-          } catch (error) {
-            if (error.name !== 'AbortError') {
-              console.error('Error processing click:', error);
-              logStateChange('Click processing error', { error });
-            }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error processing click:', error);
+        logStateChange('Click processing error', { error: error.message });
+      }
           } finally {
             isProcessingClick.current = false;
             pendingOperation.current = null;
@@ -1044,9 +1051,12 @@ const finishDrawing = useCallback(() => {
     }
   
     if (layerRefs.current.drawing) {
-      map.removeLayer(`${layerRefs.current.drawing}-stroke`); // Remove stroke layer
-      map.removeLayer(layerRefs.current.drawing);            // Remove main line layer
-      map.removeSource(layerRefs.current.drawing);
+      const drawingId = layerRefs.current.drawing;
+      if (drawingId) {
+        map.removeLayer(`${drawingId}-stroke`); // Remove stroke layer
+        map.removeLayer(drawingId);            // Remove main line layer
+        map.removeSource(drawingId);
+      }
     }
   
     if (layerRefs.current.markers) {
