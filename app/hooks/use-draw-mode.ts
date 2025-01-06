@@ -215,58 +215,210 @@ export const useDrawMode = (map: Map | null): UseDrawModeReturn => {
       unknown: 0
     }
   });
+  
+  // The RoadStats update in handleClick remains the same as you have it
+  const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
+  const pendingOperation = useRef<AbortController | null>(null);
+  const isProcessingClick = useRef(false);
 
-// The complete initializeLayers implementation
-// TO (replace with this code):
-const initializeLayers = useCallback((): void => {
-  console.log('=== initializeLayers entry ===', {
-    mapExists: !!map,
-    isStyleLoaded: map?.isStyleLoaded(),
-    timestamp: new Date().toISOString()
-  });
-
-  if (!map || !map.isStyleLoaded()) {
-    console.log('❌ Cannot initialize - map not ready');
-    return;
-  }
-
-  const drawingId = `drawing-${Date.now()}`;
-  const markersId = `markers-${Date.now()}`;
-
-  try {
-    // Clean up any existing layers first
-    if (layerRefs.current.drawing) {
-      try {
-        if (map.getLayer(layerRefs.current.drawing)) {
-          map.removeLayer(layerRefs.current.drawing);
-        }
-        if (map.getSource(layerRefs.current.drawing)) {
-          map.removeSource(layerRefs.current.drawing);
-        }
-      } catch (e) {
-        console.log('Error cleaning up drawing layer:', e);
-      }
-    }
-
-    if (layerRefs.current.markers) {
-      try {
-        if (map.getLayer(layerRefs.current.markers)) {
-          map.removeLayer(layerRefs.current.markers);
-        }
-        if (map.getSource(layerRefs.current.markers)) {
-          map.removeSource(layerRefs.current.markers);
-        }
-      } catch (e) {
-        console.log('Error cleaning up markers layer:', e);
-      }
-    }
-
-    console.log('🎨 Adding drawing source and layer');
-    // Add drawing line
-    map.addSource(drawingId, {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] }
+  // Debug state changes
+  useEffect(() => {
+    logStateChange('State updated', {
+      instanceId: hookInstanceId.current,
+      isDrawing,
+      coordinatesCount: drawnCoordinates.length,
+      elevationPointCount: elevationProfile.length,
+      snapToRoad,
+      clickPointsCount: clickPoints.length,
+      segmentsCount: segments.length
     });
+  }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
+
+  const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<{coordinates: [number, number][], roadInfo?: any}> => {
+    console.log('Snapping to road:', { clickedPoint, previousPoint });
+
+    if (!snapToRoad) return { coordinates: [clickedPoint] };
+
+    try {
+        // For single point snapping
+        if (!previousPoint) {
+            const response = await fetch(
+                `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${clickedPoint[0]},${clickedPoint[1]}.json?layers=road&radius=10&limit=5&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            );
+            
+            const data = await response.json();
+            console.log('Single point snap response:', data);
+
+            if (data.features && data.features.length > 0) {
+                // Sort features by class priority and distance
+                const sortedFeatures = data.features.sort((a: any, b: any) => {
+                    // Define priority for road classes (higher number = higher priority)
+                    const priority: { [key: string]: number } = {
+                        cycleway: 10,    // Dedicated bike paths highest priority
+                        path: 8,         // Mixed-use paths
+                        tertiary: 7,     // Small roads often good for cycling
+                        residential: 6,   // Residential streets
+                        secondary: 5,     // Medium roads
+                        primary: 4,       // Main roads
+                        trunk: 3,         // Major roads
+                        motorway: 1,      // Highways lowest priority
+                        service: 2,       // Service roads low priority
+                        track: 9         // Gravel/dirt tracks high priority for this use case
+                    };
+                    
+                    const aPriority = priority[a.properties.class] || 0;
+                    const bPriority = priority[b.properties.class] || 0;
+
+                    // Also consider bicycle-specific properties
+                    const aBikePriority = a.properties.bicycle === 'designated' ? 5 : 0;
+                    const bBikePriority = b.properties.bicycle === 'designated' ? 5 : 0;
+                    
+                    // Combine base priority with bike priority
+                    const aTotal = aPriority + aBikePriority;
+                    const bTotal = bPriority + bBikePriority;
+                    
+                    // First sort by total priority, then by distance if priority is equal
+                    if (aTotal !== bTotal) {
+                        return bTotal - aTotal;
+                    }
+                    return a.properties.tilequery.distance - b.properties.tilequery.distance;
+                });
+
+                const feature = sortedFeatures[0];
+                const snappedPoint = feature.geometry.coordinates as [number, number];
+                return {
+                    coordinates: [snappedPoint],
+                    roadInfo: feature.properties
+                };
+            }
+            return { coordinates: [clickedPoint] };
+        }
+
+        // For line segments, try profiles in priority order
+        const profiles = ['cycling', 'driving', 'walking'];  // Changed order to prioritize cycling
+        console.log('Trying profiles in order:', profiles);
+
+        // Try each profile sequentially instead of in parallel
+        let bestRoute = null;
+        let bestRouteInfo = null;
+
+        for (const profile of profiles) {
+            const response = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/${profile}/${previousPoint[0]},${previousPoint[1]};${clickedPoint[0]},${clickedPoint[1]}?geometries=geojson&overview=full&alternatives=true&continue_straight=true&exclude=ferry&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+            );
+            const data = await response.json();
+            
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                // Calculate straight-line distance for comparison
+                const straightLineDistance = turf.distance(
+                    turf.point(previousPoint),
+                    turf.point(clickedPoint),
+                    { units: 'meters' }
+                );
+
+                // Score each alternative route
+                data.routes.forEach((route: any) => {
+                    const distance = route.distance;
+                    const deviation = (distance - straightLineDistance) / straightLineDistance;
+                    const pointDensity = route.geometry.coordinates.length / distance;
+
+                    // Calculate base score
+                    let score = deviation * 0.4 + (1 / pointDensity * 0.3) + (route.duration * 0.3);
+
+                    // Apply profile bonuses
+                    if (profile === 'cycling') score *= 0.7;  // 30% bonus for cycling routes
+                    if (profile === 'driving') score *= 1.2;  // 20% penalty for driving routes
+                    if (profile === 'walking') score *= 1.5;  // 50% penalty for walking routes
+
+                    // Only consider routes that don't deviate too much
+                    if (deviation < 0.5 && (!bestRoute || score < bestRoute.score)) {
+                        bestRoute = { ...route, score };
+                        bestRouteInfo = { profile };
+                    }
+                });
+
+                // If we found a good cycling route, use it immediately
+                if (profile === 'cycling' && bestRoute) {
+                    break;
+                }
+            }
+        }
+
+        if (bestRoute) {
+          const coordinates = bestRoute.geometry.coordinates;
+          
+          // Get road info for the middle point of the route
+          const midPoint = coordinates[Math.floor(coordinates.length / 2)];
+          const tileQueryResponse = await fetch(
+              `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${midPoint[0]},${midPoint[1]}.json?layers=road&radius=5&limit=1&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+          );
+          
+          const tileData = await tileQueryResponse.json();
+          const roadInfo = tileData.features?.[0]?.properties || {};
+      
+          return {
+              coordinates: coordinates,
+              roadInfo: {
+                  ...roadInfo,
+                  profile: bestRouteInfo.profile
+              }
+          };
+      }
+
+        // Fall back to straight line if no good routes found
+        return { coordinates: [previousPoint, clickedPoint] };
+
+    } catch (error) {
+        console.error('Error in snapToNearestRoad:', error);
+        return { coordinates: [previousPoint, clickedPoint] };
+    }
+};
+
+  const initializeLayers = useCallback(() => {
+    logStateChange('Initializing layers', { mapExists: !!map });
+    if (!map) return;
+
+    // Clean up existing layers
+    if (layerRefs.current.drawing) {
+      map.removeLayer(layerRefs.current.drawing);
+      map.removeLayer(`${layerRefs.current.drawing}-stroke`);
+      map.removeSource(layerRefs.current.drawing);
+    }
+    if (layerRefs.current.markers) {
+      logStateChange('Cleaning up existing markers layer');
+      map.removeLayer(layerRefs.current.markers);
+      map.removeSource(layerRefs.current.markers);
+    }
+
+    // Create new layers with unique IDs
+    const drawingId = `drawing-${Date.now()}`;
+    const markersId = `markers-${Date.now()}`;
+    logStateChange('Creating new layers', { drawingId, markersId });
+
+// Add drawing layer
+map.addSource(drawingId, {
+  type: 'geojson',
+  data: {
+    type: 'FeatureCollection',
+    features: []
+  }
+});
+
+// 1. Bottom black stroke layer
+map.addLayer({
+  id: `${drawingId}-stroke`,
+  type: 'line',
+  source: drawingId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#000000',
+    'line-width': 5,
+    'line-opacity': 1
+  }
+});
 
     map.addLayer({
       id: drawingId,
