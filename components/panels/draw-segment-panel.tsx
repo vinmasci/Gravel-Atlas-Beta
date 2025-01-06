@@ -140,9 +140,17 @@ if (!startDrawing || !handleClick || !finishDrawing || !clearDrawing) {
       return;
     }
 
+    // Type assertion for map
+    const mapInstance = map as mapboxgl.Map;
+    
     // Check if style is loaded
-    if (!map.isStyleLoaded()) {
-      console.log('⏳ Map style not loaded');
+    try {
+      if (!mapInstance.isStyleLoaded()) {
+        console.log('⏳ Map style not loaded');
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error checking map style:', error);
       return;
     }
 
