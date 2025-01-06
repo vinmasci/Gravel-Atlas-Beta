@@ -80,9 +80,14 @@ function calculatePointDistances(points: [number, number, number][]): number[] {
       turf.point([curr[0], curr[1]]),
       { units: 'kilometers' }
     );
-    distances.push(distances[i - 1] + distance);
-  }
-  return distances;
+    
+    distance += segmentDistance;
+return {
+  distance: distance,
+  elevation: point[2],
+  surfaceType: resampledSurfaceTypes[index]  // Use the surface type from resampled data
+};
+  });
 }
 
 function smoothElevationData(points: ElevationPoint[], windowSize: number = 2): ElevationPoint[] {
