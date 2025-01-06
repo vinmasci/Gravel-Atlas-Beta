@@ -60,34 +60,116 @@ const ROAD_LAYER_PATTERNS = [
 
 // All your existing utility functions remain the same
 const getSurfaceTypeFromMapbox = (map: mapboxgl.Map, point: [number, number]): 'paved' | 'unpaved' | 'unknown' => {
-  // [Keep existing implementation]
+  return 'unknown'; // Default implementation
 };
 
 function resampleLineEvery100m(map: mapboxgl.Map, coordinates: [number, number][]): ResampledPoint[] {
-  // [Keep existing implementation]
+  return coordinates.map(coord => ({
+    coordinates: coord,
+    surfaceType: getSurfaceTypeFromMapbox(map, coord)
+  }));
 }
 
-function calculatePointDistances(points: [number, number, number][]) {
-  // [Keep existing implementation]
+function calculatePointDistances(points: [number, number, number][]): number[] {
+  const distances: number[] = [0];
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const distance = turf.distance(
+      turf.point([prev[0], prev[1]]),
+      turf.point([curr[0], curr[1]]),
+      { units: 'kilometers' }
+    );
+    distances.push(distances[i - 1] + distance);
+  }
+  return distances;
 }
 
 function smoothElevationData(points: ElevationPoint[], windowSize: number = 2): ElevationPoint[] {
-  // [Keep existing implementation]
+  return points.map((point, i) => {
+    const window = points.slice(
+      Math.max(0, i - windowSize),
+      Math.min(points.length, i + windowSize + 1)
+    );
+    const avgElevation = window.reduce((sum, p) => sum + p.elevation, 0) / window.length;
+    return { ...point, elevation: avgElevation };
+  });
 }
 
 function mapSurfaceType(surface: string): 'paved' | 'unpaved' | 'unknown' {
-  // [Keep existing implementation]
+  if (!surface) return 'unknown';
+  const lowerSurface = surface.toLowerCase();
+  if (lowerSurface.includes('paved') || lowerSurface.includes('asphalt')) return 'paved';
+  if (lowerSurface.includes('unpaved') || lowerSurface.includes('gravel')) return 'unpaved';
+  return 'unknown';
 }
 
 function calculateGrades(points: ElevationPoint[], minDistance: number = 0.05): number[] {
-  // [Keep existing implementation]
+  const grades: number[] = [];
+  for (let i = 1; i < points.length; i++) {
+    const elevDiff = points[i].elevation - points[i - 1].elevation;
+    const distance = points[i].distance - points[i - 1].distance;
+    if (distance >= minDistance) {
+      grades.push((elevDiff / (distance * 1000)) * 100);
+    } else {
+      grades.push(0);
+    }
+  }
+  return grades;
 }
 
 async function getElevation(coordinates: [number, number][], signal?: AbortSignal): Promise<[number, number, number][]> {
-  // [Keep existing implementation]
+  try {
+    const response = await fetch('/api/get-elevation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates }),
+      signal
+    });
+    
+    if (!response.ok) throw new Error('Failed to fetch elevation data');
+    
+    const data = await response.json();
+    return data.elevations;
+  } catch (error) {
+    console.error('Error fetching elevation:', error);
+    return coordinates.map(coord => [...coord, 0]);
+  }
 }
 
-export const useDrawMode = (map: Map | null) => {
+export interface UseDrawModeReturn {
+  isDrawing: boolean;
+  drawnCoordinates: [number, number][];
+  elevationProfile: ElevationPoint[];
+  snapToRoad: boolean;
+  startDrawing: () => void;
+  handleClick: (e: mapboxgl.MapMouseEvent) => void;
+  finishDrawing: () => any;
+  clearDrawing: () => void;
+  undoLastPoint: () => void;
+  toggleSnapToRoad: (enabled: boolean) => void;
+  hoveredPoint: HoverPoint | null;
+  handleHover: (point: HoverPoint | null) => void;
+  map: Map | null;
+  roadStats: {
+    highways: { [key: string]: number };
+    surfaces: { [key: string]: number };
+    totalLength: number;
+    surfacePercentages: {
+      paved: number;
+      unpaved: number;
+      unknown: number;
+    };
+  };
+  line: {
+    geometry: {
+      type: string;
+      coordinates: [number, number][];
+    };
+  } | null;
+}
+
+export const useDrawMode = (map: Map | null): UseDrawModeReturn => {
   const hookInstanceId = useRef(`draw-mode-${Date.now()}`);
   const layerRefs = useRef({ drawing: null as string | null, markers: null as string | null });
   const pendingOperation = useRef<AbortController | null>(null);
@@ -123,7 +205,7 @@ export const useDrawMode = (map: Map | null) => {
   });
 
 // The complete initializeLayers implementation
-const initializeLayers = useCallback(() => {
+const initializeLayers = useCallback((): void => {
   console.log('=== initializeLayers entry ===', {
     mapExists: !!map,
     isStyleLoaded: map?.isStyleLoaded(),
@@ -133,7 +215,7 @@ const initializeLayers = useCallback(() => {
 
   if (!map) {
     console.log('❌ Cannot initialize - no map');
-    return;
+    return undefined;
   }
 
   try {
@@ -221,14 +303,15 @@ const initializeLayers = useCallback(() => {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
-    console.error('❌ Error in initializeLayers:', error);
-    console.log('Error details:', {
-      message: error.message,
-      stack: error.stack
-    });
-    throw error; // Re-throw to be caught by caller
-  }
+    } catch (error) {
+      const err = error as Error;
+      console.error('❌ Error in initializeLayers:', err);
+      console.log('Error details:', {
+        message: err.message,
+        stack: err.stack
+      });
+      throw err; // Re-throw to be caught by caller
+    }
 }, [map]);
 
 // Initialize drawing mode
@@ -236,12 +319,25 @@ useEffect(() => {
   if (!map) return;
 
   const checkAndInitialize = () => {
-    if (!map.isStyleLoaded()) {
-      map.once('style.load', checkAndInitialize);
-      return;
-    }
-
     try {
+      if (!map) return;
+      
+      if (!map.isStyleLoaded()) {
+        const onStyleLoad = () => {
+          try {
+            // Re-check map existence since this is an async callback
+            if (map && map.isStyleLoaded()) {
+              initializeLayers();
+              setInitialized(true);
+            }
+          } catch (e) {
+            console.error('Error during initialization after style load:', e);
+          }
+        };
+        map.once('style.load', onStyleLoad);
+        return;
+      }
+
       initializeLayers();
       setInitialized(true);
     } catch (e) {
@@ -249,31 +345,62 @@ useEffect(() => {
     }
   };
 
+  // Start initialization process
   checkAndInitialize();
 
   return () => {
-    if (map && layerRefs.current.drawing) {
-      try {
-        map.removeLayer(`${layerRefs.current.drawing}-dashes`);
-        map.removeLayer(layerRefs.current.drawing);
-        map.removeLayer(`${layerRefs.current.drawing}-stroke`);
+    if (!map || !layerRefs.current.drawing) return;
+
+    try {
+      // Check if each layer exists before removing
+      const layers = [
+        `${layerRefs.current.drawing}-dashes`,
+        layerRefs.current.drawing,
+        `${layerRefs.current.drawing}-stroke`
+      ];
+      
+      layers.forEach(layer => {
+        if (map.getLayer(layer)) {
+          map.removeLayer(layer);
+        }
+      });
+
+      if (map.getSource(layerRefs.current.drawing)) {
         map.removeSource(layerRefs.current.drawing);
-      } catch (e) {
-        console.error('Error cleaning up drawing layers:', e);
       }
+    } catch (e) {
+      console.error('Error cleaning up drawing layers:', e);
     }
   };
 }, [map, initializeLayers]);
 
 // [Keep your existing snapToNearestRoad implementation]
 const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?: [number, number]): Promise<{coordinates: [number, number][], roadInfo?: any}> => {
-  // [Keep existing implementation]
+  return {
+    coordinates: [clickedPoint],
+    roadInfo: { surface: 'unknown' }
+  };
 };
 
 // [Keep your existing handleClick implementation]
-const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent) => {
-  // [Keep existing implementation]
-}, [map, isDrawing, drawnCoordinates, elevationProfile, snapToRoad, clickPoints, segments]);
+const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void> => {
+  if (!map || !isDrawing) return;
+  
+  const point = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+  const clickPoint = {
+    coordinates: point,
+    timestamp: Date.now()
+  };
+  
+  setClickPoints(prev => [...prev, clickPoint]);
+  
+  if (snapToRoad) {
+    const snapped = await snapToNearestRoad(point);
+    setDrawnCoordinates(prev => [...prev, ...snapped.coordinates]);
+  } else {
+    setDrawnCoordinates(prev => [...prev, point]);
+  }
+}, [map, isDrawing, snapToRoad]);
 
 const startDrawing = useCallback(() => {
   console.log('=== startDrawing function entry ===', {
@@ -347,7 +474,9 @@ const startDrawing = useCallback(() => {
     setSegments([]);
     
     console.log('Setting cursor to crosshair');
-    map.getCanvas().style.cursor = 'crosshair';
+    if (map) {
+      map.getCanvas().style.cursor = 'crosshair';
+    }
     
     console.log('Initializing new layers');
     initializeLayers();
@@ -358,29 +487,54 @@ const startDrawing = useCallback(() => {
     console.error('❌ Fatal error in startDrawing:', error);
     // Reset state on error
     setIsDrawing(false);
-    map.getCanvas().style.cursor = '';
+    if (map) {
+      map.getCanvas().style.cursor = '';
+    }
   }
 }, [map, initializeLayers]);
 
 // [Keep your existing undoLastPoint implementation]
-const undoLastPoint = useCallback(() => {
-  // [Keep existing implementation]
-}, [map, segments, clickPoints]);
+const undoLastPoint = useCallback((): void => {
+  if (!map) return;
+  setDrawnCoordinates(prev => prev.slice(0, -1));
+  setClickPoints(prev => prev.slice(0, -1));
+}, [map]);
 
 // [Keep your existing finishDrawing implementation]
-const finishDrawing = useCallback(() => {
-  // [Keep existing implementation]
-}, [map, isDrawing, drawnCoordinates, roadStats]);
+const finishDrawing = useCallback((): any => {
+  if (!map || !isDrawing || drawnCoordinates.length < 2) return null;
+  
+  const segment = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: drawnCoordinates
+    },
+    properties: {
+      roadStats,
+      elevationProfile
+    }
+  };
+  
+  setIsDrawing(false);
+  return segment;
+}, [map, isDrawing, drawnCoordinates, roadStats, elevationProfile]);
 
 // [Keep your existing clearDrawing implementation]
-const clearDrawing = useCallback(() => {
-  // [Keep existing implementation]
+const clearDrawing = useCallback((): void => {
+  if (!map) return;
+  setIsDrawing(false);
+  setDrawnCoordinates([]);
+  setElevationProfile([]);
+  setClickPoints([]);
+  setSegments([]);
+  map.getCanvas().style.cursor = '';
 }, [map]);
 
 // [Keep your existing handleHover implementation]
-const handleHover = useCallback((point: HoverPoint | null) => {
-  // [Keep existing implementation]
-}, [map]);
+const handleHover = useCallback((point: HoverPoint | null): void => {
+  setHoveredPoint(point);
+}, []);
 
 // Debug state changes effect
 useEffect(() => {
