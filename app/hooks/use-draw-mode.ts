@@ -205,44 +205,37 @@ export const useDrawMode = (map: Map | null): UseDrawModeReturn => {
   });
 
 // The complete initializeLayers implementation
+// TO (replace with this code):
 const initializeLayers = useCallback((): void => {
   console.log('=== initializeLayers entry ===', {
     mapExists: !!map,
     isStyleLoaded: map?.isStyleLoaded(),
-    existingRefs: layerRefs.current,
     timestamp: new Date().toISOString()
   });
 
-  if (!map) {
-    console.log('❌ Cannot initialize - no map');
-    return undefined;
+  if (!map || !map.isStyleLoaded()) {
+    console.log('❌ Cannot initialize - map not ready');
+    return;
   }
 
-  try {
-    const drawingId = `drawing-${Date.now()}`;
-    const markersId = `markers-${Date.now()}`;
-    console.log('🎨 Creating layers with IDs:', { drawingId, markersId });
+  const drawingId = `drawing-${Date.now()}`;
+  const markersId = `markers-${Date.now()}`;
 
-    console.log('Adding drawing source');
+  try {
+    // Check if sources/layers already exist and remove them
+    [drawingId, markersId].forEach(id => {
+      if (map.getLayer(id)) map.removeLayer(id);
+      if (map.getSource(id)) map.removeSource(id);
+    });
+
+    // Add sources
     map.addSource(drawingId, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] }
     });
 
-    console.log('Adding stroke layer');
-    map.addLayer({
-      id: `${drawingId}-stroke`,
-      type: 'line',
-      source: drawingId,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': '#000000',
-        'line-width': 5,
-        'line-opacity': 1
-      }
-    });
-
-    console.log('Adding main line layer');
+// TO (replace with this code):
+    // Add layers
     map.addLayer({
       id: drawingId,
       type: 'line',
@@ -250,32 +243,29 @@ const initializeLayers = useCallback((): void => {
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
         'line-color': '#00ffff',
-        'line-width': 3,
-        'line-opacity': 1
+        'line-width': 3
       }
     });
 
-    console.log('Adding dashes layer');
+    map.addSource(markersId, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+
     map.addLayer({
-      id: `${drawingId}-dashes`,
-      type: 'line',
-      source: drawingId,
-      layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      id: markersId,
+      type: 'circle',
+      source: markersId,
       paint: {
-        'line-color': '#009999',
-        'line-width': 2,
-        'line-opacity': [
-          'case',
-          ['any',
-            ['==', ['get', 'surfaceType'], 'unpaved'],
-            ['==', ['get', 'surfaceType'], 'unknown']
-          ],
-          1,
-          0
-        ],
-        'line-dasharray': [2, 4]
+        'circle-radius': 5,
+        'circle-color': '#00ffff',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#000000'
       }
     });
+
+    layerRefs.current = { drawing: drawingId, markers: markersId };
+    console.log('✅ Layers initialized:', layerRefs.current);
 
     console.log('Adding markers source');
     map.addSource(markersId, {
@@ -405,6 +395,7 @@ const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void>
   }
 }, [map, isDrawing, snapToRoad]);
 
+// TO (replace with this code):
 const startDrawing = useCallback(() => {
   console.log('=== startDrawing function entry ===', {
     mapExists: !!map,
@@ -423,20 +414,16 @@ const startDrawing = useCallback(() => {
   }
 
   try {
-    console.log('🧹 Starting cleanup', {
-      currentDrawingLayer: layerRefs.current.drawing,
-      currentMarkerLayer: layerRefs.current.markers
-    });
-
-    // Clean up existing layers
-    if (layerRefs.current.drawing) {
-      try {
+    // Skip cleanup if no existing layers
+    if (layerRefs.current.drawing || layerRefs.current.markers) {
+      console.log('🧹 Starting cleanup');
+      
+      if (layerRefs.current.drawing) {
         const layers = [
           `${layerRefs.current.drawing}-dashes`,
           layerRefs.current.drawing,
           `${layerRefs.current.drawing}-stroke`
         ];
-        console.log('Removing layers:', layers);
         
         layers.forEach(layer => {
           if (map.getLayer(layer)) {
@@ -449,51 +436,41 @@ const startDrawing = useCallback(() => {
           map.removeSource(layerRefs.current.drawing);
           console.log('Removed drawing source');
         }
-      } catch (e) {
-        console.error('❌ Error cleaning drawing layers:', e);
       }
-    }
     
-    if (layerRefs.current.markers) {
-      try {
-        if (map.getLayer(layerRefs.current.markers)) {
-          map.removeLayer(layerRefs.current.markers);
-          console.log('Removed markers layer');
-        }
-        if (map.getSource(layerRefs.current.markers)) {
-          map.removeSource(layerRefs.current.markers);
-          console.log('Removed markers source');
-        }
-      } catch (e) {
-        console.error('❌ Error cleaning marker layers:', e);
-      }
-    }
-
-    console.log('Setting initial state');
-    setIsDrawing(true);
-    setDrawnCoordinates([]);
-    setElevationProfile([]);
-    setClickPoints([]);
-    setSegments([]);
-    
-    console.log('Setting cursor to crosshair');
-    if (map) {
-      map.getCanvas().style.cursor = 'crosshair';
-    }
-    
-    console.log('Initializing new layers');
-    initializeLayers();
-    
-    console.log('✅ Drawing mode setup completed');
-
-  } catch (error) {
-    console.error('❌ Fatal error in startDrawing:', error);
-    // Reset state on error
-    setIsDrawing(false);
-    if (map) {
-      map.getCanvas().style.cursor = '';
-    }
+// TO (replace with this code):
+if (layerRefs.current.markers) {
+  if (map.getLayer(layerRefs.current.markers)) {
+    map.removeLayer(layerRefs.current.markers);
   }
+  if (map.getSource(layerRefs.current.markers)) {
+    map.removeSource(layerRefs.current.markers);
+  }
+}
+}
+
+// Initialize new state
+setIsDrawing(true);
+setDrawnCoordinates([]);
+setElevationProfile([]);
+setClickPoints([]);
+setSegments([]);
+
+// Set cursor
+map.getCanvas().style.cursor = 'crosshair';
+
+// Initialize new layers
+initializeLayers();
+
+console.log('✅ Drawing mode setup completed');
+
+} catch (error) {
+console.error('❌ Error in startDrawing:', error);
+setIsDrawing(false);
+if (map) {
+map.getCanvas().style.cursor = '';
+}
+}
 }, [map, initializeLayers]);
 
 // [Keep your existing undoLastPoint implementation]
