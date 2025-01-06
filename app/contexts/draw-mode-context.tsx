@@ -63,40 +63,32 @@ interface DrawModeProviderProps {
 
 export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, map }) => {
   const [isInitialized, setIsInitialized] = useState(false);
-  console.log('=== DrawModeProvider Render ===', {
-    hasMap: !!map,
-    isInitialized,
-    timestamp: new Date().toISOString()
-  });
-
   const drawMode = useDrawMode(map);
-  
-  console.log('=== DrawMode Hook Result ===', {
-    hasDrawMode: !!drawMode,
-    methods: {
-      hasStartDrawing: !!drawMode.startDrawing,
-      hasHandleClick: !!drawMode.handleClick
-    },
-    timestamp: new Date().toISOString()
-  });
 
   useEffect(() => {
-    if (!map) {
-      setIsInitialized(false);
-      return;
-    }
-
     const checkInit = () => {
-      if (map.isStyleLoaded()) {
-        setIsInitialized(true);
-        return true;
+      const isReady = !!map && map.isStyleLoaded();
+      console.log('Checking initialization:', {
+        hasMap: !!map,
+        styleLoaded: map?.isStyleLoaded(),
+        currentlyInitialized: isInitialized,
+        shouldBeInitialized: isReady
+      });
+      
+      if (isReady !== isInitialized) {
+        console.log(`Setting initialized to ${isReady}`);
+        setIsInitialized(isReady);
       }
-      return false;
     };
 
-    // Try to initialize immediately
-    if (!checkInit()) {
+    // Check immediately
+    checkInit();
+
+    // Set up style.load listener if needed
+    if (map && !map.isStyleLoaded()) {
+      console.log('Setting up style.load listener');
       const handleStyleLoad = () => {
+        console.log('Style loaded event received');
         checkInit();
       };
       
@@ -105,12 +97,19 @@ export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, ma
         map.off('style.load', handleStyleLoad);
       };
     }
-  }, [map]);
+  }, [map, isInitialized]);
 
   const contextValue = {
-    isInitialized,
-    drawMode: isInitialized ? drawMode : defaultDrawModeValue
+    isInitialized: !!map && map.isStyleLoaded(), // Important change here
+    drawMode: (!!map && map.isStyleLoaded()) ? drawMode : defaultDrawModeValue
   };
+
+  console.log('DrawModeProvider context:', {
+    hasMap: !!map,
+    styleLoaded: map?.isStyleLoaded(),
+    isInitialized: contextValue.isInitialized,
+    usingActualDrawMode: contextValue.drawMode !== defaultDrawModeValue
+  });
 
   return (
     <DrawModeContext.Provider value={contextValue}>

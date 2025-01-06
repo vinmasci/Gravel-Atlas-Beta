@@ -5,7 +5,7 @@
   "engines": {
     "node": "18.x"
   },
-"scripts": {
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,8 +13,7 @@
     "vercel-build": "npm install --force canvas@2.11.2 && npm run build",
     "migrate": "node scripts/migrate-segments.js",
     "stitch": "node scripts/stitch-segments.js"
-},
-
+  },
   "dependencies": {
     "@auth0/auth0-react": "^2.2.4",
     "@auth0/auth0-spa-js": "^2.1.3",
@@ -68,7 +67,7 @@
     "@types/node": "^20.17.10",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
-    "eslint": "^8",
+    "eslint": "^8.57.1",
     "eslint-config-next": "15.0.4",
     "postcss": "^8",
     "shadcn-ui": "^0.2.3",
