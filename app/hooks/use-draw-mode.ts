@@ -222,20 +222,40 @@ const initializeLayers = useCallback((): void => {
   const markersId = `markers-${Date.now()}`;
 
   try {
-    // Check if sources/layers already exist and remove them
-    [drawingId, markersId].forEach(id => {
-      if (map.getLayer(id)) map.removeLayer(id);
-      if (map.getSource(id)) map.removeSource(id);
-    });
+    // Clean up any existing layers first
+    if (layerRefs.current.drawing) {
+      try {
+        if (map.getLayer(layerRefs.current.drawing)) {
+          map.removeLayer(layerRefs.current.drawing);
+        }
+        if (map.getSource(layerRefs.current.drawing)) {
+          map.removeSource(layerRefs.current.drawing);
+        }
+      } catch (e) {
+        console.log('Error cleaning up drawing layer:', e);
+      }
+    }
 
-    // Add sources
+    if (layerRefs.current.markers) {
+      try {
+        if (map.getLayer(layerRefs.current.markers)) {
+          map.removeLayer(layerRefs.current.markers);
+        }
+        if (map.getSource(layerRefs.current.markers)) {
+          map.removeSource(layerRefs.current.markers);
+        }
+      } catch (e) {
+        console.log('Error cleaning up markers layer:', e);
+      }
+    }
+
+    console.log('🎨 Adding drawing source and layer');
+    // Add drawing line
     map.addSource(drawingId, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] }
     });
 
-// TO (replace with this code):
-    // Add layers
     map.addLayer({
       id: drawingId,
       type: 'line',
@@ -247,6 +267,8 @@ const initializeLayers = useCallback((): void => {
       }
     });
 
+    console.log('📍 Adding markers source and layer');
+    // Add markers
     map.addSource(markersId, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] }
@@ -264,44 +286,23 @@ const initializeLayers = useCallback((): void => {
       }
     });
 
+    // Save references
     layerRefs.current = { drawing: drawingId, markers: markersId };
-    console.log('✅ Layers initialized:', layerRefs.current);
-
-    console.log('Adding markers source');
-    map.addSource(markersId, {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] }
-    });
-
-    console.log('Adding markers layer');
-    map.addLayer({
-      id: markersId,
-      type: 'circle',
-      source: markersId,
-      paint: {
-        'circle-radius': 5,
-        'circle-color': '#00ffff',
-        'circle-opacity': 1,
-        'circle-stroke-width': 1,
-        'circle-stroke-color': '#000000'
-      }
-    });
-
-    layerRefs.current = { drawing: drawingId, markers: markersId };
-    console.log('✅ All layers initialized successfully', {
-      newRefs: layerRefs.current,
+    console.log('✅ Layers initialized successfully:', {
+      drawingId,
+      markersId,
       timestamp: new Date().toISOString()
     });
 
-    } catch (error) {
-      const err = error as Error;
-      console.error('❌ Error in initializeLayers:', err);
-      console.log('Error details:', {
-        message: err.message,
-        stack: err.stack
-      });
-      throw err; // Re-throw to be caught by caller
-    }
+  } catch (error) {
+    console.error('❌ Error in initializeLayers:', {
+      error,
+      message: error.message,
+      stack: error.stack
+    });
+    // Don't throw, just log and return
+    return;
+  }
 }, [map]);
 
 // Initialize drawing mode
@@ -397,6 +398,7 @@ const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void>
 
 // TO (replace with this code):
 const startDrawing = useCallback(() => {
+  console.log('TESTING ENTRY POINT');  // Add this line first
   console.log('🔍 START: startDrawing function', {
     mapInstance: !!map,
     styleLoaded: map?.isStyleLoaded(),
