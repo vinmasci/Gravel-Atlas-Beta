@@ -349,24 +349,27 @@ useEffect(() => {
   checkAndInitialize();
 
   return () => {
-    if (!map || !layerRefs.current.drawing) return;
+    const currentMap = map;
+    const currentDrawingLayer = layerRefs.current.drawing;
+    
+    if (!currentMap || !currentDrawingLayer) return;
 
     try {
       // Check if each layer exists before removing
       const layers = [
-        `${layerRefs.current.drawing}-dashes`,
-        layerRefs.current.drawing,
-        `${layerRefs.current.drawing}-stroke`
+        `${currentDrawingLayer}-dashes`,
+        currentDrawingLayer,
+        `${currentDrawingLayer}-stroke`
       ];
       
       layers.forEach(layer => {
-        if (map.getLayer(layer)) {
-          map.removeLayer(layer);
+        if (currentMap.getLayer(layer)) {
+          currentMap.removeLayer(layer);
         }
       });
 
-      if (map.getSource(layerRefs.current.drawing)) {
-        map.removeSource(layerRefs.current.drawing);
+      if (currentMap.getSource(currentDrawingLayer)) {
+        currentMap.removeSource(currentDrawingLayer);
       }
     } catch (e) {
       console.error('Error cleaning up drawing layers:', e);
