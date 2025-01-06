@@ -1,9 +1,9 @@
+// TO (replace with this entire file):
 // app/contexts/draw-mode-context.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useDrawMode } from '../hooks/use-draw-mode';
 import type { UseDrawModeReturn } from '../hooks/use-draw-mode';
 
-// Create a default value that matches the shape of UseDrawModeReturn
 const defaultDrawModeValue: UseDrawModeReturn = {
   isDrawing: false,
   drawnCoordinates: [],
@@ -65,47 +65,50 @@ export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, ma
   const [isInitialized, setIsInitialized] = useState(false);
   const drawMode = useDrawMode(map);
 
-  useEffect(() => {
+// TO (replace with this code):
+useEffect(() => {
+  let mounted = true;
+
+  const initialize = () => {
+    if (!mounted) return;
+    
+    console.log('🎯 Attempting initialization with:', {
+      hasMap: !!map,
+      styleLoaded: map?.isStyleLoaded(),
+      timestamp: new Date().toISOString()
+    });
+
     if (!map) {
-      console.log('No map instance available');
+      console.log('❌ No map available');
       setIsInitialized(false);
       return;
     }
 
-    const initializeDrawMode = () => {
-      console.log('Initializing draw mode:', {
-        hasMap: !!map,
-        styleLoaded: map.isStyleLoaded(),
-        timestamp: new Date().toISOString()
-      });
+    // Style is loaded - initialize
+    if (map.isStyleLoaded()) {
+      console.log('✅ Style already loaded, initializing');
+      setIsInitialized(true);
+      return;
+    }
 
-      if (!map.isStyleLoaded()) {
-        console.log('Style not loaded, waiting for style.load event');
-        map.once('style.load', initializeDrawMode);
-        return;
-      }
-
-      try {
-        // Ensure the map is fully interactive
-        map.dragPan.enable();
-        map.dragRotate.enable();
-        
-        setIsInitialized(true);
-        console.log('Draw mode initialized successfully');
-      } catch (error) {
-        console.error('Error initializing draw mode:', error);
-        setIsInitialized(false);
-      }
+    // Style not loaded - wait for it
+    console.log('⏳ Style not loaded, setting up listener');
+    const styleLoadHandler = () => {
+      if (!mounted) return;
+      console.log('✅ Style load event fired, initializing');
+      setIsInitialized(true);
     };
 
-    // Start initialization
-    initializeDrawMode();
+    map.once('style.load', styleLoadHandler);
+  };
 
-    // Cleanup
-    return () => {
-      setIsInitialized(false);
-    };
-  }, [map]);
+  initialize();
+
+  return () => {
+    mounted = false;
+    setIsInitialized(false);
+  };
+}, [map]);
 
   const contextValue = {
     isInitialized,
@@ -116,7 +119,8 @@ export const DrawModeProvider: React.FC<DrawModeProviderProps> = ({ children, ma
     hasMap: !!map,
     styleLoaded: map?.isStyleLoaded(),
     isInitialized: contextValue.isInitialized,
-    usingActualDrawMode: contextValue.drawMode !== defaultDrawModeValue
+    usingActualDrawMode: contextValue.drawMode !== defaultDrawModeValue,
+    timestamp: new Date().toISOString()
   });
 
   return (
