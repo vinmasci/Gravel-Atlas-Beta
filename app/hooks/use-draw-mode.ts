@@ -86,13 +86,20 @@ function calculatePointDistances(points: [number, number, number][]): number[] {
 }
 
 function smoothElevationData(points: ElevationPoint[], windowSize: number = 2): ElevationPoint[] {
+  if (points.length < windowSize) return points;
+  
   return points.map((point, i) => {
-    const window = points.slice(
-      Math.max(0, i - windowSize),
-      Math.min(points.length, i + windowSize + 1)
-    );
+    const start = Math.max(0, i - Math.floor(windowSize / 2));
+    const end = Math.min(points.length, start + windowSize);
+    const window = points.slice(start, end);
+    
     const avgElevation = window.reduce((sum, p) => sum + p.elevation, 0) / window.length;
-    return { ...point, elevation: avgElevation };
+    
+    return {
+      distance: point.distance,
+      elevation: avgElevation,
+      surfaceType: point.surfaceType // Preserve the surface type!
+    };
   });
 }
 
