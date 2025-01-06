@@ -155,22 +155,30 @@ if (!startDrawing || !handleClick || !finishDrawing || !clearDrawing) {
     }
 
     // Store references to avoid closure issues
-    const currentMap = map;
+    const currentMap = mapInstance;
     const clickHandler = handleClick;
     
     // Only set up click handler when drawing is active
     if (isDrawing) {
-      console.log('🎯 Setting up click handler');
-      currentMap.on('click', clickHandler);
-      
-      // Return cleanup function
-      return () => {
-        console.log('🧹 Removing click handler:', {
-          reason: 'Drawing mode deactivated or component unmounting',
-          timestamp: new Date().toISOString()
-        });
-        currentMap.off('click', clickHandler);
-      };
+      try {
+        console.log('🎯 Setting up click handler');
+        currentMap.on('click', clickHandler);
+        
+        // Return cleanup function
+        return () => {
+          try {
+            console.log('🧹 Removing click handler:', {
+              reason: 'Drawing mode deactivated or component unmounting',
+              timestamp: new Date().toISOString()
+            });
+            currentMap.off('click', clickHandler);
+          } catch (error) {
+            console.error('❌ Error removing click handler:', error);
+          }
+        };
+      } catch (error) {
+        console.error('❌ Error setting up click handler:', error);
+      }
     }
   }, [map, isDrawing]); // Remove handleClick from dependencies
 
