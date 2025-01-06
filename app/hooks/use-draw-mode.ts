@@ -397,23 +397,23 @@ const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void>
 
 // TO (replace with this code):
 const startDrawing = useCallback(() => {
-  console.log('=== startDrawing function entry ===', {
-    mapExists: !!map,
-    isStyleLoaded: map?.isStyleLoaded(),
-    currentLayers: map ? map.getStyle().layers.map(l => l.id).join(', ') : 'no map',
-    currentLayerRefs: layerRefs.current,
-    timestamp: new Date().toISOString()
+  console.log('🔍 START: startDrawing function', {
+    mapInstance: !!map,
+    styleLoaded: map?.isStyleLoaded(),
+    layerRefs: layerRefs.current,
   });
 
-  if (!map || !map.isStyleLoaded()) {
-    console.log('❌ Cannot start - map not ready', {
-      mapExists: !!map,
-      styleLoaded: map?.isStyleLoaded()
-    });
-    return;
-  }
-
   try {
+    if (!map || !map.isStyleLoaded()) {
+      console.log('❌ Cannot start - map conditions not met:', {
+        hasMap: !!map,
+        styleLoaded: map?.isStyleLoaded()
+      });
+      return;
+    }
+
+    console.log('✅ Map conditions met, proceeding with initialization');
+
     // Skip cleanup if no existing layers
     if (layerRefs.current.drawing || layerRefs.current.markers) {
       console.log('🧹 Starting cleanup');
@@ -449,6 +449,8 @@ if (layerRefs.current.markers) {
 }
 }
 
+console.log('🎯 Just before setIsDrawing(true)');
+    
 // Initialize new state
 setIsDrawing(true);
 setDrawnCoordinates([]);
@@ -459,8 +461,11 @@ setSegments([]);
 // Set cursor
 map.getCanvas().style.cursor = 'crosshair';
 
+console.log('🎨 About to call initializeLayers');
 // Initialize new layers
 initializeLayers();
+
+console.log('✅ Drawing mode setup completed successfully');
 
 console.log('✅ Drawing mode setup completed');
 
