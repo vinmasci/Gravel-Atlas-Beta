@@ -294,11 +294,11 @@ const initializeLayers = useCallback((): void => {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error in initializeLayers:', {
       error,
-      message: error.message,
-      stack: error.stack
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
     // Don't throw, just log and return
     return;
@@ -377,24 +377,93 @@ const snapToNearestRoad = async (clickedPoint: [number, number], previousPoint?:
 };
 
 // [Keep your existing handleClick implementation]
-const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void> => {
-  if (!map || !isDrawing) return;
-  
-  const point = [e.lngLat.lng, e.lngLat.lat] as [number, number];
-  const clickPoint = {
-    coordinates: point,
-    timestamp: Date.now()
+// Stable references for state access
+const stateRef = useRef({
+  isDrawing: false,
+  snapToRoad: true,
+  drawnCoordinates: [] as [number, number][]
+});
+
+// Keep state ref updated
+useEffect(() => {
+  stateRef.current = {
+    isDrawing,
+    snapToRoad,
+    drawnCoordinates
   };
+}, [isDrawing, snapToRoad, drawnCoordinates]);
+
+const handleClick = useCallback(async (e: mapboxgl.MapMouseEvent): Promise<void> => {
+  // Create stable reference to current state values
+  const currentState = stateRef.current;
+  const currentLayerRefs = layerRefs.current;
   
-  setClickPoints(prev => [...prev, clickPoint]);
-  
-  if (snapToRoad) {
-    const snapped = await snapToNearestRoad(point);
-    setDrawnCoordinates(prev => [...prev, ...snapped.coordinates]);
-  } else {
-    setDrawnCoordinates(prev => [...prev, point]);
+  console.log('🖱️ Click handler called:', {
+    hasMap: !!map,
+    isDrawing: currentState.isDrawing,
+    snapToRoad: currentState.snapToRoad,
+    timestamp: new Date().toISOString()
+  });
+
+  if (!map || !currentState.isDrawing) {
+    console.log('❌ Click handler aborted:', {
+      reason: !map ? 'no map' : 'not drawing',
+      timestamp: new Date().toISOString()
+    });
+    return;
   }
-}, [map, isDrawing, snapToRoad]);
+
+  // Prevent multiple simultaneous click processing
+  if (isProcessingClick.current) {
+    console.log('⏳ Already processing a click, skipping');
+    return;
+  }
+
+  isProcessingClick.current = true;
+
+  try {
+    const point = [e.lngLat.lng, e.lngLat.lat] as [number, number];
+    console.log('📍 Processing click at:', point);
+
+    const clickPoint = {
+      coordinates: point,
+      timestamp: Date.now()
+    };
+    
+    setClickPoints(prev => [...prev, clickPoint]);
+    
+    if (currentState.snapToRoad) {
+      console.log('🔄 Snapping to road...');
+      const snapped = await snapToNearestRoad(point);
+      console.log('✅ Snapped coordinates:', snapped.coordinates);
+      setDrawnCoordinates(prev => [...prev, ...snapped.coordinates]);
+    } else {
+      console.log('📌 Using exact click point');
+      setDrawnCoordinates(prev => [...prev, point]);
+    }
+
+    // Update map layers
+    if (currentLayerRefs.drawing) {
+      const source = map.getSource(currentLayerRefs.drawing) as mapboxgl.GeoJSONSource;
+      if (source) {
+        const currentCoords = currentState.drawnCoordinates;
+        source.setData({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [...currentCoords, point]
+          },
+          properties: {}
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Error in click handler:', error);
+  } finally {
+    isProcessingClick.current = false;
+  }
+}, []); // No dependencies needed since we use refs
 
 // TO (replace with this code):
 const startDrawing = useCallback(() => {

@@ -664,8 +664,59 @@ This enhancement will provide immediate visual feedback about surface types whil
 CURRENT PROBLEM 
 DRAW MODE NOT WORKING
 
-Interesting - even with our changes to the initialization, the real problem seems to be that the startDrawing function itself isn't working as expected. Let's check the chain of events:
+## 🔄 Draw Mode Debugging Session (January 6, 2025)
 
-The button click is detected
-startDrawing is called
-But nothing happens after that
+### Issues Addressed
+1. Resolved initialization sequence problems with DrawModeProvider:
+   - Fixed timing issues between map initialization and style loading
+   - Implemented proper state management for initialized state
+   - Added reliable style load detection through polling
+
+2. Fixed Context Initialization:
+   - Corrected issue where default empty functions were being used instead of actual draw mode functions
+   - Ensured DrawModeProvider properly initializes with map instance
+   - Added better state management for context initialization
+
+3. Improved Error Handling:
+   - Added comprehensive logging throughout draw mode initialization
+   - Implemented better cleanup for map layers and sources
+   - Added safeguards against duplicate source/layer creation
+
+### Current Status
+Drawing mode is partially working:
+- ✅ Drawing mode can be activated (confirmed by UI state changes)
+- ✅ Cursor changes to crosshair when drawing mode is active
+- ✅ Context initialization is successful
+- ✅ Map style loads correctly
+- ❌ Click handler not responding (known issue)
+
+### Current Issue
+The click handler is not functioning as expected:
+- Drawing mode activates but clicks on the map produce no response
+- Logs show the click handler is being rapidly set up and removed
+- Potential issue with handler reference stability in DrawSegmentPanel
+- Investigation ongoing into click event propagation
+
+### Next Steps
+1. Debug click handler implementation:
+   - Investigate handler reference stability
+   - Check event propagation
+   - Verify map instance state during clicks
+   - Review click coordinate processing
+
+2. Planned fixes:
+   - Stabilize click handler mounting/unmounting
+   - Improve handler reference management
+   - Add additional logging for click events
+   - Review event cleanup process
+
+### Technical Details
+- Click handler is being setup but immediately cleaned up due to dependency issues
+- Attempted fix using useCallback for handler memoization
+- Current implementation shows proper initialization but fails at event handling
+- Further investigation needed into map instance state during click events
+
+### Logs Analysis Shows
+```javascript
+[Log] Setting up map click handler: {isDrawing: true, mapExists: true, ...}
+[Log] Removing map click handler    // Happens immediately after

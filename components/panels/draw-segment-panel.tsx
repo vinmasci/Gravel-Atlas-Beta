@@ -65,11 +65,14 @@ export function DrawSegmentPanel() {
     timestamp: new Date().toISOString()
   });
   
-// TO (replace with this):
+// Ensure drawMode exists and has required methods
 if (!drawMode) {
   console.error('❌ DrawMode context is missing');
   return null;
 }
+
+// Type assertion to help TypeScript understand our runtime check
+const drawModeChecked = drawMode as NonNullable<typeof drawMode>;
 
 const { 
   isDrawing, 
@@ -82,10 +85,16 @@ const {
   clearDrawing,
   undoLastPoint,
   toggleSnapToRoad
-} = drawMode;
+} = drawModeChecked;
 
-if (!startDrawing) {
-  console.error('❌ startDrawing function is missing from drawMode');
+// Additional runtime check for critical methods
+if (!startDrawing || !handleClick || !finishDrawing || !clearDrawing) {
+  console.error('❌ Required drawing methods are missing', {
+    hasStartDrawing: !!startDrawing,
+    hasHandleClick: !!handleClick,
+    hasFinishDrawing: !!finishDrawing,
+    hasClearDrawing: !!clearDrawing
+  });
   return null;
 }
 
@@ -112,26 +121,50 @@ if (!startDrawing) {
     });
   }, [isDrawing, drawnCoordinates, elevationProfile, snapToRoad, showSaveDialog, isSaving]);
 
-  // Set up map click handler once
+// TO (replace with this code):
+  // Set up map click handler when drawing starts
   useEffect(() => {
-    if (!map || !drawMode) return;
-  
-    console.log('Setting up map click handler:', {
-      timestamp: new Date().toISOString(),
+    console.log('🔍 Click handler setup check:', {
       isDrawing,
       mapExists: !!map,
-      drawModeExists: !!drawMode,
-      mapStyleLoaded: map.isStyleLoaded()
+      hasHandleClick: !!handleClick,
+      timestamp: new Date().toISOString()
     });
-  
-    if (isDrawing && map.isStyleLoaded()) {
-      map.on('click', handleClick);
+
+    // Only proceed if we have all required dependencies
+    if (!map || !handleClick) {
+      console.error('❌ Missing dependencies:', {
+        hasHandler: !!handleClick,
+        hasMap: !!map
+      });
+      return;
+    }
+
+    // Check if style is loaded
+    if (!map.isStyleLoaded()) {
+      console.log('⏳ Map style not loaded');
+      return;
+    }
+
+    // Store references to avoid closure issues
+    const currentMap = map;
+    const clickHandler = handleClick;
+    
+    // Only set up click handler when drawing is active
+    if (isDrawing) {
+      console.log('🎯 Setting up click handler');
+      currentMap.on('click', clickHandler);
+      
+      // Return cleanup function
       return () => {
-        console.log('Removing map click handler');
-        map.off('click', handleClick);
+        console.log('🧹 Removing click handler:', {
+          reason: 'Drawing mode deactivated or component unmounting',
+          timestamp: new Date().toISOString()
+        });
+        currentMap.off('click', clickHandler);
       };
     }
-  }, [map, isDrawing, handleClick, drawMode]);
+  }, [map, isDrawing]); // Remove handleClick from dependencies
 
   // Handler functions
   const handleDrawingToggle = useCallback(() => {
